@@ -3,7 +3,7 @@
 
 ## Installation notes:
 
-1. [Download](https://github.com/Highpoint2000/webserver-station-logos/releases) the last repository as a zip
+1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
 2. Unpack it into the plugins folder in the root of the web server
 3. Restart the server
 4. Activate it in the settings
