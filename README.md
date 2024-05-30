@@ -8,4 +8,4 @@
 3. Restart the server
 4. Activate it in the settings
 
-The plugin installs two control buttons to start an automatic scanning process. As soon as a transmitter with a PI code is detected, the process stops.
+The plugin installs two control buttons to start an automatic scanning process. As soon as a station with RDS information is detected, the process stops.
