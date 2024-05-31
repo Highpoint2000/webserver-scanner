@@ -8,4 +8,12 @@
 3. Restart the server
 4. Activate it in the settings
 
-The plugin installs two control buttons to start an automatic scanning process. As soon as a station with RDS information is detected, the process stops.
+This plugin uses the receiver's integrated scan function. To do this, two additional buttons are installed in the web frontend to start the scanning process. The scan sensitivity can be adjusted in the receiver settings.
+
+Important notes: 
+
+THIS VERSION ONLY WORKS WITH THE PE5PVB ESP32 FIRMWARE!
+
+### version v1.0a:
+- Direct use of the integrated scan function of the ESP32 receiver (PE5PVB ESP32 firmware required!)
+- Fixed issue with incorrect number of users
