@@ -1,114 +1,33 @@
-
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.0)                                     ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.0a)                                    ///
 ///                                                                                /// 
-///  by Highpoint                                           last update: 22.05.24  ///
-///                                                                                ///
+///  by Highpoint                                                                  ///
+///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///
+///																				   ///
+///                                                        last update: 31.05.24   ///
 //////////////////////////////////////////////////////////////////////////////////////
-
-let scanInterval;
-let currentFrequency = 0.0;
-let previousFrequency = null;
-let isScanning = false;
-let frequencySocket = null;
-let piCode = '';
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const host = window.location.host;
 const wsUrl = `${protocol}//${host}/text`;
 
-function setupWebSocket() {
-    if (!frequencySocket || frequencySocket.readyState === WebSocket.CLOSED) {
-        frequencySocket = new WebSocket(wsUrl);
+function sendCommandToClient(command) {
+    let frequencySocket = new WebSocket(wsUrl);
 
-        frequencySocket.addEventListener("open", () => {
-            console.log("WebSocket-Verbindung hergestellt.");
-        });
+    frequencySocket.addEventListener("open", () => {
+        console.log("WebSocket-Connected.");
+        frequencySocket.send(command);
+        frequencySocket.close();
+    });
 
-        frequencySocket.addEventListener("message", (event) => {
-                let parsedData = JSON.parse(event.data);
-                let freq = parsedData.freq;
+    frequencySocket.addEventListener("error", (error) => {
+        console.error("WebSocket-error:", error);
+    });
 
-                if (typeof freq !== 'undefined' && freq !== null) {
-                    let newFrequency = parseFloat(freq);
-                    if (previousFrequency === null || Math.abs(newFrequency - previousFrequency) >= 0.1) {
-                        currentFrequency = newFrequency;
-                        previousFrequency = newFrequency;
-                        // console.log('Aktuelle Frequenz aktualisiert:', currentFrequency);
-                        sendDataToClient(currentFrequency);
-                    }
-                }
-
-                überprüfePiCode(parsedData.pi);
-        });
-
-        frequencySocket.addEventListener("error", (error) => {
-            console.error("WebSocket-Fehler:", error);
-        });
-    }
-}
-
-function sendDataToClient(frequency) {
-    if (frequencySocket && frequencySocket.readyState === WebSocket.OPEN) {
-        const dataToSend = `T${(frequency * 1000).toFixed(0)}`;
-        frequencySocket.send(dataToSend);
-    } else {
-        console.error('WebSocket ist nicht geöffnet.');
-    }
-}
-
-function startScan(direction) {
-    if (isScanning) {
-        clearInterval(scanInterval);
-    }
-
-    setupWebSocket();
-
-    const tuningLowerLimit = parseFloat(document.querySelector('#tuner-desc .color-4').innerText.split(' MHz')[0]);
-    const tuningUpperLimit = parseFloat(document.querySelector('#tuner-desc .color-4').innerText.split(' MHz')[1].split(' - ')[1]);
-
-    function updateFrequency() {
-        if (direction === 'up') {
-            currentFrequency += 0.1;
-            if (currentFrequency > tuningUpperLimit) {
-                currentFrequency = tuningLowerLimit;
-            }
-        } else if (direction === 'down') {
-            currentFrequency -= 0.1;
-            if (currentFrequency < tuningLowerLimit) {
-                currentFrequency = tuningUpperLimit;
-            }
-        }
-
-        currentFrequency = Math.round(currentFrequency * 10) / 10;
-
-        if (!isNaN(currentFrequency) && currentFrequency !== null) {
-            sendDataToClient(currentFrequency);
-        }
-    }
-
-    piCode = '?';
-    updateFrequency();
-    isScanning = true;
-    scanInterval = setInterval(() => {
-        updateFrequency();
-    }, 500);
-}
-
-function überprüfePiCode(receivedPiCode) {
-    if (receivedPiCode.length > 1) {
-        clearInterval(scanInterval);
-        isScanning = false;
-        piCode = '?';
-    }
-}
-
-function restartScan(direction) {
-    clearInterval(scanInterval);
-    isScanning = false;
-    piCode = '?';
-    setTimeout(() => startScan(direction), 150);
+    frequencySocket.addEventListener("close", () => {
+        console.log("WebSocket-Closed.");
+    });
 }
 
 function ScannerButtons() {
@@ -151,10 +70,10 @@ function ScannerButtons() {
             background-color: #f0f0f0;
             border-color: #aaa;
         }
-		
-		#commandinput {
-		text-align: left;
-}
+        
+        #commandinput {
+            text-align: left;
+        }
     `;
 
     const styleElement = document.createElement('style');
@@ -168,18 +87,14 @@ function ScannerButtons() {
     freqUpButton.parentNode.insertBefore(ScannerUpButton, freqUpButton);
 
     ScannerDownButton.addEventListener('click', function() {
-        restartScan('down');
+        sendCommandToClient('C1');
     });
 
     ScannerUpButton.addEventListener('click', function() {
-        restartScan('up');
+        sendCommandToClient('C2');
     });
-
-    const tuningLowerLimit = parseFloat(document.querySelector('#tuner-desc .color-4').innerText.split(' MHz')[0]);
-    const tuningUpperLimit = parseFloat(document.querySelector('#tuner-desc .color-4').innerText.split(' MHz')[1].split(' - ')[1]);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    setupWebSocket();
     ScannerButtons();
 });
