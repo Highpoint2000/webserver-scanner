@@ -4,8 +4,8 @@
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///
-///                                                                                ///
-///                                                        last update: 03.06.24   ///
+///																				   ///
+///                                                        last update: 31.05.24   ///
 //////////////////////////////////////////////////////////////////////////////////////
 
 const isESP32WithPE5PVB = true;  // Set to true if ESP32 with PE5PVB firmware is being used
@@ -351,9 +351,9 @@ function initialize() {
     const buttonEq = document.querySelector('.button-eq');
     const buttonIms = document.querySelector('.button-ims');
 
-    const newDiv = document.createElement('div');
-    newDiv.className = 'panel-50 no-bg h-100 m-0';
-    newDiv.appendChild(ScannerButton);
+	const newDiv = document.createElement('div');
+	newDiv.className = "hide-phone panel-50 no-bg h-100 m-0";
+	newDiv.appendChild(ScannerButton);
 
     buttonEq.parentNode.insertBefore(newDiv, buttonIms);
 
