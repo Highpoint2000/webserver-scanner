@@ -5,9 +5,9 @@
 ## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
-2. Unpack it into the plugins folder in the root of the web server
+2. Unpack the Scanner.js and the Scanner Logo folder with the scanner-plugin.js into the web server plugins folder (..fm-dx-webserver-main\plugins)
 3. Restart the server
-4. Activate it in the settings
+4. Activate the plugin it in the settings
 
 This plugin provides scanning functions for the FM-DX web server.
 
