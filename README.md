@@ -5,7 +5,8 @@
 ## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
-2. Unpack the Scanner.js and the Scanner Logo folder with the scanner-plugin.js into the web server plugins folder (..fm-dx-webserver-main\plugins)
+2. Unpack the Scanner.js and the Scanner Logo folder with the scanner-plugin.js into the web server plugins folder (..fm-dx-webserver-main\plugins) 
+[image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/15e5d4eb-eb09-4466-972b-20a569737cf0)
 3. Restart the server
 4. Activate the plugin it in the settings
 
