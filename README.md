@@ -27,6 +27,7 @@ For ESP32 receivers (e.g. TEF6686) the plugin uses the newly integrated scan fun
 
 ### v1.2:
 - Added Scan Sensitivity and Scanhold Time settings
+- Design issues fixed
 
 ## History: 
 
