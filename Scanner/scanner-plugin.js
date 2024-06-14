@@ -1,10 +1,12 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.2)                                     ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.2)              last update: 14.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
-///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///
-///                                                        last update: 31.05.24   ///
+///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
+///                                                                                ///
+///  https://github.com/Highpoint2000/webserver-scanner                            ///
+///                                                                                ///
 //////////////////////////////////////////////////////////////////////////////////////
 
 const isESP32WithPE5PVB = true;  // Set to true if ESP32 with PE5PVB firmware is being used
