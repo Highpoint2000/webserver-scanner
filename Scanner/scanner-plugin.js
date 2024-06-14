@@ -403,8 +403,6 @@ function initialize() {
     }
 }
 
-
-
 let sensitivityValue = null;
 let delayValue = null;
 
