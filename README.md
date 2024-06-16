@@ -1,7 +1,8 @@
 # Scanner Plugin for [FM-DX-Webserver](https://github.com/NoobishSVK/fm-dx-webserver)
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/c983c83d-e08a-417d-a067-f76d4cedb2eb)
 
-
+### v1.3 BETA:
+- Added Auto Scan Mode for  PE5PVB Firmware Devices including setting the scan hold time
 
 ## Installation notes:
 
@@ -23,13 +24,11 @@ For ESP32 receivers (e.g. TEF6686) the plugin uses the newly integrated scan fun
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
 - There are problems when using upstream proxy servers and NON-TEF receivers
 
-## Current version: 
+## History: 
 
 ### v1.2:
 - Added Scan Sensitivity and Scanhold Time settings
 - Design issues fixed
-
-## History: 
 
 ### v1.1:
 - Add a Auto Scan Mode for ESP32 receiver (Newewst PE5PVB ESP32 firmware (RC-Version) required!)
