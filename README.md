@@ -3,6 +3,7 @@
 
 ### v1.3 BETA:
 - Added Auto Scan Mode for  PE5PVB Firmware Devices including setting the scan hold time
+  ---> To do this, set the query in the header of the script to 'false'!
 
 ## Installation notes:
 
