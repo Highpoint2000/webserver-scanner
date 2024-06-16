@@ -3,7 +3,7 @@
 ///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3 BETA)         last update: 16.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
-///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
+///  mod by PE5PVB                                                                 ///     
 ///                                                                                ///
 ///  https://github.com/Highpoint2000/webserver-scanner                            ///
 ///                                                                                ///
