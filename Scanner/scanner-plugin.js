@@ -1,38 +1,46 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3 BETA)         last update: 16.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3 BETA)         last update: 17.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
-///  mod by PE5PVB                                                                 ///     
+///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
 ///                                                                                ///
 ///  https://github.com/Highpoint2000/webserver-scanner                            ///
 ///                                                                                ///
 //////////////////////////////////////////////////////////////////////////////////////
 
-const isESP32WithPE5PVB = false;  // Set to true if ESP32 with PE5PVB firmware is being used
-const defaultScanHoldTime = 5000;  // Only valid for isESP32WithPE5PVB = false
-const pluginVersion = 'V1.3 BETA'; // Hier wird die Plugin-Version gesetzt
+const isESP32WithPE5PVB = false; // Set to true if ESP32 with PE5PVB firmware is being used
+const pluginVersion = 'V1.3 BETA'; // Sets the plugin version
 
+// Only valid for isESP32WithPE5PVB = false
+let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,20000,30000   
+let defaultSensitivityValue = 35; // Value in dBf: 20,25,30,35,40,45,50,55,60
+let defaultScannerMode = 'normal'; // normal or blacklist 
 
 //////////////////////////////////////////////////////////////////////////////////////
 
+let delayValue = defaultScanHoldTime / 1000; 
+let sensitivityValue = defaultSensitivityValue; 
+let checkStrengthCounter = 0;
+let modeValue = defaultScannerMode;
+
 (() => {
     const scannerPlugin = (() => {   
-
-        let scanInterval;
+        let scanInterval = null; // Variable to store the interval timer
         let currentFrequency = 0.0;
         let previousFrequency = null;
         let previousPiCode = null;
         let isScanning = false;
         let frequencySocket = null;
         let piCode = '?';
+        let stereo_forced_user = 'stereo';
 
         const localHost = window.location.host;
         const wsUrl = `ws://${localHost}/text`;
 
         function setupWebSocket() {
             // WebSocket setup
-            //if (!isESP32WithPE5PVB) {
+            if (!isESP32WithPE5PVB) {
                 if (!frequencySocket || frequencySocket.readyState === WebSocket.CLOSED) {
                     frequencySocket = new WebSocket(wsUrl);
 
@@ -50,7 +58,7 @@ const pluginVersion = 'V1.3 BETA'; // Hier wird die Plugin-Version gesetzt
                         setTimeout(setupWebSocket, 1000);
                     });
                 }
-            //}
+            }
         }
 
         function sendDataToClient(frequency) {
@@ -61,7 +69,7 @@ const pluginVersion = 'V1.3 BETA'; // Hier wird die Plugin-Version gesetzt
                 console.log("WebSocket sent:", dataToSend);
             } else {
                 console.error('WebSocket not open.');
-                setTimeout(() => sendDataToClient(frequency), 500); // Retry after a short delay
+                setTimeout(() => sendDataToClient(frequency), 1000); // Retry after a short delay
             }
         }
 
@@ -102,43 +110,67 @@ const pluginVersion = 'V1.3 BETA'; // Hier wird die Plugin-Version gesetzt
             });
         }
 
+        let mode = defaultScannerMode;
+
         function waitForServer() {
             // Wait for the server to be available
             if (typeof window.socket !== "undefined") {
                 window.socket.addEventListener("message", (event) => {
                     const parsedData = JSON.parse(event.data);
-                    const newPiCode = parsedData.pi;
+                    const PiCode = parsedData.pi;
                     const freq = parsedData.freq;
+                    const strength = parsedData.signal;
+                    const stereo = parsedData.st;
+                    const stereo_forced = parsedData.st_forced;
 
-                    if (newPiCode !== previousPiCode) {
-                        previousPiCode = newPiCode;
-                        //if (!isESP32WithPE5PVB) {
-                            checkPiCode(newPiCode);
-                        //}
+                    // console.log(isScanning, stereo_forced, stereo_forced_user, modeValue);
+
+                    if (isScanning === true) {
+                        if (stereo_forced === true && stereo_forced_user !== 'mono') {
+                            stereo_forced_user = 'mono';
+                            sendCommandToClient('B0');
+                        }
+                    } else {
+                        if (stereo_forced_user === 'mono') {
+                            sendCommandToClient('B1');
+                            stereo_forced_user = 'stereo'; // Update stereo_forced_user after sending 'B1'
+                        }
                     }
 
                     if (freq !== previousFrequency) {
-                        previousFrequency = freq;
+                        checkStrengthCounter = 0; // Reset the counter
                     }
-
+                    previousFrequency = freq;
                     currentFrequency = freq;
+                    checkStrengthCounter++;
+
+                    // console.log(isESP32WithPE5PVB, checkStrengthCounter); 
+                    if (!isESP32WithPE5PVB && checkStrengthCounter === 12) {  		
+                        if (modeValue === 'blacklist') {
+                            if (!isInBlacklist(freq, blacklist)) {            
+                                checkStereo(stereo, freq, strength, PiCode);
+                            } else {        
+                                console.log(freq, 'is in the blacklist');
+                            }
+                        } else {
+                            checkStereo(stereo, freq, strength, PiCode);
+                        }
+                    }
                 });
             } else {
                 console.error('Socket is not defined.');
-                setTimeout(waitForServer, 250);
+                setTimeout(waitForServer, 1000);
             }
         }
 
         waitForServer();
 
         function startScan(direction) {
-            // Start scanning in the specified direction
-            console.log('Scan started in direction:', direction);
-
             if (isScanning) {
-                clearInterval(scanInterval);
-                console.log('Previous scan stopped.');
+                return; // Do not start a new scan if one is already running
             }
+
+            console.log('Scan started in direction:', direction);
 
             const tuningRangeText = document.querySelector('#tuner-desc .color-4').innerText;
             const tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
@@ -163,85 +195,96 @@ const pluginVersion = 'V1.3 BETA'; // Hier wird die Plugin-Version gesetzt
                 }
 
                 currentFrequency = Math.round(currentFrequency * 10) / 10;
-                console.log("Current frequency:", currentFrequency);
-                sendDataToClient(currentFrequency);
+                sendDataToClient(currentFrequency);        
             }
 
-            piCode = '?';
-            updateFrequency();
             isScanning = true;
-            scanInterval = setInterval(updateFrequency, 500);
-            console.log('New scan started.');
+            updateFrequency();
+            scanInterval = setInterval(updateFrequency, 1500);
         }
 
-function AutoScan() {
-    const ScanButton = document.getElementById('Scan-on-off');
-    const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
-
-    startScan('up'); // Starte den Scan
-
-    // Warte für die Scan-Hold-Zeit, bevor du den Scan erneut startest
-    const scanHoldTime = getScanHoldTime();
-    const delay = scanHoldTime !== undefined ? scanHoldTime : defaultScanHoldTime;
-
-    //console.log(`Current scanHoldTime: ${scanHoldTime}, Delay: ${delay} ms`);
-
-    // Übergebe isScanOn als Parameter an die setTimeout-Funktion, um sicherzustellen, dass sie im richtigen Kontext verwendet wird
-    setTimeout(AutoScanCallback, delay, isScanOn);
-}
-
-function AutoScanCallback(isScanOn) {
-    if (isScanOn) {
-        console.log('Restarting AutoScan after delay.');
-        AutoScan(); // Starte den Scan erneut nach der Verzögerung
-    }
-}
-
-function getScanHoldTime() {
-    const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
-
-    if (delayInput) {
-        const delayValue = delayInput.getAttribute('data-value');
-        const millisecondsPerSecond = 1000;
-
-        if (delayValue !== null) {
-            const scanholdtime = parseFloat(delayValue) * millisecondsPerSecond;
-            console.log(`Selected delay in milliseconds: ${scanholdtime}`);
-            return scanholdtime;
-        } else {
-            console.error('Delay value not found or invalid.');
-            return defaultScanHoldTime; // Fallback to defaultScanHoldTime if no valid value found
+        // Function to check if a frequency is in the blacklist
+        function isInBlacklist(currentFrequency, blacklist) {
+            return blacklist.some(entry => entry.split(' ').includes(currentFrequency));
         }
-    } else {
-        console.error('Dropdown input for delay not found.');
-        return defaultScanHoldTime; // Fallback to defaultScanHoldTime if input element not found
-    }
-}
 
+        let blacklist = [];
 
+        // Check and initialize blacklist
+        function checkBlacklist() {
+            const blacklistProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+            const port = window.location.port;
+            const host = document.location.hostname;
+            const blacklistUrl = `${blacklistProtocol}//${host}:${port}/scanner/blacklist.txt`;
+
+            fetch(blacklistUrl)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`Error fetching blacklist: ${response.status} ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
+                    console.log('Blacklist initialized:', blacklist);
+                })
+                .catch(error => {
+                    console.error('Error checking blacklist:', error.message);
+                    blacklist = [];
+                });
+        }
+
+        checkBlacklist();
+
+        let scanTimeout; // Variable to hold the timeout
+
+        function AutoScan() {
+            const ScanButton = document.getElementById('Scan-on-off');
+            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+
+            if (isScanOn && !isScanning) {
+                startScan('up'); // Start scanning once
+            }
+        }
+
+        function checkStereo(stereo, freq, strength, PiCode) {
+            const ScanButton = document.getElementById('Scan-on-off');
+            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+
+            if (stereo === true) {
+                if (strength > sensitivityValue) {
+                    const millisecondsPerSecond = 1000;
+                    const delayValueMilliseconds = delayValue * millisecondsPerSecond;
+
+                    if (isScanOn) {
+                        console.log(`Autoscan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue}) with delay: ${delayValueMilliseconds}`);
+                    } else {
+                        console.log(`Scan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue})`);
+                    }
+
+                    clearInterval(scanInterval); // Stops the scan interval
+                    isScanning = false; // Disables scanning
+
+                    scanTimeout = setTimeout(() => {
+                        if (isScanOn) {
+                            startScan('up'); // Restart scanning after the delay
+                        }
+                    }, delayValueMilliseconds);
+                }
+            }
+        }
 
         function stopAutoScan() {
-            clearInterval(scanInterval);
-            isScanning = false;
-            // Optional: Reset any other variables or states related to scanning
-        }
-
-        function checkPiCode(receivedPiCode) {
-            // Check if the received Pi code is valid
-            if (receivedPiCode.length > 1) {
-                clearInterval(scanInterval);
-                isScanning = false;
-                piCode = '?';
-                console.log('Scan aborted because the Pi code has more than one character.');
-            }
+            clearInterval(scanInterval); // Stops the scan interval
+            isScanning = false; // Disables scanning
+            clearTimeout(scanTimeout); // Clear any existing scan timeout
         }
 
         function restartScan(direction) {
             // Restart scanning in the specified direction
-            console.log('Restarting scan in direction:', direction);
             clearInterval(scanInterval);
             isScanning = false;
-            piCode = '?';
             setTimeout(() => startScan(direction), 150);
         }
 
@@ -375,7 +418,7 @@ function getScanHoldTime() {
             ScannerButton.classList.add('bg-color-3');
             ScannerButton.title = `Plugin Version ${pluginVersion}`;
 
-            // Überprüfen, ob ein Button mit dem Label "Mute" existiert
+            // Check if a button with the label "Mute" exists
             const muteButton = document.querySelector('button[aria-label="Mute"]');
             if (muteButton) {
                 ScannerButton.style.width = 'calc(100% - 1px)';
@@ -407,22 +450,20 @@ function getScanHoldTime() {
                     ScanButton.classList.remove('bg-color-4');
                     ScanButton.classList.add('bg-color-3');
                     clearInterval(blinkInterval);
+
+                    stopAutoScan(); // Stop the scan process
+
                     if (isESP32WithPE5PVB) {
                         sendCommandToClient('J0');
-                    } else {
-                        stopAutoScan();
                     }
-                
-                    // Save dropdown values
+
                     saveDropdownValues();
 
-                    // Remove scanner controls and restore volume slider
                     const scannerControls = document.getElementById('scanner-controls');
                     if (scannerControls) {
                         scannerControls.parentNode.removeChild(scannerControls);
                     }
 
-                    // Volume Slider wieder einblenden
                     const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
                     volumeSliderParent.style.display = 'block';
                 } else {
@@ -430,47 +471,40 @@ function getScanHoldTime() {
                     ScanButton.classList.remove('bg-color-3');
                     ScanButton.classList.add('bg-color-4');
                     clearInterval(blinkInterval);
-                
+
                     if (isESP32WithPE5PVB) {
                         sendCommandToClient('J1');
                     } else {
                         AutoScan();
-                    }    
-                                
+                    }
+
                     blinkInterval = setInterval(function () {
                         ScanButton.classList.toggle('bg-color-3');
                         ScanButton.classList.toggle('bg-color-4');
                     }, 500);
 
-                    // Create scanner controls
                     createScannerControls();
-                    // Restore dropdown values
-                    restoreDropdownValues();
                 }
-
             }
 
             const ScanButton = document.getElementById('Scan-on-off');
             ScanButton.addEventListener('click', toggleScan);
 
-            // Starten des Blinkens, wenn der Button beim Laden der Seite auf ON gesetzt ist
+            // Start blinking if the button is set to ON when the page loads
             if (ScanButton.getAttribute('data-scan-status') === 'on') {
                 blinkInterval = setInterval(function () {
                     ScanButton.classList.toggle('bg-color-3');
                     ScanButton.classList.toggle('bg-color-4');
                 }, 500);
             } else {
-                // Bei Start des Scanners den Volume Slider einblenden
+                // Show the volume slider when the scanner starts
                 const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
                 volumeSliderParent.style.display = 'block';
             }
         }
 
-        let sensitivityValue = null;
-        let delayValue = null;
-
         function createScannerControls() {
-            // Flex-Container für Scanner Sensitivity und Scanner Delay erstellen
+            // Create a flex container for scanner sensitivity and scanner delay
             const scannerControls = document.createElement('div');
             scannerControls.className = "panel-50 no-bg h-100";
             scannerControls.id = "scanner-controls";
@@ -480,6 +514,21 @@ function getScanHoldTime() {
             scannerControls.style.marginTop = "0px";
             scannerControls.style.position = 'relative'; // Make sure it's on top
 
+            const modeContainer = document.createElement('div');
+            modeContainer.className = "dropdown";
+            modeContainer.style.marginRight = "10px";
+            modeContainer.style.marginLeft = "-px";
+            modeContainer.style.width = "100%";
+            modeContainer.style.height = "99%";
+            modeContainer.style.position = 'relative'; // Make sure it's on top		
+            modeContainer.innerHTML = `
+                <input type="text" placeholder="${defaultScannerMode}" title="Scanner Mode" readonly>
+                <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
+                    <li data-value="normal" class="option">normal</li>
+                    <li data-value="blacklist" class="option">blacklist</li>
+                </ul>
+            `;		
+
             const sensitivityContainer = document.createElement('div');
             sensitivityContainer.className = "dropdown";
             sensitivityContainer.style.marginRight = "5px";
@@ -488,18 +537,35 @@ function getScanHoldTime() {
             sensitivityContainer.style.height = "99%";
             sensitivityContainer.style.position = 'relative'; // Make sure it's on top
 
-            sensitivityContainer.innerHTML = `
-                <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
-                <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
-                    <li data-value="1" class="option">1</li>
-                    <li data-value="5" class="option">5</li>
-                    <li data-value="10" class="option">10</li>
-                    <li data-value="15" class="option">15</li>
-                    <li data-value="20" class="option">20</li>
-                    <li data-value="25" class="option">25</li>
-                    <li data-value="30" class="option">30</li>
-                </ul>
-            `;
+            if (isESP32WithPE5PVB) {
+                sensitivityContainer.innerHTML = `
+                    <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
+                    <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="1" class="option">1</li>
+                        <li data-value="5" class="option">5</li>
+                        <li data-value="10" class="option">10</li>
+                        <li data-value="15" class="option">15</li>
+                        <li data-value="20" class="option">20</li>
+                        <li data-value="25" class="option">25</li>
+                        <li data-value="30" class="option">30</li>
+                    </ul>
+                `;
+            } else {
+                sensitivityContainer.innerHTML = `
+                    <input type="text" placeholder="${defaultSensitivityValue} dBf" title="Scanner Sensitivity" readonly>
+                    <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="20" class="option">20 dBf</li>
+                        <li data-value="25" class="option">25 dBf</li>
+                        <li data-value="30" class="option">30 dBf</li>
+                        <li data-value="35" class="option">35 dBf</li>
+                        <li data-value="40" class="option">40 dBf</li>
+                        <li data-value="45" class="option">45 dBf</li>
+                        <li data-value="50" class="option">50 dBf</li>
+                        <li data-value="55" class="option">55 dBf</li>
+                        <li data-value="60" class="option">60 dBf</li>
+                    </ul>
+                `;
+            }
 
             const delayContainer = document.createElement('div');
             delayContainer.className = "dropdown";
@@ -509,49 +575,53 @@ function getScanHoldTime() {
             delayContainer.style.height = "99%";
             delayContainer.style.position = 'relative'; // Make sure it's on top
 
-			if (isESP32WithPE5PVB) {
+            if (isESP32WithPE5PVB) {
+                delayContainer.innerHTML = `
+                    <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="1" class="option">1 sec.</li>
+                        <li data-value="3" class="option">3 sec.</li>
+                        <li data-value="5" class="option">5 sec.</li>
+                        <li data-value="7" class="option">7 sec.</li>
+                        <li data-value="10" class="option">10 sec.</li>
+                        <li data-value="20" class="option">20 sec.</li>
+                        <li data-value="30" class="option">30 sec.</li>
+                    </ul>
+                `;
+            } else {
+                delayContainer.innerHTML = `
+                    <input type="text" placeholder="${defaultScanHoldTime / 1000} sec." title="Scanhold Time" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="1" class="option">1 sec.</li>
+                        <li data-value="3" class="option">3 sec.</li>
+                        <li data-value="5" class="option">5 sec.</li>
+                        <li data-value="7" class="option">7 sec.</li>
+                        <li data-value="10" class="option">10 sec.</li>
+                        <li data-value="20" class="option">20 sec.</li>
+                        <li data-value="30" class="option">30 sec.</li>
+                    </ul>
+                `;
+            }
 
-            delayContainer.innerHTML = `
-                <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
-                <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                    <li data-value="1" class="option">1 sec.</li>
-                    <li data-value="3" class="option">3 sec.</li>
-                    <li data-value="5" class="option">5 sec.</li>
-					<li data-value="7" class="option">7 sec.</li>
-                    <li data-value="10" class="option">10 sec.</li>
-                    <li data-value="20" class="option">20 sec.</li>
-                    <li data-value="30" class="option">30 sec.</li>
-                </ul>
-            `;
-			
-			} else {
-				
-			            delayContainer.innerHTML = `
-                <input type="text" placeholder="${defaultScanHoldTime / 1000} sec." title="Scanhold Time" readonly>
-                <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                    <li data-value="1" class="option">1 sec.</li>
-                    <li data-value="3" class="option">3 sec.</li>
-                    <li data-value="5" class="option">5 sec.</li>
-					<li data-value="7" class="option">7 sec.</li>
-                    <li data-value="10" class="option">10 sec.</li>
-                    <li data-value="20" class="option">20 sec.</li>
-                    <li data-value="30" class="option">30 sec.</li>
-                </ul>
-            `;
+            let myArray = blacklist; // Example: Empty array
 
-			}			
+            if (!isESP32WithPE5PVB) {
+                if (myArray.length !== 0) {
+                    defaultScannerMode = 'normal';
+                    scannerControls.appendChild(modeContainer);
+                    initializeDropdown(modeContainer, 'Selected Mode:', 'normal');
+                }
+            }
 
             scannerControls.appendChild(sensitivityContainer);
-            scannerControls.appendChild(delayContainer);
-
-            // Volume Slider ersetzen durch Flex-Container mit Scanner Controls
-            const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-            volumeSliderParent.style.display = 'none'; // Volume Slider ausblenden
-            volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
-
-            // Initialize dropdown functionality
             initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
+            scannerControls.appendChild(delayContainer);
             initializeDropdown(delayContainer, 'Selected Delay:', 'K');
+
+            // Replace volume slider with flex container with scanner controls
+            const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+            volumeSliderParent.style.display = 'none'; // Hide volume slider
+            volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
         }
 
         function initializeDropdown(container, logPrefix, commandPrefix) {
@@ -569,8 +639,18 @@ function getScanHoldTime() {
                 option.addEventListener('click', () => {
                     const value = option.getAttribute('data-value');
                     input.value = option.textContent.trim();
-                    input.setAttribute('data-value', value); // Set data-value attribute
-                    dropdown.style.display = 'none'; // Dropdown nach Auswahl schließen
+                    input.setAttribute('data-value', value); // Set the data-value attribute
+                    dropdown.style.display = 'none'; // Close the dropdown after selection
+
+                    // Save the selected value
+                    modeValue = value;
+                    if (commandPrefix === 'I') {
+                        sensitivityValue = value;
+                    }
+                    if (commandPrefix === 'K') {
+                        delayValue = value;
+                    }
+
                     if (isESP32WithPE5PVB) {        
                         sendCommandToClient(`${commandPrefix}${value}`);
                     }
@@ -583,18 +663,24 @@ function getScanHoldTime() {
                 }
             });
 
-            // Restore saved value if exists
-            if (commandPrefix === 'I' && sensitivityValue) {
+            // Restore saved value if present
+            if (modeValue) {
+                const savedOption = [...options].find(opt => opt.getAttribute('data-value') === modeValue);
+                if (savedOption) {
+                    input.value = savedOption.textContent.trim();
+                    input.setAttribute('data-value', modeValue); // Set the data-value attribute
+                }
+            } else if (commandPrefix === 'I' && sensitivityValue) {
                 const savedOption = [...options].find(opt => opt.getAttribute('data-value') === sensitivityValue);
                 if (savedOption) {
                     input.value = savedOption.textContent.trim();
-                    input.setAttribute('data-value', sensitivityValue); // Set data-value attribute
+                    input.setAttribute('data-value', sensitivityValue); // Set the data-value attribute
                 }
             } else if (commandPrefix === 'K' && delayValue) {
                 const savedOption = [...options].find(opt => opt.getAttribute('data-value') === delayValue);
                 if (savedOption) {
                     input.value = savedOption.textContent.trim();
-                    input.setAttribute('data-value', delayValue); // Set data-value attribute
+                    input.setAttribute('data-value', delayValue); // Set the data-value attribute
                 }
             }
         }
@@ -607,29 +693,24 @@ function getScanHoldTime() {
         }
 
         function saveDropdownValues() {
-            const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
-            const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
-            sensitivityValue = sensitivityInput.getAttribute('data-value');
-            delayValue = delayInput.getAttribute('data-value');
-        }
+            const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
+            const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
+            const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(3) input');
 
-        function restoreDropdownValues() {
-            if (sensitivityValue !== null && delayValue !== null) {
-                const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
-                const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
-                
-                // Find the correct option element by value and set the input value
-                const sensitivityOption = document.querySelector(`#scanner-controls .dropdown:nth-child(1) .option[data-value="${sensitivityValue}"]`);
-                const delayOption = document.querySelector(`#scanner-controls .dropdown:nth-child(2) .option[data-value="${delayValue}"]`);
-                
-                if (sensitivityOption) {
-                    sensitivityInput.value = sensitivityOption.textContent.trim();
-                    sensitivityInput.setAttribute('data-value', sensitivityValue);
-                }
-                if (delayOption) {
-                    delayInput.value = delayOption.textContent.trim();
-                    delayInput.setAttribute('data-value', delayValue);
-                }
+            if (modeInput) {
+                modeValue = modeInput.getAttribute('data-value');
+            } else {
+                modeValue = defaultScannerMode;
+            }
+            if (sensitivityInput) {
+                sensitivityValue = sensitivityInput.getAttribute('data-value');
+            } else {
+                sensitivityValue = defaultSensitivityValue;
+            }
+            if (delayInput) {
+                delayValue = delayInput.getAttribute('data-value');
+            } else {
+                delayValue = defaultScanHoldTime;
             }
         }
     })();
