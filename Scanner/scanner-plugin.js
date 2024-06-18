@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3)              last update: 18.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3)               last update: 18.06.24 ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
@@ -15,21 +15,21 @@
 const isESP32WithPE5PVB = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the scan mode of the firmware
 
 // Only valid for isESP32WithPE5PVB = false
-let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,20000,30000   
-let defaultSensitivityValue = 35; // Value in dBf: 20,25,30,35,40,45,50,55,60
+let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000   
+let defaultSensitivityValue = 35; // Value in dBf: 5,10,15,20,25,30,35,40,45,50,55,60
 let defaultScannerMode = 'normal'; // normal or blacklist 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const pluginVersion = 'V1.3'; 
-let delayValue = defaultScanHoldTime / 1000; 
-let sensitivityValue = defaultSensitivityValue; 
-let modeValue = defaultScannerMode;
-
-let checkStrengthCounter = 0;
 
 (() => {
-    const scannerPlugin = (() => {   
+    const scannerPlugin = (() => {  
+	
+		let delayValue = defaultScanHoldTime / 1000; 
+		let sensitivityValue = defaultSensitivityValue; 
+		let modeValue = defaultScannerMode;
+		let checkStrengthCounter = 0;
         let scanInterval = null; // Variable to store the interval timer
         let currentFrequency = 0.0;
         let previousFrequency = null;
@@ -431,8 +431,8 @@ let checkStrengthCounter = 0;
                 ScannerButton.style.width = 'calc(100% - 2px)';
                 ScannerButton.style.marginLeft = '0px';
             }
-
-            // if (isESP32WithPE5PVB) {
+			
+            if (isTuneAuthenticated) {
                 const buttonEq = document.querySelector('.button-eq');
                 const buttonIms = document.querySelector('.button-ims');
 
@@ -441,7 +441,7 @@ let checkStrengthCounter = 0;
                 newDiv.appendChild(ScannerButton);
 
                 buttonEq.parentNode.insertBefore(newDiv, buttonIms);
-            // }
+            }
 
             let blinkInterval;
 
@@ -558,6 +558,9 @@ function createScannerControls() {
         sensitivityContainer.innerHTML = `
             <input type="text" placeholder="${sensitivityValue} dBf" title="Scanner Sensitivity" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+				<li data-value="5" class="option">5 dBf</li>
+			    <li data-value="10" class="option">10 dBf</li>
+			    <li data-value="15" class="option">15 dBf</li>
                 <li data-value="20" class="option">20 dBf</li>
                 <li data-value="25" class="option">25 dBf</li>
                 <li data-value="30" class="option">30 dBf</li>
@@ -601,6 +604,7 @@ function createScannerControls() {
                 <li data-value="5" class="option">5 sec.</li>
                 <li data-value="7" class="option">7 sec.</li>
                 <li data-value="10" class="option">10 sec.</li>
+				<li data-value="15" class="option">15 sec.</li>
                 <li data-value="20" class="option">20 sec.</li>
                 <li data-value="30" class="option">30 sec.</li>
             </ul>
@@ -699,27 +703,48 @@ function createScannerControls() {
             });
         }
 
-function saveDropdownValues() {
-    const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
-    const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
-    const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(3) input');
+		function saveDropdownValues() {
+			const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
+			const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
+			const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(3) input');
 
-    if (modeInput) {
-        modeValue = modeInput.getAttribute('data-value') || modeValue;
-    } else {
-        modeValue = defaultScannerMode;
-    }
-    if (sensitivityInput) {
-        sensitivityValue = sensitivityInput.getAttribute('data-value') || sensitivityValue;
-    } else {
-        sensitivityValue = defaultSensitivityValue;
-    }
-    if (delayInput) {
-        delayValue = delayInput.getAttribute('data-value') || delayValue;
-    } else {
-        delayValue = defaultScanHoldTime / 1000;
-    }
-}
+			if (modeInput) {
+				modeValue = modeInput.getAttribute('data-value') || modeValue;
+			} else {
+				modeValue = defaultScannerMode;
+			}
+			if (sensitivityInput) {
+				sensitivityValue = sensitivityInput.getAttribute('data-value') || sensitivityValue;
+			} else {
+				sensitivityValue = defaultSensitivityValue;
+			}
+			if (delayInput) {
+				delayValue = delayInput.getAttribute('data-value') || delayValue;
+			} else {
+				delayValue = defaultScanHoldTime / 1000;
+			}
+		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			checkAdminMode();
+		});
+
+		var isTuneAuthenticated = false; // Globale Variable initial auf false setzen
+
+		function checkAdminMode() {
+			var bodyText = document.body.textContent || document.body.innerText;
+			var isAdminLoggedIn = bodyText.includes("You are logged in as an adminstrator.");
+			var canControlReceiver = bodyText.includes("You are logged in and can control the receiver.");
+
+			if (isAdminLoggedIn || canControlReceiver) {
+				console.log("Admin or Tune mode found. Scanner Plugin Authentication successful.");
+				isTuneAuthenticated = true;
+			} else {
+				console.log("No special authentication message found. Authentication failed.");
+				isTuneAuthenticated = false;
+        
+			}
+		}
 
     })();
 })();
