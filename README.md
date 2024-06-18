@@ -3,9 +3,7 @@
 
 
 ### v1.3:
-- Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time)
-      ---> To do this, set the query off PE5PVB Firmware in the header of the script to 'false'!
-      ---> Only for ADMIN- oder TUNE-Athentification!
+- Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time). To do this, set the query off PE5PVB Firmware in the header of the script to 'false'.
 - Default values ​​for mode, sensitivity and scan hold time can be set in the script
 - blacklist on/off and sensivity have affect the manual search mode << >>
 - To use the blacklist option, a file /web/scanner/blacklist.txt must be created  (For example, the frequencies that should not be logged must be: 89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
@@ -22,7 +20,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## Important notes: 
 
-For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest PE5PVB firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
+- Auto Scan Mode ist only usable with ADMIN- oder TUNE-Athentification! 
+- Only one browser instance is allowed to carry out the scan!
+- For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest PE5PVB firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
 
 ## Known bugs:
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
