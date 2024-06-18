@@ -2,7 +2,7 @@
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
 
 
-### v1.3 BETA:
+### v1.4:
 - Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time)
   ---> To do this, set the query off PE5PVB Firmware in the header of the script to 'false'!
 
