@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3 BETA)         last update: 18.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3)              last update: 18.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
@@ -21,7 +21,7 @@ let defaultScannerMode = 'normal'; // normal or blacklist
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3 BETA'; 
+const pluginVersion = 'V1.3'; 
 let delayValue = defaultScanHoldTime / 1000; 
 let sensitivityValue = defaultSensitivityValue; 
 let modeValue = defaultScannerMode;
