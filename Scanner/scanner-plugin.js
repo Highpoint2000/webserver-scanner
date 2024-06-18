@@ -12,9 +12,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const isESP32WithPE5PVB = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the scan mode of the firmware
+const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
+const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
-// Only valid for isESP32WithPE5PVB = false
+// Only valid for Autoscan_PE5PVB_Mode = false
 let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000   
 let defaultSensitivityValue = 35; // Value in dBf: 5,10,15,20,25,30,35,40,45,50,55,60
 let defaultScannerMode = 'normal'; // normal or blacklist 
@@ -44,7 +45,7 @@ const pluginVersion = 'V1.3a';
 
         function setupWebSocket() {
             // WebSocket setup
-            if (!isESP32WithPE5PVB) {
+            if (!Autoscan_PE5PVB_Mode) {
                 if (!frequencySocket || frequencySocket.readyState === WebSocket.CLOSED) {
                     frequencySocket = new WebSocket(wsUrl);
 
@@ -148,8 +149,8 @@ const pluginVersion = 'V1.3a';
                     currentFrequency = freq;
                     checkStrengthCounter++;
 
-                    // console.log(isESP32WithPE5PVB, checkStrengthCounter); 
-                    if (!isESP32WithPE5PVB && checkStrengthCounter === 12) {  		
+                    // console.log(Autoscan_PE5PVB_Mode, checkStrengthCounter); 
+                    if (!Autoscan_PE5PVB_Mode && checkStrengthCounter === 12) {  		
 						checkStereo(stereo, freq, strength, PiCode);
                     }
 
@@ -161,6 +162,8 @@ const pluginVersion = 'V1.3a';
         }
 
         waitForServer();
+		
+		
 
 function startScan(direction) {
     if (isScanning) {
@@ -193,7 +196,7 @@ function startScan(direction) {
 
         currentFrequency = Math.round(currentFrequency * 10) / 10;
 
-        if (!isESP32WithPE5PVB) {
+        if (!Autoscan_PE5PVB_Mode) {
             if (modeValue === 'blacklist') {
                 while (isInBlacklist(currentFrequency, blacklist)) {
                     console.log('Blacklist Frequency:', currentFrequency);
@@ -417,7 +420,7 @@ function isInBlacklist(currentFrequency, blacklist) {
             const freqUpButton = document.getElementById('freq-up');
             freqUpButton.parentNode.insertBefore(scannerUpButton, freqUpButton);
 
-            if (isESP32WithPE5PVB) {
+            if (Search_PE5PVB_Mode) {
                 scannerDownButton.addEventListener('click', function () {
                     sendCommandToClient('C1');
                 });
@@ -529,7 +532,7 @@ function isInBlacklist(currentFrequency, blacklist) {
 
                     stopAutoScan(); // Stop the scan process
 
-                    if (isESP32WithPE5PVB) {
+                    if (Autoscan_PE5PVB_Mode) {
                         sendCommandToClient('J0');
                     }
 
@@ -548,7 +551,7 @@ function isInBlacklist(currentFrequency, blacklist) {
                     ScanButton.classList.add('bg-color-4');
                     clearInterval(blinkInterval);
 
-                    if (isESP32WithPE5PVB) {
+                    if (Autoscan_PE5PVB_Mode) {
                         sendCommandToClient('J1');
                     } else {
                         AutoScan();
@@ -614,7 +617,7 @@ function createScannerControls() {
     sensitivityContainer.style.height = "99%";
     sensitivityContainer.style.position = 'relative'; // Make sure it's on top
 
-    if (isESP32WithPE5PVB) {
+    if (Autoscan_PE5PVB_Mode) {
         sensitivityContainer.innerHTML = `
             <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -655,7 +658,7 @@ function createScannerControls() {
     delayContainer.style.height = "99%";
     delayContainer.style.position = 'relative'; // Make sure it's on top
 
-    if (isESP32WithPE5PVB) {
+    if (Autoscan_PE5PVB_Mode) {
         delayContainer.innerHTML = `
             <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -688,7 +691,7 @@ function createScannerControls() {
 	let whitelistArray = whitelist; 
 	
 
-    if (!isESP32WithPE5PVB) {
+    if (!Autoscan_PE5PVB_Mode) {
         if (blacklistArray.length !== 0 || whitelistArray.length !== 0 ) {
             modeContainer.style.display = 'block';
             scannerControls.appendChild(modeContainer);
@@ -737,7 +740,7 @@ function createScannerControls() {
                         modeValue = value;
                     }
 
-                    if (isESP32WithPE5PVB) {        
+                    if (Autoscan_PE5PVB_Mode) {        
                         sendCommandToClient(`${commandPrefix}${value}`);
                     }
                 });
