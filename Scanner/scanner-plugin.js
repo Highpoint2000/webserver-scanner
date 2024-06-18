@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3 BETA)         last update: 17.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3 BETA)         last update: 18.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
@@ -9,20 +9,24 @@
 ///                                                                                ///
 //////////////////////////////////////////////////////////////////////////////////////
 
-const isESP32WithPE5PVB = false; // Set to true if ESP32 with PE5PVB firmware is being used
-const pluginVersion = 'V1.3 BETA'; // Sets the plugin version
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const isESP32WithPE5PVB = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the scan mode of the firmware
 
 // Only valid for isESP32WithPE5PVB = false
 let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,20000,30000   
 let defaultSensitivityValue = 35; // Value in dBf: 20,25,30,35,40,45,50,55,60
 let defaultScannerMode = 'normal'; // normal or blacklist 
 
-//////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const pluginVersion = 'V1.3 BETA'; 
 let delayValue = defaultScanHoldTime / 1000; 
 let sensitivityValue = defaultSensitivityValue; 
-let checkStrengthCounter = 0;
 let modeValue = defaultScannerMode;
+
+let checkStrengthCounter = 0;
 
 (() => {
     const scannerPlugin = (() => {   
@@ -258,9 +262,9 @@ let modeValue = defaultScannerMode;
                     const delayValueMilliseconds = delayValue * millisecondsPerSecond;
 
                     if (isScanOn) {
-                        console.log(`Autoscan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue}) with delay: ${delayValueMilliseconds}`);
+                        console.log(`Autoscan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue}) with delay: ${delayValueMilliseconds} - mode: ${modeValue}`);
                     } else {
-                        console.log(`Scan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue})`);
+                        console.log(`Scan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue}) - mode: ${modeValue}`);
                     }
 
                     clearInterval(scanInterval); // Stops the scan interval
@@ -503,126 +507,127 @@ let modeValue = defaultScannerMode;
             }
         }
 
-        function createScannerControls() {
-            // Create a flex container for scanner sensitivity and scanner delay
-            const scannerControls = document.createElement('div');
-            scannerControls.className = "panel-50 no-bg h-100";
-            scannerControls.id = "scanner-controls";
-            scannerControls.style.width = '96%';
-            scannerControls.style.display = 'flex';
-            scannerControls.style.justifyContent = 'space-between';
-            scannerControls.style.marginTop = "0px";
-            scannerControls.style.position = 'relative'; // Make sure it's on top
+function createScannerControls() {
+    // Create a flex container for scanner sensitivity and scanner delay
+    const scannerControls = document.createElement('div');
+    scannerControls.className = "panel-50 no-bg h-100";
+    scannerControls.id = "scanner-controls";
+    scannerControls.style.width = '96%';
+    scannerControls.style.display = 'flex';
+    scannerControls.style.justifyContent = 'space-between';
+    scannerControls.style.marginTop = "0px";
+    scannerControls.style.position = 'relative'; // Make sure it's on top
 
-            const modeContainer = document.createElement('div');
-            modeContainer.className = "dropdown";
-            modeContainer.style.marginRight = "10px";
-            modeContainer.style.marginLeft = "-px";
-            modeContainer.style.width = "100%";
-            modeContainer.style.height = "99%";
-            modeContainer.style.position = 'relative'; // Make sure it's on top		
-            modeContainer.innerHTML = `
-                <input type="text" placeholder="${defaultScannerMode}" title="Scanner Mode" readonly>
-                <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
-                    <li data-value="normal" class="option">normal</li>
-                    <li data-value="blacklist" class="option">blacklist</li>
-                </ul>
-            `;		
+    const modeContainer = document.createElement('div');
+    modeContainer.className = "dropdown";
+    modeContainer.style.marginRight = "10px";
+    modeContainer.style.marginLeft = "-px";
+    modeContainer.style.width = "100%";
+    modeContainer.style.height = "99%";
+    modeContainer.style.position = 'relative'; // Make sure it's on top		
+    modeContainer.innerHTML = `
+        <input type="text" placeholder="${modeValue}" title="Scanner Mode" readonly>
+        <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+            <li data-value="normal" class="option">normal</li>
+            <li data-value="blacklist" class="option">blacklist</li>
+        </ul>
+    `;
 
-            const sensitivityContainer = document.createElement('div');
-            sensitivityContainer.className = "dropdown";
-            sensitivityContainer.style.marginRight = "5px";
-            sensitivityContainer.style.marginLeft = "-5px";
-            sensitivityContainer.style.width = "100%";
-            sensitivityContainer.style.height = "99%";
-            sensitivityContainer.style.position = 'relative'; // Make sure it's on top
+    const sensitivityContainer = document.createElement('div');
+    sensitivityContainer.className = "dropdown";
+    sensitivityContainer.style.marginRight = "5px";
+    sensitivityContainer.style.marginLeft = "-5px";
+    sensitivityContainer.style.width = "100%";
+    sensitivityContainer.style.height = "99%";
+    sensitivityContainer.style.position = 'relative'; // Make sure it's on top
 
-            if (isESP32WithPE5PVB) {
-                sensitivityContainer.innerHTML = `
-                    <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
-                    <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
-                        <li data-value="1" class="option">1</li>
-                        <li data-value="5" class="option">5</li>
-                        <li data-value="10" class="option">10</li>
-                        <li data-value="15" class="option">15</li>
-                        <li data-value="20" class="option">20</li>
-                        <li data-value="25" class="option">25</li>
-                        <li data-value="30" class="option">30</li>
-                    </ul>
-                `;
-            } else {
-                sensitivityContainer.innerHTML = `
-                    <input type="text" placeholder="${defaultSensitivityValue} dBf" title="Scanner Sensitivity" readonly>
-                    <ul class="options open-top" style="position: absolute;  display: none; bottom: 100%; margin-bottom: 5px;">
-                        <li data-value="20" class="option">20 dBf</li>
-                        <li data-value="25" class="option">25 dBf</li>
-                        <li data-value="30" class="option">30 dBf</li>
-                        <li data-value="35" class="option">35 dBf</li>
-                        <li data-value="40" class="option">40 dBf</li>
-                        <li data-value="45" class="option">45 dBf</li>
-                        <li data-value="50" class="option">50 dBf</li>
-                        <li data-value="55" class="option">55 dBf</li>
-                        <li data-value="60" class="option">60 dBf</li>
-                    </ul>
-                `;
-            }
+    if (isESP32WithPE5PVB) {
+        sensitivityContainer.innerHTML = `
+            <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
+            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                <li data-value="1" class="option">1</li>
+                <li data-value="5" class="option">5</li>
+                <li data-value="10" class="option">10</li>
+                <li data-value="15" class="option">15</li>
+                <li data-value="20" class="option">20</li>
+                <li data-value="25" class="option">25</li>
+                <li data-value="30" class="option">30</li>
+            </ul>
+        `;
+    } else {
+        sensitivityContainer.innerHTML = `
+            <input type="text" placeholder="${sensitivityValue} dBf" title="Scanner Sensitivity" readonly>
+            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                <li data-value="20" class="option">20 dBf</li>
+                <li data-value="25" class="option">25 dBf</li>
+                <li data-value="30" class="option">30 dBf</li>
+                <li data-value="35" class="option">35 dBf</li>
+                <li data-value="40" class="option">40 dBf</li>
+                <li data-value="45" class="option">45 dBf</li>
+                <li data-value="50" class="option">50 dBf</li>
+                <li data-value="55" class="option">55 dBf</li>
+                <li data-value="60" class="option">60 dBf</li>
+            </ul>
+        `;
+    }
 
-            const delayContainer = document.createElement('div');
-            delayContainer.className = "dropdown";
-            delayContainer.style.marginLeft = "0px";
-            delayContainer.style.marginRight = "-5px";
-            delayContainer.style.width = "100%";
-            delayContainer.style.height = "99%";
-            delayContainer.style.position = 'relative'; // Make sure it's on top
+    const delayContainer = document.createElement('div');
+    delayContainer.className = "dropdown";
+    delayContainer.style.marginLeft = "0px";
+    delayContainer.style.marginRight = "-5px";
+    delayContainer.style.width = "100%";
+    delayContainer.style.height = "99%";
+    delayContainer.style.position = 'relative'; // Make sure it's on top
 
-            if (isESP32WithPE5PVB) {
-                delayContainer.innerHTML = `
-                    <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
-                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                        <li data-value="1" class="option">1 sec.</li>
-                        <li data-value="3" class="option">3 sec.</li>
-                        <li data-value="5" class="option">5 sec.</li>
-                        <li data-value="7" class="option">7 sec.</li>
-                        <li data-value="10" class="option">10 sec.</li>
-                        <li data-value="20" class="option">20 sec.</li>
-                        <li data-value="30" class="option">30 sec.</li>
-                    </ul>
-                `;
-            } else {
-                delayContainer.innerHTML = `
-                    <input type="text" placeholder="${defaultScanHoldTime / 1000} sec." title="Scanhold Time" readonly>
-                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                        <li data-value="1" class="option">1 sec.</li>
-                        <li data-value="3" class="option">3 sec.</li>
-                        <li data-value="5" class="option">5 sec.</li>
-                        <li data-value="7" class="option">7 sec.</li>
-                        <li data-value="10" class="option">10 sec.</li>
-                        <li data-value="20" class="option">20 sec.</li>
-                        <li data-value="30" class="option">30 sec.</li>
-                    </ul>
-                `;
-            }
+    if (isESP32WithPE5PVB) {
+        delayContainer.innerHTML = `
+            <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
+            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                <li data-value="1" class="option">1 sec.</li>
+                <li data-value="3" class="option">3 sec.</li>
+                <li data-value="5" class="option">5 sec.</li>
+                <li data-value="7" class="option">7 sec.</li>
+                <li data-value="10" class="option">10 sec.</li>
+                <li data-value="20" class="option">20 sec.</li>
+                <li data-value="30" class="option">30 sec.</li>
+            </ul>
+        `;
+    } else {
+        delayContainer.innerHTML = `
+            <input type="text" placeholder="${delayValue} sec." title="Scanhold Time" readonly>
+            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                <li data-value="1" class="option">1 sec.</li>
+                <li data-value="3" class="option">3 sec.</li>
+                <li data-value="5" class="option">5 sec.</li>
+                <li data-value="7" class="option">7 sec.</li>
+                <li data-value="10" class="option">10 sec.</li>
+                <li data-value="20" class="option">20 sec.</li>
+                <li data-value="30" class="option">30 sec.</li>
+            </ul>
+        `;
+    }
 
-            let myArray = blacklist; // Example: Empty array
+    let myArray = blacklist; // Example: Empty array
 
-            if (!isESP32WithPE5PVB) {
-                if (myArray.length !== 0) {
-                    defaultScannerMode = 'normal';
-                    scannerControls.appendChild(modeContainer);
-                    initializeDropdown(modeContainer, 'Selected Mode:', 'normal');
-                }
-            }
-
-            scannerControls.appendChild(sensitivityContainer);
-            initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
-            scannerControls.appendChild(delayContainer);
-            initializeDropdown(delayContainer, 'Selected Delay:', 'K');
-
-            // Replace volume slider with flex container with scanner controls
-            const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-            volumeSliderParent.style.display = 'none'; // Hide volume slider
-            volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
+    if (!isESP32WithPE5PVB) {
+        if (myArray.length !== 0) {
+            modeContainer.style.display = 'block';
+            scannerControls.appendChild(modeContainer);
+            initializeDropdown(modeContainer, 'Selected Mode:', 'M');
         }
+    }
+
+    scannerControls.appendChild(sensitivityContainer);
+    initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
+    scannerControls.appendChild(delayContainer);
+    initializeDropdown(delayContainer, 'Selected Delay:', 'K');
+
+    // Replace volume slider with flex container with scanner controls
+    const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+    volumeSliderParent.style.display = 'none'; // Hide volume slider
+    volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
+}
+
 
         function initializeDropdown(container, logPrefix, commandPrefix) {
             const input = container.querySelector('input');
@@ -643,12 +648,14 @@ let modeValue = defaultScannerMode;
                     dropdown.style.display = 'none'; // Close the dropdown after selection
 
                     // Save the selected value
-                    modeValue = value;
                     if (commandPrefix === 'I') {
                         sensitivityValue = value;
                     }
                     if (commandPrefix === 'K') {
                         delayValue = value;
+                    }
+                    if (commandPrefix === 'M') {
+                        modeValue = value;
                     }
 
                     if (isESP32WithPE5PVB) {        
@@ -664,13 +671,7 @@ let modeValue = defaultScannerMode;
             });
 
             // Restore saved value if present
-            if (modeValue) {
-                const savedOption = [...options].find(opt => opt.getAttribute('data-value') === modeValue);
-                if (savedOption) {
-                    input.value = savedOption.textContent.trim();
-                    input.setAttribute('data-value', modeValue); // Set the data-value attribute
-                }
-            } else if (commandPrefix === 'I' && sensitivityValue) {
+            if (commandPrefix === 'I' && sensitivityValue) {
                 const savedOption = [...options].find(opt => opt.getAttribute('data-value') === sensitivityValue);
                 if (savedOption) {
                     input.value = savedOption.textContent.trim();
@@ -682,6 +683,12 @@ let modeValue = defaultScannerMode;
                     input.value = savedOption.textContent.trim();
                     input.setAttribute('data-value', delayValue); // Set the data-value attribute
                 }
+            } else if (commandPrefix === 'M' && modeValue) {
+                const savedOption = [...options].find(opt => opt.getAttribute('data-value') === modeValue);
+                if (savedOption) {
+                    input.value = savedOption.textContent.trim();
+                    input.setAttribute('data-value', modeValue); // Set the data-value attribute
+                }
             }
         }
 
@@ -692,26 +699,27 @@ let modeValue = defaultScannerMode;
             });
         }
 
-        function saveDropdownValues() {
-            const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
-            const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
-            const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(3) input');
+function saveDropdownValues() {
+    const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
+    const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
+    const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(3) input');
 
-            if (modeInput) {
-                modeValue = modeInput.getAttribute('data-value');
-            } else {
-                modeValue = defaultScannerMode;
-            }
-            if (sensitivityInput) {
-                sensitivityValue = sensitivityInput.getAttribute('data-value');
-            } else {
-                sensitivityValue = defaultSensitivityValue;
-            }
-            if (delayInput) {
-                delayValue = delayInput.getAttribute('data-value');
-            } else {
-                delayValue = defaultScanHoldTime;
-            }
-        }
+    if (modeInput) {
+        modeValue = modeInput.getAttribute('data-value') || modeValue;
+    } else {
+        modeValue = defaultScannerMode;
+    }
+    if (sensitivityInput) {
+        sensitivityValue = sensitivityInput.getAttribute('data-value') || sensitivityValue;
+    } else {
+        sensitivityValue = defaultSensitivityValue;
+    }
+    if (delayInput) {
+        delayValue = delayInput.getAttribute('data-value') || delayValue;
+    } else {
+        delayValue = defaultScanHoldTime / 1000;
+    }
+}
+
     })();
 })();
