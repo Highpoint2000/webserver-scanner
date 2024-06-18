@@ -18,7 +18,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## Important notes: 
 
-For ESP32 receivers (e.g. TEF6686) the plugin uses the newly integrated scan function. However, the prerequisite is the installation of the latest firmware version (RC version). The mode can be started, stopped and the scan sensitivity and scan hold time can be adjusted using the auto scan button. For all receiver types there is also a scan control available using the left/right buttons, which stops at the next RDS station.
+For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated scan function. However, the prerequisite is the installation of the latest firmware version. The mode can be started, stopped and the scan sensitivity and scan hold time can be adjusted using the auto scan button. For all receiver types there is also a scan control available using the left/right buttons, which stops at the next RDS station.
 
  If your ESP32 receiver is not running a suitable firmware version or you are using a different type of receiver, you can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. However, the Auto Scan mode with the sensitivity and scanhold settings are then not available.
 
