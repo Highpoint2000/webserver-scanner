@@ -1,12 +1,9 @@
 # Scanner Plugin for [FM-DX-Webserver](https://github.com/NoobishSVK/fm-dx-webserver)
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
 
-
-### v1.3:
-- Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time). To do this, set the query off PE5PVB Firmware in the header of the script to 'false'.
-- Default values ​​for mode, sensitivity and scan hold time can be set in the script
-- blacklist on/off and sensivity have affect the manual search mode << >>
-- To use the blacklist option, a file /web/scanner/blacklist.txt must be created  (For example, the frequencies that should not be logged must be: 89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
+### v1.3a:
+- optimze the blacklist 
+- Add a white list function (file /web/scanner/whitelist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
 
 ## Installation notes:
 
@@ -20,7 +17,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## Important notes: 
 
-- Auto Scan Mode ist only usable with ADMIN- oder TUNE-Athentification! 
+- Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification! 
 - Only one browser instance is allowed to carry out the scan!
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest PE5PVB firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
 
@@ -29,6 +26,12 @@ This plugin provides scanning functions for the FM-DX web server.
 - There are problems when using upstream proxy servers and NON-TEF receivers
 
 ## History: 
+
+### v1.3:
+- Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time). To do this, set the query off PE5PVB Firmware in the header of the script to 'false'.
+- Default values ​​for mode, sensitivity and scan hold time can be set in the script
+- blacklist on/off and sensivity have affect the manual search mode << >>
+- To use the blacklist option, a file /web/scanner/blacklist.txt must be created  (For example, the frequencies that should not be logged must be: 89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
 
 ### v1.2:
 - Added Scan Sensitivity and Scanhold Time settings
