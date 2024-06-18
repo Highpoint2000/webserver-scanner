@@ -2,7 +2,7 @@
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
 
 ### v1.3a:
-- optimze the blacklist 
+- optimze the blacklist processing
 - Add a white list function (file /web/scanner/whitelist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
 
 ## Installation notes:
