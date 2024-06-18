@@ -13,7 +13,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
+const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
 // Only valid for Autoscan_PE5PVB_Mode = false
 let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000   
