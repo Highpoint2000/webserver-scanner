@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3)               last update: 18.06.24 ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3a)             last update: 18.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  mod by PE5PVB - Will only work with PE5PVB ESP32 firmware                     ///     
@@ -21,7 +21,7 @@ let defaultScannerMode = 'normal'; // normal or blacklist
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3'; 
+const pluginVersion = 'V1.3a'; 
 
 (() => {
     const scannerPlugin = (() => {  
@@ -150,16 +150,9 @@ const pluginVersion = 'V1.3';
 
                     // console.log(isESP32WithPE5PVB, checkStrengthCounter); 
                     if (!isESP32WithPE5PVB && checkStrengthCounter === 12) {  		
-                        if (modeValue === 'blacklist') {
-                            if (!isInBlacklist(freq, blacklist)) {            
-                                checkStereo(stereo, freq, strength, PiCode);
-                            } else {        
-                                console.log(freq, 'is in the blacklist');
-                            }
-                        } else {
-                            checkStereo(stereo, freq, strength, PiCode);
-                        }
+						checkStereo(stereo, freq, strength, PiCode);
                     }
+
                 });
             } else {
                 console.error('Socket is not defined.');
@@ -169,48 +162,94 @@ const pluginVersion = 'V1.3';
 
         waitForServer();
 
-        function startScan(direction) {
-            if (isScanning) {
-                return; // Do not start a new scan if one is already running
-            }
+function startScan(direction) {
+    if (isScanning) {
+        return; // Do not start a new scan if one is already running
+    }
 
-            console.log('Scan started in direction:', direction);
+    console.log('Scan started in direction:', direction);
 
-            const tuningRangeText = document.querySelector('#tuner-desc .color-4').innerText;
-            const tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
-            const tuningUpperLimit = parseFloat(tuningRangeText.split(' MHz')[1].split(' - ')[1]);
+    const tuningRangeText = document.querySelector('#tuner-desc .color-4').innerText;
+    const tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
+    const tuningUpperLimit = parseFloat(tuningRangeText.split(' MHz')[1].split(' - ')[1]);
 
-            if (isNaN(currentFrequency) || currentFrequency === 0.0) {
+    if (isNaN(currentFrequency) || currentFrequency === 0.0) {
+        currentFrequency = tuningLowerLimit;
+    }
+
+    function updateFrequency() {
+        currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
+        if (direction === 'up') {
+            currentFrequency += 0.1;
+            if (currentFrequency > tuningUpperLimit) {
                 currentFrequency = tuningLowerLimit;
             }
-
-            function updateFrequency() {
-                currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
-                if (direction === 'up') {
-                    currentFrequency += 0.1;
-                    if (currentFrequency > tuningUpperLimit) {
-                        currentFrequency = tuningLowerLimit;
-                    }
-                } else if (direction === 'down') {
-                    currentFrequency -= 0.1;
-                    if (currentFrequency < tuningLowerLimit) {
-                        currentFrequency = tuningUpperLimit;
-                    }
-                }
-
-                currentFrequency = Math.round(currentFrequency * 10) / 10;
-                sendDataToClient(currentFrequency);        
+        } else if (direction === 'down') {
+            currentFrequency -= 0.1;
+            if (currentFrequency < tuningLowerLimit) {
+                currentFrequency = tuningUpperLimit;
             }
-
-            isScanning = true;
-            updateFrequency();
-            scanInterval = setInterval(updateFrequency, 1500);
         }
 
-        // Function to check if a frequency is in the blacklist
-        function isInBlacklist(currentFrequency, blacklist) {
-            return blacklist.some(entry => entry.split(' ').includes(currentFrequency));
+        currentFrequency = Math.round(currentFrequency * 10) / 10;
+
+        if (!isESP32WithPE5PVB) {
+            if (modeValue === 'blacklist') {
+                while (isInBlacklist(currentFrequency, blacklist)) {
+                    console.log('Blacklist Frequency:', currentFrequency);
+                    // Adjust frequency and continue checking until it's not in blacklist
+                    if (direction === 'up') {
+                        currentFrequency += 0.1;
+                        if (currentFrequency > tuningUpperLimit) {
+                            currentFrequency = tuningLowerLimit;
+                        }
+                    } else if (direction === 'down') {
+                        currentFrequency -= 0.1;
+                        if (currentFrequency < tuningLowerLimit) {
+                            currentFrequency = tuningUpperLimit;
+                        }
+                    }
+                    currentFrequency = Math.round(currentFrequency * 10) / 10;
+                }
+            } else if (modeValue === 'whitelist') {
+                while (!isInWhitelist(currentFrequency, whitelist)) {
+                    //console.log('Not Whitelist Frequency:', currentFrequency);
+                    // Adjust frequency and continue checking until it's in whitelist
+                    if (direction === 'up') {
+                        currentFrequency += 0.1;
+                        if (currentFrequency > tuningUpperLimit) {
+                            currentFrequency = tuningLowerLimit;
+                        }
+                    } else if (direction === 'down') {
+                        currentFrequency -= 0.1;
+                        if (currentFrequency < tuningLowerLimit) {
+                            currentFrequency = tuningUpperLimit;
+                        }
+                    }
+                    currentFrequency = Math.round(currentFrequency * 10) / 10;
+                }
+            }
         }
+
+        sendDataToClient(currentFrequency);
+    }
+
+    isScanning = true;
+    updateFrequency();
+    scanInterval = setInterval(updateFrequency, 1500);
+}
+
+// Function to check if a frequency is in the whitelist
+function isInWhitelist(currentFrequency, whitelist) {
+    return whitelist.includes(currentFrequency.toString());
+}
+
+
+// Function to check if a frequency is in the blacklist
+function isInBlacklist(currentFrequency, blacklist) {
+    return blacklist.includes(currentFrequency.toString());
+}
+
 
         let blacklist = [];
 
@@ -231,6 +270,8 @@ const pluginVersion = 'V1.3';
                 })
                 .then(data => {
                     blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
+					blacklist = blacklist.map(value => parseFloat(value).toString());
+					
                     console.log('Blacklist initialized:', blacklist);
                 })
                 .catch(error => {
@@ -240,6 +281,37 @@ const pluginVersion = 'V1.3';
         }
 
         checkBlacklist();
+		
+		let whitelist = [];
+
+        // Check and initialize whitelist
+        function checkwhitelist() {
+            const whitelistProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+            const port = window.location.port;
+            const host = document.location.hostname;
+            const whitelistUrl = `${whitelistProtocol}//${host}:${port}/scanner/whitelist.txt`;
+
+            fetch(whitelistUrl)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`Error fetching whitelist: ${response.status} ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    whitelist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
+					whitelist = whitelist.map(value => parseFloat(value).toString());
+					
+                    console.log('whitelist initialized:', whitelist);
+                })
+                .catch(error => {
+                    console.error('Error checking whitelist:', error.message);
+                    whitelist = [];
+                });
+        }
+
+        checkwhitelist();	
 
         let scanTimeout; // Variable to hold the timeout
 
@@ -530,6 +602,7 @@ function createScannerControls() {
         <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
             <li data-value="normal" class="option">normal</li>
             <li data-value="blacklist" class="option">blacklist</li>
+			<li data-value="whitelist" class="option">whitelist</li>
         </ul>
     `;
 
@@ -611,10 +684,12 @@ function createScannerControls() {
         `;
     }
 
-    let myArray = blacklist; // Example: Empty array
+    let blacklistArray = blacklist; 
+	let whitelistArray = whitelist; 
+	
 
     if (!isESP32WithPE5PVB) {
-        if (myArray.length !== 0) {
+        if (blacklistArray.length !== 0 || whitelistArray.length !== 0 ) {
             modeContainer.style.display = 'block';
             scannerControls.appendChild(modeContainer);
             initializeDropdown(modeContainer, 'Selected Mode:', 'M');
