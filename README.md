@@ -23,7 +23,6 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## Known bugs:
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
-- There are problems when using upstream proxy servers and NON-TEF receivers
 
 ## History: 
 
