@@ -1,8 +1,9 @@
 # Scanner Plugin for [FM-DX-Webserver](https://github.com/NoobishSVK/fm-dx-webserver)
-![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/c983c83d-e08a-417d-a067-f76d4cedb2eb)
+![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
+
 
 ### v1.3 BETA:
-- Added Auto Scan Mode for  PE5PVB Firmware Devices including setting the scan hold time
+- Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time)
   ---> To do this, set the query in the header of the script to 'false'!
 
 ## Installation notes:
