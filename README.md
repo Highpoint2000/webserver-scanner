@@ -4,7 +4,7 @@
 ### v1.3a:
 - optimze the blacklist processing
 - Add a white list function (file /web/scanner/whitelist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
-- separate software switches for Auto Scan and Search mode << >> (Mixed Mode with PE5PVB Firmware) 
+- separate software switches for auto scan and search mode << >> (Mixed Mode with PE5PVB Firmware) 
 
 ## Installation notes:
 
