@@ -4,7 +4,7 @@
 
 ### v1.3 BETA:
 - Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time)
-  ---> To do this, set the query in the header of the script to 'false'!
+  ---> To do this, set the query off PE5PVB Firmware in the header of the script to 'false'!
 
 ## Installation notes:
 
