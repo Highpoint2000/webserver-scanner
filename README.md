@@ -6,7 +6,7 @@
 - Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time)
   ---> To do this, set the query off PE5PVB Firmware in the header of the script to 'false'!
 - Default values ​​for mode, sensitivity and scan hold time can be set in the script
-- Settings now also affect the manual search mode << >>
+- blacklist on/off and sensivity have affect the manual search mode << >>
 - To use the blacklist option, a file /web/scanner/blacklist.txt must be created  (For example, the frequencies that should not be logged must be: 89,800 89,400 100.80 ... They can be written next to or below each other with spaces)
 
 ## Installation notes:
