@@ -18,7 +18,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## Important notes: 
 
-For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
+For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest PE5PVB firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
 
 ## Known bugs:
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
