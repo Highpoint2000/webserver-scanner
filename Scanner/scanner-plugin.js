@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3a)             last update: 18.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3b)             last update: 18.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -9,7 +9,6 @@
 ///                                                                                ///
 //////////////////////////////////////////////////////////////////////////////////////
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
@@ -17,12 +16,12 @@ const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware i
 
 // Only valid for Autoscan_PE5PVB_Mode = false
 let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000   
-let defaultSensitivityValue = 35; // Value in dBf: 5,10,15,20,25,30,35,40,45,50,55,60
-let defaultScannerMode = 'normal'; // normal or blacklist 
+let defaultSensitivityValue = 30; // Value in dBf: 5,10,15,20,25,30,35,40,45,50,55,60
+let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3a'; 
+const pluginVersion = 'V1.3b'; 
 
 (() => {
     const scannerPlugin = (() => {  
@@ -39,7 +38,11 @@ const pluginVersion = 'V1.3a';
         let frequencySocket = null;
         let piCode = '?';
         let stereo_forced_user = 'stereo';
-
+		let blinkInterval;
+		let isScanOnValue = false;
+		let mode = defaultScannerMode;
+		let stereo_detect = false; // Initialization of the stereo_detect variable to false
+		const millisecondsPerSecond = 10;
         const localHost = window.location.host;
         const wsUrl = `ws://${localHost}/text`;
 
@@ -60,7 +63,7 @@ const pluginVersion = 'V1.3a';
                     frequencySocket.addEventListener("close", () => {
                         console.log("WebSocket closed.");
                         // Try to reconnect
-                        setTimeout(setupWebSocket, 1000);
+                        setTimeout(setupWebSocket, 300);
                     });
                 }
             }
@@ -74,7 +77,7 @@ const pluginVersion = 'V1.3a';
                 console.log("WebSocket sent:", dataToSend);
             } else {
                 console.error('WebSocket not open.');
-                setTimeout(() => sendDataToClient(frequency), 1000); // Retry after a short delay
+                setTimeout(() => sendDataToClient(frequency), 300); // Retry after a short delay
             }
         }
 
@@ -114,145 +117,154 @@ const pluginVersion = 'V1.3a';
                 console.log("WebSocket closed.");
             });
         }
+		
+		function waitForServer() {
+			// Wait for the server to be available
+			if (typeof window.socket !== "undefined") {
+				window.socket.addEventListener("message", handleSocketMessage);
+			} else {
+				console.error('Socket is not defined.');
+				setTimeout(waitForServer, 250);
+			}
+		}
 
-        let mode = defaultScannerMode;
+		waitForServer();
 
-        function waitForServer() {
-            // Wait for the server to be available
-            if (typeof window.socket !== "undefined") {
-                window.socket.addEventListener("message", (event) => {
-                    const parsedData = JSON.parse(event.data);
-                    const PiCode = parsedData.pi;
-                    const freq = parsedData.freq;
-                    const strength = parsedData.signal;
-                    const stereo = parsedData.st;
-                    const stereo_forced = parsedData.st_forced;
+		function handleSocketMessage(event) {
+            const parsedData = JSON.parse(event.data);
+            const txInfo = parsedData.txInfo;
+            let PiCode, freq, strength, stereo, stereo_forced, station;
 
-                    // console.log(isScanning, stereo_forced, stereo_forced_user, modeValue);
+            setTimeout(() => {
+                PiCode = parsedData.pi;
+                freq = parsedData.freq;
+                strength = parsedData.signal;
+                stereo = parsedData.st;
+                stereo_forced = parsedData.st_forced;
+                station = txInfo.station;
 
-                    if (isScanning === true) {
-                        if (stereo_forced === true && stereo_forced_user !== 'mono') {
-                            stereo_forced_user = 'mono';
-                            sendCommandToClient('B0');
-                        }
-                    } else {
-                        if (stereo_forced_user === 'mono') {
-                            sendCommandToClient('B1');
-                            stereo_forced_user = 'stereo'; // Update stereo_forced_user after sending 'B1'
-                        }
+                // console.log(isScanning, stereo_forced, stereo_forced_user, modeValue, station);
+
+                if (isScanning === true) {
+                    if (stereo_forced === true && stereo_forced_user !== 'mono') {
+                        stereo_forced_user = 'mono';
+                        sendCommandToClient('B0');
                     }
-
-                    if (freq !== previousFrequency) {
-                        checkStrengthCounter = 0; // Reset the counter
+                } else {
+                    if (stereo_forced_user === 'mono') {
+                        sendCommandToClient('B1');
+                        stereo_forced_user = 'stereo'; // Update stereo_forced_user after sending 'B1'
                     }
-                    previousFrequency = freq;
-                    currentFrequency = freq;
-                    checkStrengthCounter++;
+                } 
 
-                    // console.log(Autoscan_PE5PVB_Mode, checkStrengthCounter); 
-                    if (!Autoscan_PE5PVB_Mode && checkStrengthCounter === 12) {  		
-						checkStereo(stereo, freq, strength, PiCode);
+                if (freq !== previousFrequency) {
+                    checkStrengthCounter = 0; // Reset the counter
+                    stereo_detect = false; // Reset stereo_detect when frequency changes
+                }
+                previousFrequency = freq;
+                currentFrequency = freq;
+                checkStrengthCounter++;
+
+                // Check for stereo detection between counter 4 and 99 (inclusive)
+                if (checkStrengthCounter > 7) {
+                    if (stereo === true) {
+                        stereo_detect = true; // Set stereo_detect to true if stereo is true
                     }
+                }
+                //console.log(stereo, stereo_detect, checkStrengthCounter);
 
-                });
-            } else {
-                console.error('Socket is not defined.');
-                setTimeout(waitForServer, 1000);
-            }
+                if (!Autoscan_PE5PVB_Mode) {
+                    checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter);
+                }
+            }, 0);
         }
 
-        waitForServer();
-		
-		
+        function startScan(direction) {
+            if (isScanning) {
+                return; // Do not start a new scan if one is already running
+            }
 
-function startScan(direction) {
-    if (isScanning) {
-        return; // Do not start a new scan if one is already running
-    }
+            console.log('Scan started in direction:', direction);
 
-    console.log('Scan started in direction:', direction);
+            const tuningRangeText = document.querySelector('#tuner-desc .color-4').innerText;
+            const tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
+            const tuningUpperLimit = parseFloat(tuningRangeText.split(' MHz')[1].split(' - ')[1]);
 
-    const tuningRangeText = document.querySelector('#tuner-desc .color-4').innerText;
-    const tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
-    const tuningUpperLimit = parseFloat(tuningRangeText.split(' MHz')[1].split(' - ')[1]);
-
-    if (isNaN(currentFrequency) || currentFrequency === 0.0) {
-        currentFrequency = tuningLowerLimit;
-    }
-
-    function updateFrequency() {
-        currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
-        if (direction === 'up') {
-            currentFrequency += 0.1;
-            if (currentFrequency > tuningUpperLimit) {
+            if (isNaN(currentFrequency) || currentFrequency === 0.0) {
                 currentFrequency = tuningLowerLimit;
             }
-        } else if (direction === 'down') {
-            currentFrequency -= 0.1;
-            if (currentFrequency < tuningLowerLimit) {
-                currentFrequency = tuningUpperLimit;
-            }
-        }
 
-        currentFrequency = Math.round(currentFrequency * 10) / 10;
+            function updateFrequency() {
+                currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
+                if (direction === 'up') {
+                    currentFrequency += 0.1;
+                    if (currentFrequency > tuningUpperLimit) {
+                        currentFrequency = tuningLowerLimit;
+                    }
+                } else if (direction === 'down') {
+                    currentFrequency -= 0.1;
+                    if (currentFrequency < tuningLowerLimit) {
+                        currentFrequency = tuningUpperLimit;
+                    }
+                }
 
-        if (!Autoscan_PE5PVB_Mode) {
-            if (modeValue === 'blacklist') {
-                while (isInBlacklist(currentFrequency, blacklist)) {
-                    console.log('Blacklist Frequency:', currentFrequency);
-                    // Adjust frequency and continue checking until it's not in blacklist
-                    if (direction === 'up') {
-                        currentFrequency += 0.1;
-                        if (currentFrequency > tuningUpperLimit) {
-                            currentFrequency = tuningLowerLimit;
+                currentFrequency = Math.round(currentFrequency * 10) / 10;
+
+                if (!Autoscan_PE5PVB_Mode) {
+                    if (modeValue === 'blacklist') {
+                        while (isInBlacklist(currentFrequency, blacklist)) {
+                            console.log('Blacklist Frequency:', currentFrequency);
+                            // Adjust frequency and continue checking until it's not in blacklist
+                            if (direction === 'up') {
+                                currentFrequency += 0.1;
+                                if (currentFrequency > tuningUpperLimit) {
+                                    currentFrequency = tuningLowerLimit;
+                                }
+                            } else if (direction === 'down') {
+                                currentFrequency -= 0.1;
+                                if (currentFrequency < tuningLowerLimit) {
+                                    currentFrequency = tuningUpperLimit;
+                                }
+                            }
+                            currentFrequency = Math.round(currentFrequency * 10) / 10;
                         }
-                    } else if (direction === 'down') {
-                        currentFrequency -= 0.1;
-                        if (currentFrequency < tuningLowerLimit) {
-                            currentFrequency = tuningUpperLimit;
+                    } else if (modeValue === 'whitelist') {
+                        while (!isInWhitelist(currentFrequency, whitelist)) {
+                            //console.log('Not Whitelist Frequency:', currentFrequency);
+                            // Adjust frequency and continue checking until it's in whitelist
+                            if (direction === 'up') {
+                                currentFrequency += 0.1;
+                                if (currentFrequency > tuningUpperLimit) {
+                                    currentFrequency = tuningLowerLimit;
+                                }
+                            } else if (direction === 'down') {
+                                currentFrequency -= 0.1;
+                                if (currentFrequency < tuningLowerLimit) {
+                                    currentFrequency = tuningUpperLimit;
+                                }
+                            }
+                            currentFrequency = Math.round(currentFrequency * 10) / 10;
                         }
                     }
-                    currentFrequency = Math.round(currentFrequency * 10) / 10;
                 }
-            } else if (modeValue === 'whitelist') {
-                while (!isInWhitelist(currentFrequency, whitelist)) {
-                    //console.log('Not Whitelist Frequency:', currentFrequency);
-                    // Adjust frequency and continue checking until it's in whitelist
-                    if (direction === 'up') {
-                        currentFrequency += 0.1;
-                        if (currentFrequency > tuningUpperLimit) {
-                            currentFrequency = tuningLowerLimit;
-                        }
-                    } else if (direction === 'down') {
-                        currentFrequency -= 0.1;
-                        if (currentFrequency < tuningLowerLimit) {
-                            currentFrequency = tuningUpperLimit;
-                        }
-                    }
-                    currentFrequency = Math.round(currentFrequency * 10) / 10;
-                }
+
+                sendDataToClient(currentFrequency);
             }
+
+            isScanning = true;
+            updateFrequency();
+            scanInterval = setInterval(updateFrequency, 700);
         }
 
-        sendDataToClient(currentFrequency);
-    }
+        // Function to check if a frequency is in the whitelist
+        function isInWhitelist(currentFrequency, whitelist) {
+            return whitelist.includes(currentFrequency.toString());
+        }
 
-    isScanning = true;
-    updateFrequency();
-    scanInterval = setInterval(updateFrequency, 1500);
-}
-
-// Function to check if a frequency is in the whitelist
-function isInWhitelist(currentFrequency, whitelist) {
-    return whitelist.includes(currentFrequency.toString());
-}
-
-
-// Function to check if a frequency is in the blacklist
-function isInBlacklist(currentFrequency, blacklist) {
-    return blacklist.includes(currentFrequency.toString());
-}
-
+        // Function to check if a frequency is in the blacklist
+        function isInBlacklist(currentFrequency, blacklist) {
+            return blacklist.includes(currentFrequency.toString());
+        }
 
         let blacklist = [];
 
@@ -288,7 +300,7 @@ function isInBlacklist(currentFrequency, blacklist) {
 		let whitelist = [];
 
         // Check and initialize whitelist
-        function checkwhitelist() {
+        function checkWhitelist() {
             const whitelistProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
             const port = window.location.port;
             const host = document.location.hostname;
@@ -306,7 +318,7 @@ function isInBlacklist(currentFrequency, blacklist) {
                     whitelist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
 					whitelist = whitelist.map(value => parseFloat(value).toString());
 					
-                    console.log('whitelist initialized:', whitelist);
+                    console.log('Whitelist initialized:', whitelist);
                 })
                 .catch(error => {
                     console.error('Error checking whitelist:', error.message);
@@ -314,42 +326,65 @@ function isInBlacklist(currentFrequency, blacklist) {
                 });
         }
 
-        checkwhitelist();	
+        checkWhitelist();	
 
         let scanTimeout; // Variable to hold the timeout
 
         function AutoScan() {
-            const ScanButton = document.getElementById('Scan-on-off');
-            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
-
-            if (isScanOn && !isScanning) {
+            if (isScanOnValue && !isScanning) {
                 startScan('up'); // Start scanning once
             }
         }
 
-        function checkStereo(stereo, freq, strength, PiCode) {
-            const ScanButton = document.getElementById('Scan-on-off');
-            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+        function checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter) {
+            if (stereo_detect === true || PiCode.length > 1) {
+                clearInterval(scanInterval); // Clears a previously defined scanning interval
+                isScanning = false; // Updates a flag indicating scanning status
 
-            if (stereo === true) {
-                if (strength > sensitivityValue) {
-                    const millisecondsPerSecond = 1000;
-                    const delayValueMilliseconds = delayValue * millisecondsPerSecond;
+                if (strength > sensitivityValue || PiCode.length > 1) {
+                    let delayValueMilliseconds = delayValue * 10;
 
-                    if (isScanOn) {
-                        console.log(`Autoscan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue}) with delay: ${delayValueMilliseconds} - mode: ${modeValue}`);
-                    } else {
-                        console.log(`Scan stops at frequency: ${freq} due to strength (${strength} > ${sensitivityValue}) - mode: ${modeValue}`);
+                    if (PiCode.length > 1) {
+                        delayValueMilliseconds += 50;
                     }
 
-                    clearInterval(scanInterval); // Stops the scan interval
-                    isScanning = false; // Disables scanning
-
-                    scanTimeout = setTimeout(() => {
-                        if (isScanOn) {
-                            startScan('up'); // Restart scanning after the delay
+                    handleStationTimeout = setTimeout(() => {
+                        if (isScanOnValue) {
+                            if (station.length > 2) {
+                                startScan('up'); // Restart scanning after the delay
+                                checkStrengthCounter = 0; // Reset the counter
+                                station = '';
+                                stereo_detect = false;
+                                startScan('up');
+                            } else {
+                                if (checkStrengthCounter > delayValueMilliseconds) {
+                                    startScan('up'); // Restart scanning after the delay
+                                    checkStrengthCounter = 0; // Reset the counter
+                                    stereo_detect = false;
+                                    station = '';
+                                    startScan('up');
+                                }
+                            }
                         }
-                    }, delayValueMilliseconds);
+                    }, 100); // Delay of 100 ms before handling station details
+                } else {
+                    if (isScanOnValue) {
+                        clearInterval(scanInterval); // Clears a previously defined scanning interval
+                        stereo_detect = false;
+                        station = '';
+                        startScan('up');
+                    }
+                }
+            } else {
+                if (isScanOnValue) {
+                    let delayValueMilliseconds = delayValue * 10;
+                    if (checkStrengthCounter > delayValueMilliseconds) {
+                        clearInterval(scanInterval); // Clears a previously defined scanning interval
+                        isScanning = false; // Updates a flag indicating scanning status
+                        stereo_detect = false;
+                        station = '';
+                        startScan('up');
+                    }
                 }
             }
         }
@@ -443,43 +478,6 @@ function isInBlacklist(currentFrequency, blacklist) {
         setupWebSocket();
         ScannerButtons();
 
-        // Function to send a command to the client via WebSockets
-        function sendCommandToClient(command) {
-            // Determine the WebSocket protocol based on the current page
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Determine the host of the current page
-            const host = window.location.host;
-            // Construct the WebSocket URL
-            const wsUrl = `${protocol}//${host}/text`;
-
-            // Create a WebSocket connection to the specified URL
-            const autoScanSocket = new WebSocket(wsUrl);
-
-            // Event listener for opening the WebSocket connection
-            autoScanSocket.addEventListener("open", () => {
-                console.log("WebSocket connected.");
-                // Send the command via the WebSocket connection
-                console.log("Sending command:", command);
-                autoScanSocket.send(command);
-            });
-
-            // Event listener for WebSocket errors
-            autoScanSocket.addEventListener("error", (error) => {
-                console.error("WebSocket error:", error);
-            });
-
-            // Event listener for receiving a message from the server
-            autoScanSocket.addEventListener("message", (event) => {
-                // Close the WebSocket connection after receiving the response
-                autoScanSocket.close();
-            });
-
-            // Event listener for closing the WebSocket connection
-            autoScanSocket.addEventListener("close", () => {
-                console.log("WebSocket closed.");
-            });
-        }
-
         window.addEventListener('load', initialize);
 
         function initialize() {
@@ -518,8 +516,6 @@ function isInBlacklist(currentFrequency, blacklist) {
                 buttonEq.parentNode.insertBefore(newDiv, buttonIms);
             }
 
-            let blinkInterval;
-
             function toggleScan() {
                 const ScanButton = document.getElementById('Scan-on-off');
                 const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
@@ -545,8 +541,10 @@ function isInBlacklist(currentFrequency, blacklist) {
 
                     const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
                     volumeSliderParent.style.display = 'block';
+					isScanOnValue = false;
                 } else {
                     ScanButton.setAttribute('data-scan-status', 'on');
+					isScanOnValue = true;
                     ScanButton.classList.remove('bg-color-3');
                     ScanButton.classList.add('bg-color-4');
                     clearInterval(blinkInterval);
@@ -582,134 +580,132 @@ function isInBlacklist(currentFrequency, blacklist) {
             }
         }
 
-function createScannerControls() {
-    // Create a flex container for scanner sensitivity and scanner delay
-    const scannerControls = document.createElement('div');
-    scannerControls.className = "panel-50 no-bg h-100";
-    scannerControls.id = "scanner-controls";
-    scannerControls.style.width = '96%';
-    scannerControls.style.display = 'flex';
-    scannerControls.style.justifyContent = 'space-between';
-    scannerControls.style.marginTop = "0px";
-    scannerControls.style.position = 'relative'; // Make sure it's on top
+        function createScannerControls() {
+            // Create a flex container for scanner sensitivity and scanner delay
+            const scannerControls = document.createElement('div');
+            scannerControls.className = "panel-50 no-bg h-100";
+            scannerControls.id = "scanner-controls";
+            scannerControls.style.width = '96%';
+            scannerControls.style.display = 'flex';
+            scannerControls.style.justifyContent = 'space-between';
+            scannerControls.style.marginTop = "0px";
+            scannerControls.style.position = 'relative'; // Make sure it's on top
 
-    const modeContainer = document.createElement('div');
-    modeContainer.className = "dropdown";
-    modeContainer.style.marginRight = "10px";
-    modeContainer.style.marginLeft = "-px";
-    modeContainer.style.width = "100%";
-    modeContainer.style.height = "99%";
-    modeContainer.style.position = 'relative'; // Make sure it's on top		
-    modeContainer.innerHTML = `
-        <input type="text" placeholder="${modeValue}" title="Scanner Mode" readonly>
-        <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-            <li data-value="normal" class="option">normal</li>
-            <li data-value="blacklist" class="option">blacklist</li>
-			<li data-value="whitelist" class="option">whitelist</li>
-        </ul>
-    `;
+            const modeContainer = document.createElement('div');
+            modeContainer.className = "dropdown";
+            modeContainer.style.marginRight = "10px";
+            modeContainer.style.marginLeft = "0px";
+            modeContainer.style.width = "100%";
+            modeContainer.style.height = "99%";
+            modeContainer.style.position = 'relative'; // Make sure it's on top		
+            modeContainer.innerHTML = `
+                <input type="text" placeholder="${modeValue}" title="Scanner Mode" readonly>
+                <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                    <li data-value="normal" class="option">normal</li>
+                    <li data-value="blacklist" class="option">blacklist</li>
+                    <li data-value="whitelist" class="option">whitelist</li>
+                </ul>
+            `;
 
-    const sensitivityContainer = document.createElement('div');
-    sensitivityContainer.className = "dropdown";
-    sensitivityContainer.style.marginRight = "5px";
-    sensitivityContainer.style.marginLeft = "-5px";
-    sensitivityContainer.style.width = "100%";
-    sensitivityContainer.style.height = "99%";
-    sensitivityContainer.style.position = 'relative'; // Make sure it's on top
+            const sensitivityContainer = document.createElement('div');
+            sensitivityContainer.className = "dropdown";
+            sensitivityContainer.style.marginRight = "5px";
+            sensitivityContainer.style.marginLeft = "-5px";
+            sensitivityContainer.style.width = "100%";
+            sensitivityContainer.style.height = "99%";
+            sensitivityContainer.style.position = 'relative'; // Make sure it's on top
 
-    if (Autoscan_PE5PVB_Mode) {
-        sensitivityContainer.innerHTML = `
-            <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
-            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                <li data-value="1" class="option">1</li>
-                <li data-value="5" class="option">5</li>
-                <li data-value="10" class="option">10</li>
-                <li data-value="15" class="option">15</li>
-                <li data-value="20" class="option">20</li>
-                <li data-value="25" class="option">25</li>
-                <li data-value="30" class="option">30</li>
-            </ul>
-        `;
-    } else {
-        sensitivityContainer.innerHTML = `
-            <input type="text" placeholder="${sensitivityValue} dBf" title="Scanner Sensitivity" readonly>
-            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-				<li data-value="5" class="option">5 dBf</li>
-			    <li data-value="10" class="option">10 dBf</li>
-			    <li data-value="15" class="option">15 dBf</li>
-                <li data-value="20" class="option">20 dBf</li>
-                <li data-value="25" class="option">25 dBf</li>
-                <li data-value="30" class="option">30 dBf</li>
-                <li data-value="35" class="option">35 dBf</li>
-                <li data-value="40" class="option">40 dBf</li>
-                <li data-value="45" class="option">45 dBf</li>
-                <li data-value="50" class="option">50 dBf</li>
-                <li data-value="55" class="option">55 dBf</li>
-                <li data-value="60" class="option">60 dBf</li>
-            </ul>
-        `;
-    }
+            if (Autoscan_PE5PVB_Mode) {
+                sensitivityContainer.innerHTML = `
+                    <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="1" class="option">1</li>
+                        <li data-value="5" class="option">5</li>
+                        <li data-value="10" class="option">10</li>
+                        <li data-value="15" class="option">15</li>
+                        <li data-value="20" class="option">20</li>
+                        <li data-value="25" class="option">25</li>
+                        <li data-value="30" class="option">30</li>
+                    </ul>
+                `;
+            } else {
+                sensitivityContainer.innerHTML = `
+                    <input type="text" placeholder="${sensitivityValue} dBf" title="Scanner Sensitivity" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="5" class="option">5 dBf</li>
+                        <li data-value="10" class="option">10 dBf</li>
+                        <li data-value="15" class="option">15 dBf</li>
+                        <li data-value="20" class="option">20 dBf</li>
+                        <li data-value="25" class="option">25 dBf</li>
+                        <li data-value="30" class="option">30 dBf</li>
+                        <li data-value="35" class="option">35 dBf</li>
+                        <li data-value="40" class="option">40 dBf</li>
+                        <li data-value="45" class="option">45 dBf</li>
+                        <li data-value="50" class="option">50 dBf</li>
+                        <li data-value="55" class="option">55 dBf</li>
+                        <li data-value="60" class="option">60 dBf</li>
+                    </ul>
+                `;
+            }
 
-    const delayContainer = document.createElement('div');
-    delayContainer.className = "dropdown";
-    delayContainer.style.marginLeft = "0px";
-    delayContainer.style.marginRight = "-5px";
-    delayContainer.style.width = "100%";
-    delayContainer.style.height = "99%";
-    delayContainer.style.position = 'relative'; // Make sure it's on top
+            const delayContainer = document.createElement('div');
+            delayContainer.className = "dropdown";
+            delayContainer.style.marginLeft = "0px";
+            delayContainer.style.marginRight = "-5px";
+            delayContainer.style.width = "100%";
+            delayContainer.style.height = "99%";
+            delayContainer.style.position = 'relative'; // Make sure it's on top
 
-    if (Autoscan_PE5PVB_Mode) {
-        delayContainer.innerHTML = `
-            <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
-            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                <li data-value="1" class="option">1 sec.</li>
-                <li data-value="3" class="option">3 sec.</li>
-                <li data-value="5" class="option">5 sec.</li>
-                <li data-value="7" class="option">7 sec.</li>
-                <li data-value="10" class="option">10 sec.</li>
-                <li data-value="20" class="option">20 sec.</li>
-                <li data-value="30" class="option">30 sec.</li>
-            </ul>
-        `;
-    } else {
-        delayContainer.innerHTML = `
-            <input type="text" placeholder="${delayValue} sec." title="Scanhold Time" readonly>
-            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                <li data-value="1" class="option">1 sec.</li>
-                <li data-value="3" class="option">3 sec.</li>
-                <li data-value="5" class="option">5 sec.</li>
-                <li data-value="7" class="option">7 sec.</li>
-                <li data-value="10" class="option">10 sec.</li>
-				<li data-value="15" class="option">15 sec.</li>
-                <li data-value="20" class="option">20 sec.</li>
-                <li data-value="30" class="option">30 sec.</li>
-            </ul>
-        `;
-    }
+            if (Autoscan_PE5PVB_Mode) {
+                delayContainer.innerHTML = `
+                    <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="1" class="option">1 sec.</li>
+                        <li data-value="3" class="option">3 sec.</li>
+                        <li data-value="5" class="option">5 sec.</li>
+                        <li data-value="7" class="option">7 sec.</li>
+                        <li data-value="10" class="option">10 sec.</li>
+                        <li data-value="20" class="option">20 sec.</li>
+                        <li data-value="30" class="option">30 sec.</li>
+                    </ul>
+                `;
+            } else {
+                delayContainer.innerHTML = `
+                    <input type="text" placeholder="${delayValue} sec." title="Scanhold Time" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="1" class="option">1 sec.</li>
+                        <li data-value="3" class="option">3 sec.</li>
+                        <li data-value="5" class="option">5 sec.</li>
+                        <li data-value="7" class="option">7 sec.</li>
+                        <li data-value="10" class="option">10 sec.</li>
+                        <li data-value="15" class="option">15 sec.</li>
+                        <li data-value="20" class="option">20 sec.</li>
+                        <li data-value="30" class="option">30 sec.</li>
+                    </ul>
+                `;
+            }
 
-    let blacklistArray = blacklist; 
-	let whitelistArray = whitelist; 
-	
+            let blacklistArray = blacklist; 
+            let whitelistArray = whitelist; 
 
-    if (!Autoscan_PE5PVB_Mode) {
-        if (blacklistArray.length !== 0 || whitelistArray.length !== 0 ) {
-            modeContainer.style.display = 'block';
-            scannerControls.appendChild(modeContainer);
-            initializeDropdown(modeContainer, 'Selected Mode:', 'M');
+            if (!Autoscan_PE5PVB_Mode) {
+                if (blacklistArray.length !== 0 || whitelistArray.length !== 0 ) {
+                    modeContainer.style.display = 'block';
+                    scannerControls.appendChild(modeContainer);
+                    initializeDropdown(modeContainer, 'Selected Mode:', 'M');
+                }
+            }
+
+            scannerControls.appendChild(sensitivityContainer);
+            initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
+            scannerControls.appendChild(delayContainer);
+            initializeDropdown(delayContainer, 'Selected Delay:', 'K');
+
+            // Replace volume slider with flex container with scanner controls
+            const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+            volumeSliderParent.style.display = 'none'; // Hide volume slider
+            volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
         }
-    }
-
-    scannerControls.appendChild(sensitivityContainer);
-    initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
-    scannerControls.appendChild(delayContainer);
-    initializeDropdown(delayContainer, 'Selected Delay:', 'K');
-
-    // Replace volume slider with flex container with scanner controls
-    const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-    volumeSliderParent.style.display = 'none'; // Hide volume slider
-    volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
-}
-
 
         function initializeDropdown(container, logPrefix, commandPrefix) {
             const input = container.querySelector('input');
@@ -807,7 +803,7 @@ function createScannerControls() {
 			checkAdminMode();
 		});
 
-		var isTuneAuthenticated = false; // Globale Variable initial auf false setzen
+		var isTuneAuthenticated = false; // Set global variable initially to false
 
 		function checkAdminMode() {
 			var bodyText = document.body.textContent || document.body.innerText;
@@ -820,9 +816,7 @@ function createScannerControls() {
 			} else {
 				console.log("No special authentication message found. Authentication failed.");
 				isTuneAuthenticated = false;
-        
 			}
 		}
-
     })();
 })();
