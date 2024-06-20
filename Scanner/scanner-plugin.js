@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3b)             last update: 18.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3b)             last update: 20.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
