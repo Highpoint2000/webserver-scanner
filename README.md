@@ -1,10 +1,12 @@
 # Scanner Plugin for [FM-DX-Webserver](https://github.com/NoobishSVK/fm-dx-webserver)
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
 
-### v1.3a:
-- optimze the blacklist processing
-- Add a white list function (file /web/scanner/whitelist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
-- separate software switches for auto scan and search mode << >> (Mixed Mode with PE5PVB Firmware) 
+### v1.3b:
+- optimze scan performance
+- longer RDS detection if PI-code detected
+
+  NOTE: If you use the logger plugin, please update it to at least version [1.3d](https://github.com/Highpoint2000/webserver-logger/releases)!
+
 
 ## Installation notes:
 
@@ -26,6 +28,11 @@ This plugin provides scanning functions for the FM-DX web server.
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
 
 ## History: 
+
+### v1.3a:
+- optimze the blacklist processing
+- Add a white list function (file /web/scanner/whitelist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with spaces)
+- separate software switches for auto scan and search mode << >> (Mixed Mode with PE5PVB Firmware) 
 
 ### v1.3:
 - Added Auto Scan Mode for ALL Devices including settings (blacklist on/off, sensivity, scan hold time). To do this, set the query off PE5PVB Firmware in the header of the script to 'false'.
