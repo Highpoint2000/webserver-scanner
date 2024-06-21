@@ -165,20 +165,12 @@ const pluginVersion = 'V1.3b';
                 currentFrequency = freq;
                 checkStrengthCounter++;
 
-				if (isScanOnValue) {
                 // Check for stereo detection between counter 4 and 99 (inclusive)
 					if (checkStrengthCounter > 3) {
 						if (stereo === true) {
 							stereo_detect = true; // Set stereo_detect to true if stereo is true
 						}
 					}
-				} else {
-					if (checkStrengthCounter > 3) {
-						if (stereo === true) {
-							stereo_detect = true; // Set stereo_detect to true if stereo is true
-						}
-					}
-				}
 					
                 //console.log(stereo, stereo_detect, checkStrengthCounter);
 
@@ -382,12 +374,14 @@ const pluginVersion = 'V1.3b';
                     }
                 }
             } else {
+				if (isScanOnValue) {
                     if (checkStrengthCounter > 10) {
                         clearInterval(scanInterval); // Clears a previously defined scanning interval
                         isScanning = false; // Updates a flag indicating scanning status
                         stereo_detect = false;
                         startScan('up');
                     }
+				}
             }
         }
 
