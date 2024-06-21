@@ -382,7 +382,7 @@ const pluginVersion = 'V1.3b';
                         startScan('up');
                     }
 				} else {
-					startScan('up');
+					//startScan('up');
 				}
             }
         }
