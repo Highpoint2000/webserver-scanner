@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3b)             last update: 20.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3b)             last update: 21.06.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -166,7 +166,7 @@ const pluginVersion = 'V1.3b';
                 checkStrengthCounter++;
 
                 // Check for stereo detection between counter 4 and 99 (inclusive)
-                if (checkStrengthCounter > 7) {
+                if (checkStrengthCounter > 3) {
                     if (stereo === true) {
                         stereo_detect = true; // Set stereo_detect to true if stereo is true
                     }
@@ -176,7 +176,7 @@ const pluginVersion = 'V1.3b';
                 if (!Autoscan_PE5PVB_Mode) {
                     checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter);
                 }
-            }, 0);
+            }, 50);
         }
 
         function startScan(direction) {
@@ -253,7 +253,7 @@ const pluginVersion = 'V1.3b';
 
             isScanning = true;
             updateFrequency();
-            scanInterval = setInterval(updateFrequency, 700);
+            scanInterval = setInterval(updateFrequency, 500);
         }
 
         // Function to check if a frequency is in the whitelist
@@ -341,7 +341,7 @@ const pluginVersion = 'V1.3b';
                 clearInterval(scanInterval); // Clears a previously defined scanning interval
                 isScanning = false; // Updates a flag indicating scanning status
 
-                if (strength > sensitivityValue || PiCode.length > 1) {
+                if (strength > sensitivityValue) {
                     let delayValueMilliseconds = delayValue * 10;
 
                     if (PiCode.length > 1) {
