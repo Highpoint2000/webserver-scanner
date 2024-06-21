@@ -381,6 +381,8 @@ const pluginVersion = 'V1.3b';
                         stereo_detect = false;
                         startScan('up');
                     }
+				} else {
+					startScan('up');
 				}
             }
         }
