@@ -77,7 +77,7 @@ const pluginVersion = 'V1.3b';
                 console.log("WebSocket sent:", dataToSend);
             } else {
                 console.error('WebSocket not open.');
-                setTimeout(() => sendDataToClient(frequency), 300); // Retry after a short delay
+                setTimeout(() => sendDataToClient(frequency), 100); // Retry after a short delay
             }
         }
 
@@ -165,12 +165,21 @@ const pluginVersion = 'V1.3b';
                 currentFrequency = freq;
                 checkStrengthCounter++;
 
+				if (isScanOnValue) {
                 // Check for stereo detection between counter 4 and 99 (inclusive)
-                if (checkStrengthCounter > 3) {
-                    if (stereo === true) {
-                        stereo_detect = true; // Set stereo_detect to true if stereo is true
-                    }
-                }
+					if (checkStrengthCounter > 3) {
+						if (stereo === true) {
+							stereo_detect = true; // Set stereo_detect to true if stereo is true
+						}
+					}
+				} else {
+					if (checkStrengthCounter > 3) {
+						if (stereo === true) {
+							stereo_detect = true; // Set stereo_detect to true if stereo is true
+						}
+					}
+				}
+					
                 //console.log(stereo, stereo_detect, checkStrengthCounter);
 
                 if (!Autoscan_PE5PVB_Mode) {
@@ -253,7 +262,7 @@ const pluginVersion = 'V1.3b';
 
             isScanning = true;
             updateFrequency();
-            scanInterval = setInterval(updateFrequency, 500);
+            scanInterval = setInterval(updateFrequency, 1000);
         }
 
         // Function to check if a frequency is in the whitelist
@@ -337,55 +346,48 @@ const pluginVersion = 'V1.3b';
         }
 
         function checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter) {
+			
+			let delayValueMilliseconds = delayValue * 10;	
             if (stereo_detect === true || PiCode.length > 1) {
-                clearInterval(scanInterval); // Clears a previously defined scanning interval
-                isScanning = false; // Updates a flag indicating scanning status
+				
+                if (strength > sensitivityValue || PiCode.length > 1) {					
+					//console.log(strength, sensitivityValue);
 
-                if (strength > sensitivityValue) {
-                    let delayValueMilliseconds = delayValue * 10;
-
-                    if (PiCode.length > 1) {
+                    if (PiCode.length > 1 && station === '') {
                         delayValueMilliseconds += 50;
                     }
-
-                    handleStationTimeout = setTimeout(() => {
+					//console.log(checkStrengthCounter, delayValueMilliseconds);				
+            
+					clearInterval(scanInterval); // Clears a previously defined scanning interval
+					isScanning = false; // Updates a flag indicating scanning status		
+					
                         if (isScanOnValue) {
-                            if (station.length > 2) {
-                                startScan('up'); // Restart scanning after the delay
-                                checkStrengthCounter = 0; // Reset the counter
-                                station = '';
-                                stereo_detect = false;
-                                startScan('up');
-                            } else {
                                 if (checkStrengthCounter > delayValueMilliseconds) {
-                                    startScan('up'); // Restart scanning after the delay
-                                    checkStrengthCounter = 0; // Reset the counter
-                                    stereo_detect = false;
-                                    station = '';
-                                    startScan('up');
+										startScan('up'); // Restart scanning after the delay
+										checkStrengthCounter = 0; // Reset the counter
+										stereo_detect = false;
+										station = '';
+										startScan('up');
                                 }
-                            }
-                        }
-                    }, 100); // Delay of 100 ms before handling station details
+                        }					
+                  
                 } else {
                     if (isScanOnValue) {
-                        clearInterval(scanInterval); // Clears a previously defined scanning interval
-                        stereo_detect = false;
-                        station = '';
-                        startScan('up');
+						if (checkStrengthCounter > 10) {
+							clearInterval(scanInterval); // Clears a previously defined scanning interval
+							stereo_detect = false;
+							isScanning = false; // Updates a flag indicating scanning status
+							startScan('up');
+						}
                     }
                 }
             } else {
-                if (isScanOnValue) {
-                    let delayValueMilliseconds = delayValue * 10;
-                    if (checkStrengthCounter > delayValueMilliseconds) {
+                    if (checkStrengthCounter > 10) {
                         clearInterval(scanInterval); // Clears a previously defined scanning interval
                         isScanning = false; // Updates a flag indicating scanning status
                         stereo_detect = false;
-                        station = '';
                         startScan('up');
                     }
-                }
             }
         }
 
