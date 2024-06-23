@@ -21,8 +21,8 @@ This plugin provides scanning functions for the FM-DX web server.
 ## Important notes: 
 
 - Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification! 
-- Add a white- or blacklist function: file /web/scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
 - Only one browser instance is allowed to carry out the scan!
+- Add a white- or blacklist function: file /web/scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest PE5PVB firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
 
 ## Known bugs:
