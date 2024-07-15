@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3b)             last update: 21.06.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3c)             last update: 15.07.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -21,7 +21,7 @@ let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3b'; 
+const pluginVersion = 'V1.3c'; 
 
 (() => {
     const scannerPlugin = (() => {  
@@ -187,9 +187,28 @@ const pluginVersion = 'V1.3b';
 
             console.log('Scan started in direction:', direction);
 
-            const tuningRangeText = document.querySelector('#tuner-desc .color-4').innerText;
-            const tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
-            const tuningUpperLimit = parseFloat(tuningRangeText.split(' MHz')[1].split(' - ')[1]);
+			const tuningElement = document.querySelector('#tuner-desc .color-4');
+			let tuningLowerLimit;
+			let tuningUpperLimit;
+
+			if (tuningElement) {
+				const tuningRangeText = tuningElement.innerText;
+				tuningLowerLimit = parseFloat(tuningRangeText.split(' MHz')[0]);
+				tuningUpperLimit = parseFloat(tuningRangeText.split(' MHz')[1].split(' - ')[1]);
+
+				if (isNaN(tuningLowerLimit)) {
+					tuningLowerLimit = 87.5;
+				}
+				if (isNaN(tuningUpperLimit)) {
+					tuningUpperLimit = 108.0;
+				}
+			} else {
+				tuningLowerLimit = 87.5;
+				tuningUpperLimit = 108.0;
+			}
+
+			console.log(`Tuning-Bereich: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz`);
+
 
             if (isNaN(currentFrequency) || currentFrequency === 0.0) {
                 currentFrequency = tuningLowerLimit;
@@ -381,8 +400,6 @@ const pluginVersion = 'V1.3b';
                         stereo_detect = false;
                         startScan('up');
                     }
-				} else {
-					//startScan('up');
 				}
             }
         }
@@ -503,7 +520,7 @@ const pluginVersion = 'V1.3b';
                 ScannerButton.style.marginLeft = '0px';
             }
 			
-            if (isTuneAuthenticated) {
+
                 const buttonEq = document.querySelector('.button-eq');
                 const buttonIms = document.querySelector('.button-ims');
 
@@ -512,9 +529,9 @@ const pluginVersion = 'V1.3b';
                 newDiv.appendChild(ScannerButton);
 
                 buttonEq.parentNode.insertBefore(newDiv, buttonIms);
-            }
 
-            function toggleScan() {
+
+            function toggleScan() {			         
                 const ScanButton = document.getElementById('Scan-on-off');
                 const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
 
@@ -541,6 +558,10 @@ const pluginVersion = 'V1.3b';
                     volumeSliderParent.style.display = 'block';
 					isScanOnValue = false;
                 } else {
+					
+					if (isTuneAuthenticated) {
+					
+					
                     ScanButton.setAttribute('data-scan-status', 'on');
 					isScanOnValue = true;
                     ScanButton.classList.remove('bg-color-3');
@@ -559,12 +580,16 @@ const pluginVersion = 'V1.3b';
                     }, 500);
 
                     createScannerControls();
+					
+					} else {
+						alert("You must be logged in to use the autoscan mode!");
+					}
                 }
             }
 
             const ScanButton = document.getElementById('Scan-on-off');
-            ScanButton.addEventListener('click', toggleScan);
-
+			ScanButton.addEventListener('click', toggleScan);
+			
             // Start blinking if the button is set to ON when the page loads
             if (ScanButton.getAttribute('data-scan-status') === 'on') {
                 blinkInterval = setInterval(function () {
