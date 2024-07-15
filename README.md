@@ -1,12 +1,11 @@
 # Scanner Plugin for [FM-DX-Webserver](https://github.com/NoobishSVK/fm-dx-webserver)
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
 
-### v1.3b:
-- optimze scan performance
-- longer RDS detection if PI-code detected
+### v1.3c:
+- Fixed a bug due to missing band limits
+- Autoscan mode button is visible again without login
 
-  NOTE: If you use the logger plugin, please update it to at least version [1.3d](https://github.com/Highpoint2000/webserver-logger/releases)!
-
+NOTE: If you use the logger plugin, please update it to at least version [1.3d](https://github.com/Highpoint2000/webserver-logger/releases)!
 
 ## Installation notes:
 
@@ -29,6 +28,10 @@ This plugin provides scanning functions for the FM-DX web server.
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
 
 ## History: 
+
+### v1.3b:
+- optimze scan performance
+- longer RDS detection if PI-code detected
 
 ### v1.3a:
 - optimze the blacklist processing
