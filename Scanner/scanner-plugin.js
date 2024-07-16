@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3c)             last update: 15.07.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3d)             last update: 16.07.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -8,6 +8,8 @@
 ///  https://github.com/Highpoint2000/webserver-scanner                            ///
 ///                                                                                ///
 //////////////////////////////////////////////////////////////////////////////////////
+
+///  This plugin only works from web server version 1.2.3!!!
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -21,7 +23,7 @@ let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3c'; 
+const pluginVersion = 'V1.3d'; 
 
 (() => {
     const scannerPlugin = (() => {  
@@ -44,30 +46,38 @@ const pluginVersion = 'V1.3c';
 		let stereo_detect = false; // Initialization of the stereo_detect variable to false
 		const millisecondsPerSecond = 10;
         const localHost = window.location.host;
-        const wsUrl = `ws://${localHost}/text`;
 
-        function setupWebSocket() {
-            // WebSocket setup
-            if (!Autoscan_PE5PVB_Mode) {
-                if (!frequencySocket || frequencySocket.readyState === WebSocket.CLOSED) {
-                    frequencySocket = new WebSocket(wsUrl);
+		async function setupWebSocket() {
+			// WebSocket setup
+			if (!Autoscan_PE5PVB_Mode) {
+				if (!frequencySocket || frequencySocket.readyState === WebSocket.CLOSED) {
+					try {
+						frequencySocket = await window.socketPromise;
 
-                    frequencySocket.addEventListener("open", () => {
-                        console.log("WebSocket connected.");
-                    });
+						frequencySocket.addEventListener("open", () => {
+							console.log("WebSocket connected.");
+						});
 
-                    frequencySocket.addEventListener("error", (error) => {
-                        console.error("WebSocket error:", error);
-                    });
+						frequencySocket.addEventListener("error", (error) => {
+							console.error("WebSocket error:", error);
+						});
 
-                    frequencySocket.addEventListener("close", () => {
-                        console.log("WebSocket closed.");
-                        // Try to reconnect
-                        setTimeout(setupWebSocket, 300);
-                    });
-                }
-            }
-        }
+						frequencySocket.addEventListener("close", () => {
+							console.log("WebSocket closed.");
+							// Try to reconnect
+							setTimeout(setupWebSocket, 300);
+						});
+					} catch (error) {
+						console.error("Failed to set up WebSocket:", error);
+						// Attempt to reconnect after a delay
+						setTimeout(setupWebSocket, 300);
+					}
+				}
+			}
+		}
+
+		// Call setupWebSocket initially
+		setupWebSocket();
 
         function sendDataToClient(frequency) {
             // Send data via WebSocket
@@ -81,42 +91,49 @@ const pluginVersion = 'V1.3c';
             }
         }
 
-        // Function to send a command to the client via WebSockets
-        function sendCommandToClient(command) {
-            // Determine the WebSocket protocol based on the current page
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Determine the host of the current page
-            const host = window.location.host;
-            // Construct the WebSocket URL
-            const wsUrl = `${protocol}//${host}/text`;
+		async function sendCommandToClient(command) {
+			try {
+				// Create a WebSocket connection to the specified URL
+				const autoScanSocket = await window.socketPromise;
 
-            // Create a WebSocket connection to the specified URL
-            const autoScanSocket = new WebSocket(wsUrl);
+				// Check if the WebSocket is already open
+				if (autoScanSocket.readyState === WebSocket.OPEN) {
+					console.log("WebSocket already connected.");
+					sendCommand(autoScanSocket, command);
+				} else {
+					// Event listener for opening the WebSocket connection
+					autoScanSocket.addEventListener("open", () => {
+						console.log("WebSocket connected.");
+						sendCommand(autoScanSocket, command);
+					});
+				}
 
-            // Event listener for opening the WebSocket connection
-            autoScanSocket.addEventListener("open", () => {
-                console.log("WebSocket connected.");
-                // Send the command via the WebSocket connection
-                console.log("Sending command:", command);
-                autoScanSocket.send(command);
-            });
+				// Event listener for WebSocket errors
+				autoScanSocket.addEventListener("error", (error) => {
+					console.error("WebSocket error:", error);
+				});
 
-            // Event listener for WebSocket errors
-            autoScanSocket.addEventListener("error", (error) => {
-                console.error("WebSocket error:", error);
-            });
+				// Event listener for receiving a message from the server
+				autoScanSocket.addEventListener("message", (event) => {
+					// console.log("Message from server:", event.data);
+					// Close the WebSocket connection if necessary
+					// autoScanSocket.close();
+				});
 
-            // Event listener for receiving a message from the server
-            autoScanSocket.addEventListener("message", (event) => {
-                // Close the WebSocket connection after receiving the response
-                autoScanSocket.close();
-            });
+				// Event listener for closing the WebSocket connection
+				autoScanSocket.addEventListener("close", () => {
+					console.log("WebSocket closed.");
+				});
+			} catch (error) {
+				console.error("Failed to send command to client:", error);
+			}
+		}
 
-            // Event listener for closing the WebSocket connection
-            autoScanSocket.addEventListener("close", () => {
-                console.log("WebSocket closed.");
-            });
-        }
+		function sendCommand(socket, command) {
+			console.log("Sending command:", command);
+			socket.send(command);
+		}
+
 		
 		function waitForServer() {
 			// Wait for the server to be available
