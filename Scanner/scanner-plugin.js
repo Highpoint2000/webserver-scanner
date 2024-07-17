@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3d)             last update: 16.07.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 17.07.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -14,16 +14,16 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
+const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
-// Only valid for Autoscan_PE5PVB_Mode = false
-let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000   
-let defaultSensitivityValue = 30; // Value in dBf: 5,10,15,20,25,30,35,40,45,50,55,60
+// Only valid for Autoscan_PE5PVB_Mode = false 
 let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
+let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000 
+let defaultSensitivityValue = 30; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3d'; 
+const pluginVersion = 'V1.3e BETA'; 
 
 (() => {
     const scannerPlugin = (() => {  
@@ -46,6 +46,7 @@ const pluginVersion = 'V1.3d';
 		let stereo_detect = false; // Initialization of the stereo_detect variable to false
 		const millisecondsPerSecond = 10;
         const localHost = window.location.host;
+		let signalValue = 'dBf';
 
 		async function setupWebSocket() {
 			// WebSocket setup
@@ -194,7 +195,7 @@ const pluginVersion = 'V1.3d';
                 if (!Autoscan_PE5PVB_Mode) {
                     checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter);
                 }
-            }, 50);
+            }, 0);
         }
 
         function startScan(direction) {
@@ -308,9 +309,7 @@ const pluginVersion = 'V1.3d';
         // Check and initialize blacklist
         function checkBlacklist() {
             const blacklistProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-            const port = window.location.port;
-            const host = document.location.hostname;
-            const blacklistUrl = `${blacklistProtocol}//${host}:${port}/scanner/blacklist.txt`;
+			const blacklistUrl = `${blacklistProtocol}//${window.location.host}/scanner/blacklist.txt`;
 
             fetch(blacklistUrl)
                 .then(response => {
@@ -339,9 +338,7 @@ const pluginVersion = 'V1.3d';
         // Check and initialize whitelist
         function checkWhitelist() {
             const whitelistProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-            const port = window.location.port;
-            const host = document.location.hostname;
-            const whitelistUrl = `${whitelistProtocol}//${host}:${port}/scanner/whitelist.txt`;
+			const whitelistUrl = `${whitelistProtocol}//${window.location.host}/scanner/whitelist.txt`;
 
             fetch(whitelistUrl)
                 .then(response => {
@@ -619,6 +616,22 @@ const pluginVersion = 'V1.3d';
                 volumeSliderParent.style.display = 'block';
             }
         }
+		
+		// Funktion zur Überprüfung und Ausgabe des Werts des gewünschten Elements
+		function checkSignalUnits() {
+			// Selektiere das Element
+			const signalElement = document.querySelector('span.signal-units.text-medium');
+    
+			// Überprüfe, ob das Element existiert und einen Wert hat
+			if (signalElement) {
+				signalValue = signalElement.textContent.trim();
+				//console.log(`Aktueller Wert: ${signalValue}`);
+			} else {
+				console.warn('Das signalValue Element wurde nicht gefunden.');
+			}
+		}
+
+		setInterval(checkSignalUnits, 1000);
 
         function createScannerControls() {
             // Create a flex container for scanner sensitivity and scanner delay
@@ -669,6 +682,7 @@ const pluginVersion = 'V1.3d';
                     </ul>
                 `;
             } else {
+				if (signalValue === 'dBf') {		
                 sensitivityContainer.innerHTML = `
                     <input type="text" placeholder="${sensitivityValue} dBf" title="Scanner Sensitivity" readonly>
                     <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -686,6 +700,45 @@ const pluginVersion = 'V1.3d';
                         <li data-value="60" class="option">60 dBf</li>
                     </ul>
                 `;
+				} else {
+				if (signalValue === 'dBµV') {		
+                sensitivityContainer.innerHTML = `
+                    <input type="text" placeholder="${sensitivityValue} dBµV" title="Scanner Sensitivity" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="5" class="option">5 dBµV</li>
+                        <li data-value="10" class="option">10 dBµV</li>
+                        <li data-value="15" class="option">15 dBµV</li>
+                        <li data-value="20" class="option">20 dBµV</li>
+                        <li data-value="25" class="option">25 dBµV</li>
+                        <li data-value="30" class="option">30 dBµV</li>
+                        <li data-value="35" class="option">35 dBµV</li>
+                        <li data-value="40" class="option">40 dBµV</li>
+                        <li data-value="45" class="option">45 dBµV</li>
+                        <li data-value="50" class="option">50 dBµV</li>
+						<li data-value="55" class="option">55 dBµV</li>
+						<li data-value="60" class="option">60 dBµV</li>
+                    </ul>
+                `;
+				} else {	
+				if (signalValue === 'dBm') {		
+                sensitivityContainer.innerHTML = `
+                    <input type="text" placeholder="${sensitivityValue} dBm" title="Scanner Sensitivity" readonly>
+                    <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                        <li data-value="-115" class="option">-115 dBm</li>
+                        <li data-value="-110" class="option">-110 dBm</li>
+                        <li data-value="-105" class="option">-105 dBm</li>
+                        <li data-value="-100" class="option">-100 dBm</li>
+                        <li data-value="-95" class="option">-95 dBm</li>
+                        <li data-value="-90" class="option">-90 dBm</li>
+                        <li data-value="-85" class="option">-85 dBm</li>
+                        <li data-value="-80" class="option">-80 dBm</li>
+                        <li data-value="-75" class="option">-75 dBm</li>
+                        <li data-value="-70" class="option">-70 dBm</li>
+                        <li data-value="-65" class="option">-65 dBm</li>
+                        <li data-value="-60" class="option">-60 dBm</li>
+                    </ul>
+                `;
+				}}}				
             }
 
             const delayContainer = document.createElement('div');
@@ -746,7 +799,7 @@ const pluginVersion = 'V1.3d';
             volumeSliderParent.style.display = 'none'; // Hide volume slider
             volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
         }
-
+		
         function initializeDropdown(container, logPrefix, commandPrefix) {
             const input = container.querySelector('input');
             const options = container.querySelectorAll('.option');
@@ -849,7 +902,7 @@ const pluginVersion = 'V1.3d';
 			var bodyText = document.body.textContent || document.body.innerText;
 			var isAdminLoggedIn = bodyText.includes("You are logged in as an adminstrator.");
 			var canControlReceiver = bodyText.includes("You are logged in and can control the receiver.");
-
+			
 			if (isAdminLoggedIn || canControlReceiver) {
 				console.log("Admin or Tune mode found. Scanner Plugin Authentication successful.");
 				isTuneAuthenticated = true;
@@ -858,5 +911,6 @@ const pluginVersion = 'V1.3d';
 				isTuneAuthenticated = false;
 			}
 		}
+		
     })();
 })();
