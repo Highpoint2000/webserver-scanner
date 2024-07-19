@@ -900,7 +900,7 @@ const pluginVersion = 'V1.3e BETA';
 
 		function checkAdminMode() {
 			var bodyText = document.body.textContent || document.body.innerText;
-			var isAdminLoggedIn = bodyText.includes("You are logged in as an adminstrator.");
+			var isAdminLoggedIn = bodyText.includes("You are logged in as an administrator.") || bodyText.includes("You are logged in as an adminstrator.");
 			var canControlReceiver = bodyText.includes("You are logged in and can control the receiver.");
 			
 			if (isAdminLoggedIn || canControlReceiver) {
