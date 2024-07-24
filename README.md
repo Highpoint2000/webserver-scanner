@@ -1,4 +1,7 @@
 # Scanner Plugin for [FM-DX-Webserver](https://github.com/NoobishSVK/fm-dx-webserver)
+
+This plugin provides scanning functions for the FM-DX web server.
+
 ![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
 
 ### v1.3d (only works from web server version 1.2.3 - older versions must take the plugin version 1.3c !!!)
@@ -13,8 +16,6 @@ NOTE: If you use the logger plugin, please update it to at least version [1.3e o
 [image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/15e5d4eb-eb09-4466-972b-20a569737cf0)
 3. Restart the server
 4. Activate the plugin it in the settings
-
-This plugin provides scanning functions for the FM-DX web server.
 
 ## Important notes: 
 
