@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 17.07.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 26.07.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -587,7 +587,7 @@ const pluginVersion = 'V1.3e BETA';
                     } else {
                         AutoScan();
                     }
-
+					
                     blinkInterval = setInterval(function () {
                         ScanButton.classList.toggle('bg-color-3');
                         ScanButton.classList.toggle('bg-color-4');
@@ -636,21 +636,24 @@ const pluginVersion = 'V1.3e BETA';
         function createScannerControls() {
             // Create a flex container for scanner sensitivity and scanner delay
             const scannerControls = document.createElement('div');
-            scannerControls.className = "panel-50 no-bg h-100";
+            scannerControls.className = "no-bg h-100";
             scannerControls.id = "scanner-controls";
-            scannerControls.style.width = '96%';
+            scannerControls.style.width = '100%';
             scannerControls.style.display = 'flex';
             scannerControls.style.justifyContent = 'space-between';
             scannerControls.style.marginTop = "0px";
+			scannerControls.style.marginRight = "10px";
             scannerControls.style.position = 'relative'; // Make sure it's on top
-
+            
             const modeContainer = document.createElement('div');
             modeContainer.className = "dropdown";
-            modeContainer.style.marginRight = "10px";
+            modeContainer.style.marginRight = "1px";
             modeContainer.style.marginLeft = "0px";
             modeContainer.style.width = "100%";
             modeContainer.style.height = "99%";
-            modeContainer.style.position = 'relative'; // Make sure it's on top		
+            modeContainer.style.position = 'relative'; // Make sure it's on top	
+			modeContainer.style.borderTopLeftRadius = '15px';
+			modeContainer.style.borderBottomLeftRadius = '15px';			
             modeContainer.innerHTML = `
                 <input type="text" placeholder="${modeValue}" title="Scanner Mode" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -662,8 +665,8 @@ const pluginVersion = 'V1.3e BETA';
 
             const sensitivityContainer = document.createElement('div');
             sensitivityContainer.className = "dropdown";
-            sensitivityContainer.style.marginRight = "5px";
-            sensitivityContainer.style.marginLeft = "-5px";
+            sensitivityContainer.style.marginRight = "1px";
+            sensitivityContainer.style.marginLeft = "0px";
             sensitivityContainer.style.width = "100%";
             sensitivityContainer.style.height = "99%";
             sensitivityContainer.style.position = 'relative'; // Make sure it's on top
@@ -744,10 +747,22 @@ const pluginVersion = 'V1.3e BETA';
             const delayContainer = document.createElement('div');
             delayContainer.className = "dropdown";
             delayContainer.style.marginLeft = "0px";
-            delayContainer.style.marginRight = "-5px";
+
+			var VolumeSlider = document.getElementById('volumeSlider');
+			var VolumeSliderWidth = VolumeSlider.clientWidth; // Oder scannerControls.offsetWidth
+			           // Zeige die Breite in der Konsole an
+            console.log('Die Breite des Divs ist: ' + VolumeSliderWidth + 'px');
+			if (VolumeSliderWidth > '300') {
+				delayContainer.style.marginRight = "-10px";
+			} else {
+				delayContainer.style.marginRight = "5px";
+			}
+			
             delayContainer.style.width = "100%";
             delayContainer.style.height = "99%";
             delayContainer.style.position = 'relative'; // Make sure it's on top
+			delayContainer.style.borderTopRightRadius = '15px';
+			delayContainer.style.borderBottomRightRadius = '15px';
 
             if (Autoscan_PE5PVB_Mode) {
                 delayContainer.innerHTML = `
