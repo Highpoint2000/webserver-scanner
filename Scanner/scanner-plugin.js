@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 26.07.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 27.07.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -14,12 +14,12 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
+const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
 // Only valid for Autoscan_PE5PVB_Mode = false 
-let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
-let defaultScanHoldTime = 5000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000 
 let defaultSensitivityValue = 30; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
+let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
+let defaultScanHoldTime = 10000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -645,15 +645,23 @@ const pluginVersion = 'V1.3e BETA';
 			scannerControls.style.marginRight = "10px";
             scannerControls.style.position = 'relative'; // Make sure it's on top
             
-            const modeContainer = document.createElement('div');
+            const sensitivityContainer = document.createElement('div');
+            sensitivityContainer.className = "dropdown";
+            sensitivityContainer.style.marginRight = "1px";
+            sensitivityContainer.style.marginLeft = "0px";
+            sensitivityContainer.style.width = "100%";
+            sensitivityContainer.style.height = "99%";
+            sensitivityContainer.style.position = 'relative'; // Make sure it's on top
+			sensitivityContainer.style.borderTopLeftRadius = '15px';
+			sensitivityContainer.style.borderBottomLeftRadius = '15px';
+			
+			const modeContainer = document.createElement('div');
             modeContainer.className = "dropdown";
             modeContainer.style.marginRight = "1px";
             modeContainer.style.marginLeft = "0px";
             modeContainer.style.width = "100%";
             modeContainer.style.height = "99%";
-            modeContainer.style.position = 'relative'; // Make sure it's on top	
-			modeContainer.style.borderTopLeftRadius = '15px';
-			modeContainer.style.borderBottomLeftRadius = '15px';			
+            modeContainer.style.position = 'relative'; // Make sure it's on top		
             modeContainer.innerHTML = `
                 <input type="text" placeholder="${modeValue}" title="Scanner Mode" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -662,18 +670,29 @@ const pluginVersion = 'V1.3e BETA';
                     <li data-value="whitelist" class="option">whitelist</li>
                 </ul>
             `;
+			
 
-            const sensitivityContainer = document.createElement('div');
-            sensitivityContainer.className = "dropdown";
-            sensitivityContainer.style.marginRight = "1px";
-            sensitivityContainer.style.marginLeft = "0px";
-            sensitivityContainer.style.width = "100%";
-            sensitivityContainer.style.height = "99%";
-            sensitivityContainer.style.position = 'relative'; // Make sure it's on top
-
+            const delayContainer = document.createElement('div');
+            delayContainer.className = "dropdown";
+            delayContainer.style.marginLeft = "0px";	
+            delayContainer.style.width = "100%";
+            delayContainer.style.height = "99%";
+            delayContainer.style.position = 'relative'; // Make sure it's on top
+			delayContainer.style.borderTopRightRadius = '15px';
+			delayContainer.style.borderBottomRightRadius = '15px';
+			var VolumeSlider = document.getElementById('volumeSlider');
+			var VolumeSliderWidth = VolumeSlider.clientWidth; // Oder scannerControls.offsetWidth
+			           // Zeige die Breite in der Konsole an
+            console.log('Die Breite des Divs ist: ' + VolumeSliderWidth + 'px');
+			if (VolumeSliderWidth > '300') {
+				delayContainer.style.marginRight = "-10px";
+			} else {
+				delayContainer.style.marginRight = "5px";
+			}
+			
             if (Autoscan_PE5PVB_Mode) {
                 sensitivityContainer.innerHTML = `
-                    <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
+                    <input type="text" placeholder="${sensitivityValue}" title="Scanner Sensitivity" readonly>
                     <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
                         <li data-value="1" class="option">1</li>
                         <li data-value="5" class="option">5</li>
@@ -743,30 +762,10 @@ const pluginVersion = 'V1.3e BETA';
                 `;
 				}}}				
             }
-
-            const delayContainer = document.createElement('div');
-            delayContainer.className = "dropdown";
-            delayContainer.style.marginLeft = "0px";
-
-			var VolumeSlider = document.getElementById('volumeSlider');
-			var VolumeSliderWidth = VolumeSlider.clientWidth; // Oder scannerControls.offsetWidth
-			           // Zeige die Breite in der Konsole an
-            console.log('Die Breite des Divs ist: ' + VolumeSliderWidth + 'px');
-			if (VolumeSliderWidth > '300') {
-				delayContainer.style.marginRight = "-10px";
-			} else {
-				delayContainer.style.marginRight = "5px";
-			}
 			
-            delayContainer.style.width = "100%";
-            delayContainer.style.height = "99%";
-            delayContainer.style.position = 'relative'; // Make sure it's on top
-			delayContainer.style.borderTopRightRadius = '15px';
-			delayContainer.style.borderBottomRightRadius = '15px';
-
             if (Autoscan_PE5PVB_Mode) {
                 delayContainer.innerHTML = `
-                    <input type="text" placeholder="Scanhold" title="Scanhold Time" readonly>
+                    <input type="text" placeholder="${delayValue} sec." title="Scanhold Time" readonly>
                     <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
                         <li data-value="1" class="option">1 sec.</li>
                         <li data-value="3" class="option">3 sec.</li>
@@ -796,6 +795,9 @@ const pluginVersion = 'V1.3e BETA';
             let blacklistArray = blacklist; 
             let whitelistArray = whitelist; 
 
+            scannerControls.appendChild(sensitivityContainer);
+            initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
+
             if (!Autoscan_PE5PVB_Mode) {
                 if (blacklistArray.length !== 0 || whitelistArray.length !== 0 ) {
                     modeContainer.style.display = 'block';
@@ -804,8 +806,6 @@ const pluginVersion = 'V1.3e BETA';
                 }
             }
 
-            scannerControls.appendChild(sensitivityContainer);
-            initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I');
             scannerControls.appendChild(delayContainer);
             initializeDropdown(delayContainer, 'Selected Delay:', 'K');
 
@@ -886,8 +886,8 @@ const pluginVersion = 'V1.3e BETA';
         }
 
 		function saveDropdownValues() {
-			const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
-			const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
+			const sensitivityInput = document.querySelector('#scanner-controls .dropdown:nth-child(1) input');
+			const modeInput = document.querySelector('#scanner-controls .dropdown:nth-child(2) input');
 			const delayInput = document.querySelector('#scanner-controls .dropdown:nth-child(3) input');
 
 			if (modeInput) {
