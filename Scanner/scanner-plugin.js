@@ -14,7 +14,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
+const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
 // Only valid for Autoscan_PE5PVB_Mode = false 
 let defaultSensitivityValue = 30; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
