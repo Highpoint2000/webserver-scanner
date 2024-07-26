@@ -2,7 +2,8 @@
 
 This plugin provides scanning functions for the FM-DX web server.
 
-![image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/548c8bac-1cc0-4c25-8272-fc039b495d4e)
+![image](https://github.com/user-attachments/assets/5d87fc30-20cc-4778-8e07-7c46bd02e48b)
+
 
 ### v1.3d (only works from web server version 1.2.3 - older versions must take the plugin version 1.3c !!!)
 - Problem with multiple connections (user online) fixed
