@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 27.07.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 29.07.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -14,12 +14,12 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
+const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
 // Only valid for Autoscan_PE5PVB_Mode = false 
 let defaultSensitivityValue = 30; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScannerMode = 'normal'; // normal, blacklist, or whitelist
-let defaultScanHoldTime = 10000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000 
+let defaultScanHoldTime = 7000; // Value in ms: 1000,3000,5000,7000,10000,15000,20000,30000 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -142,7 +142,7 @@ const pluginVersion = 'V1.3e BETA';
 				window.socket.addEventListener("message", handleSocketMessage);
 			} else {
 				console.error('Socket is not defined.');
-				setTimeout(waitForServer, 250);
+				setTimeout(waitForServer, 50);
 			}
 		}
 
@@ -184,7 +184,7 @@ const pluginVersion = 'V1.3e BETA';
                 checkStrengthCounter++;
 
                 // Check for stereo detection between counter 4 and 99 (inclusive)
-					if (checkStrengthCounter > 3) {
+					if (checkStrengthCounter > 2) {
 						if (stereo === true) {
 							stereo_detect = true; // Set stereo_detect to true if stereo is true
 						}
@@ -291,7 +291,7 @@ const pluginVersion = 'V1.3e BETA';
 
             isScanning = true;
             updateFrequency();
-            scanInterval = setInterval(updateFrequency, 1000);
+            scanInterval = setInterval(updateFrequency, 500);
         }
 
         // Function to check if a frequency is in the whitelist
