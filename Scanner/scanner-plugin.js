@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e BETA)        last update: 29.07.24  ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V1.3e)       	    last update: 03.08.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -9,12 +9,12 @@
 ///                                                                                ///
 //////////////////////////////////////////////////////////////////////////////////////
 
-///  This plugin only works from web server version 1.2.3!!!
+///  This plugin only works from web server version 1.2.6!!!
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Autoscan_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
+const Search_PE5PVB_Mode = true; // Set to true if ESP32 with PE5PVB firmware is being used and you want to use the search mode << >> of the firmware
 
 // Only valid for Autoscan_PE5PVB_Mode = false 
 let defaultSensitivityValue = 30; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
@@ -23,7 +23,7 @@ let defaultScanHoldTime = 7000; // Value in ms: 1000,3000,5000,7000,10000,15000,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V1.3e BETA'; 
+const pluginVersion = 'V1.3e'; 
 
 (() => {
     const scannerPlugin = (() => {  
@@ -154,12 +154,12 @@ const pluginVersion = 'V1.3e BETA';
             let PiCode, freq, strength, stereo, stereo_forced, station;
 
             setTimeout(() => {
-                PiCode = parsedData.pi;
+				PiCode = parsedData.pi;
                 freq = parsedData.freq;
-                strength = parsedData.signal;
+                strength = parsedData.sig;
                 stereo = parsedData.st;
                 stereo_forced = parsedData.st_forced;
-                station = txInfo.station;
+                station = txInfo.tx;
 
                 // console.log(isScanning, stereo_forced, stereo_forced_user, modeValue, station);
 
