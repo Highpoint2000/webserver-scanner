@@ -5,8 +5,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/5d87fc30-20cc-4778-8e07-7c46bd02e48b)
 
 
-### v1.3d (only works from web server version 1.2.3 - older versions must take the plugin version 1.3c !!!)
-- Problem with multiple connections (user online) fixed
+### v1.3e (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- compatible with changed websocket data in version 1.2.6
+- Increase scan and search speed
 
 NOTE: If you use the logger plugin, please update it to at least version [1.3e or 1.3d ](https://github.com/Highpoint2000/webserver-logger/releases)!
 
@@ -29,6 +30,9 @@ NOTE: If you use the logger plugin, please update it to at least version [1.3e o
 - Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
 
 ## History: 
+
+### v1.3d (only works from web server version 1.2.3 - older versions must take the plugin version 1.3c !!!)
+- Problem with multiple connections (user online) fixed
 
 ### v1.3c
 - Fixed a bug due to missing band limits
