@@ -2,34 +2,42 @@
 
 This plugin provides scanning functions for the FM-DX web server.
 
-![image](https://github.com/user-attachments/assets/5d87fc30-20cc-4778-8e07-7c46bd02e48b)
+![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)
 
 
-### v1.3e (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- compatible with changed websocket data in version 1.2.6
-- Increase scan and search speed
 
-NOTE: If you use the logger plugin, please update it to at least version [1.3e or 1.3d ](https://github.com/Highpoint2000/webserver-logger/releases)!
+### v2.0 SERVER BASED VERSION (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Automatic background scan when no user is connected or automatic start when the web server is started
+- Hide the control buttons when autoscan mode is active (blinking information!)
+- Activating the scanner control function is done by holding down the auto scan buttons
+- blacklist.txt and whitlist.txt are now loaded from the plugin path
 
 ## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
-2. Unpack the Scanner.js and the Scanner folder with the scanner-plugin.js into the web server plugins folder (..fm-dx-webserver-main\plugins) 
-[image](https://github.com/Highpoint2000/webserver-scanner/assets/168109804/15e5d4eb-eb09-4466-972b-20a569737cf0)
-3. Restart the server
-4. Activate the plugin it in the settings
+2. Unpack all files from the plugins folder to ..fm-dx-webserver-main\plugins\ 
+3. copy, rename and overwrite the index.js version that matches the web server: \server\index_x.x.x.js to ..fm-dx-webserver-main\server\index.js
+4. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
+5. Activate the scanner plugin in the settings
 
 ## Important notes: 
 
-- Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification! 
-- Only one browser instance is allowed to carry out the scan!
-- Add a white- or blacklist function: file /web/scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
-- For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan function. However, the prerequisite is the installation of the latest PE5PVB firmware version. You can switch the plugin's scan mode using a switch (true/false) in the plugin's source code. 
+- Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!! 
+- Add a white- or blacklist function: file ../plugins/Scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
+- For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan and search function. However, the prerequisite is the installation of the latest PE5PVB firmware version. 
+  You can switch the plugin's scan mode using a switch (true/false) in the header of scanner_server.js
+- In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
+- Auto scanner preferences can be configured in the scanner_server.js header
+- All changes to the scanner_server.js script are only activated by restarting the web server !!!
 
 ## Known bugs:
-- Currently, no status updates on the status of the scanner can be retrieved from the receiver. The reload of the website starts with Auto Scan off. 
+-
 
 ## History: 
+
+## v1.3e (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- compatible with changed websocket data in version 1.2.6
+- Increase scan and search speed
 
 ### v1.3d (only works from web server version 1.2.3 - older versions must take the plugin version 1.3c !!!)
 - Problem with multiple connections (user online) fixed
