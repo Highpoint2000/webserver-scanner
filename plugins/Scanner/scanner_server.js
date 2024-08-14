@@ -491,6 +491,7 @@ function startScan(direction) {
 
         if (!ScanPE5PVB) {
             if (ScannerMode === 'blacklist') {
+				console.log('ja');
                 while (isInBlacklist(currentFrequency, blacklist)) {
                     if (direction === 'up') {
                         currentFrequency += 0.1;
