@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)     last update: 14.08.24      ///
+///  SCANNER SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)     last update: 15.08.24      ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -167,10 +167,12 @@
 							}
 						}
                     }
+					
+					updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
 					                  
                 } else if (status === 'broadcast') {
                     updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-                    console.log(eventData);
+                    // console.log(eventData);
                 }
 
                 // Handle Scan button state
@@ -357,95 +359,128 @@ function BlinkAutoScan() {
 }
 
 
-    // Create scanner control buttons
-    function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
-        const ScannerButton = document.createElement('button');
-        ScannerButton.classList.add('hide-phone');
-        ScannerButton.id = 'Scan-on-off';
-        ScannerButton.setAttribute('aria-label', 'Scan');
-        ScannerButton.setAttribute('data-tooltip', 'Auto Scan on/off');
-        ScannerButton.setAttribute('data-scan-status', 'off');
-        ScannerButton.style.borderRadius = '0px 0px 0px 0px';
-        ScannerButton.style.position = 'relative';
-        ScannerButton.style.top = '0px';
-        ScannerButton.style.right = '0px';
-        ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
-        ScannerButton.classList.add('bg-color-3');
-        ScannerButton.title = `Plugin Version ${pluginVersion}`;
+// Helper functions to manage cookies
+function setCookie(name, value, days) {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+}
 
-        const muteButton = document.querySelector('button[aria-label="Mute"]');
-        if (muteButton) {
-            ScannerButton.style.width = 'calc(100% - 1px)';
-            ScannerButton.style.marginLeft = '-1px';
-        } else {
-            ScannerButton.style.width = 'calc(100% - 2px)';
-            ScannerButton.style.marginLeft = '0px';
-        }
+function getCookie(name) {
+    return document.cookie.split('; ').reduce((r, v) => {
+        const parts = v.split('=');
+        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+    }, '');
+}
 
-        const buttonEq = document.querySelector('.button-eq');
-        const buttonIms = document.querySelector('.button-ims');
+function eraseCookie(name) {
+    setCookie(name, '', -1);
+}
 
-        const newDiv = document.createElement('div');
-        newDiv.className = "hide-phone panel-50 no-bg h-100 m-0";
-        newDiv.appendChild(ScannerButton);
+// Create scanner control buttons
+function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
+    const ScannerButton = document.createElement('button');
+    ScannerButton.classList.add('hide-phone');
+    ScannerButton.id = 'Scan-on-off';
+    ScannerButton.setAttribute('aria-label', 'Scan');
+    ScannerButton.setAttribute('data-tooltip', 'Auto Scan on/off');
+    ScannerButton.setAttribute('data-scan-status', 'off');
+    ScannerButton.style.borderRadius = '0px 0px 0px 0px';
+    ScannerButton.style.position = 'relative';
+    ScannerButton.style.top = '0px';
+    ScannerButton.style.right = '0px';
+    ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+    ScannerButton.classList.add('bg-color-3');
+    ScannerButton.title = `Plugin Version ${pluginVersion}`;
 
-        buttonEq.parentNode.insertBefore(newDiv, buttonIms);
+    const muteButton = document.querySelector('button[aria-label="Mute"]');
+    if (muteButton) {
+        ScannerButton.style.width = 'calc(100% - 1px)';
+        ScannerButton.style.marginLeft = '-1px';
+    } else {
+        ScannerButton.style.width = 'calc(100% - 2px)';
+        ScannerButton.style.marginLeft = '0px';
+    }
 
-        let pressTimer;
-        let isLongPress = false;
+    const buttonEq = document.querySelector('.button-eq');
+    const buttonIms = document.querySelector('.button-ims');
 
-        // Toggle the scan mode based on press duration
-        function toggleScan(isLongPressAction) {
-            const ScanButton = document.getElementById('Scan-on-off');
-            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+    const newDiv = document.createElement('div');
+    newDiv.className = "hide-phone panel-50 no-bg h-100 m-0";
+    newDiv.appendChild(ScannerButton);
 
-            if (isLongPressAction) {
-                if (isTuneAuthenticated) {
-                    const scannerControls = document.getElementById('scanner-controls');
-                    if (scannerControls) {
-                        scannerControls.parentNode.removeChild(scannerControls);
-                        const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-                        volumeSliderParent.style.display = 'block';
-                    } else {
-                        createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
-                    }
+    buttonEq.parentNode.insertBefore(newDiv, buttonIms);
+
+    let pressTimer;
+    let isLongPress = false;
+
+    // Toggle the scan mode based on press duration
+    function toggleScan(isLongPressAction) {
+        const ScanButton = document.getElementById('Scan-on-off');
+        const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+
+        if (isLongPressAction) {
+            if (isTuneAuthenticated) {
+                const scannerControls = document.getElementById('scanner-controls');
+                if (scannerControls) {
+                    scannerControls.parentNode.removeChild(scannerControls);
+                    const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+                    volumeSliderParent.style.display = 'block';
+                    setCookie('scannerControlsStatus', 'off', 7); // Remember the status
                 } else {
-					showCustomAlert("Admin must be logged in to use the autoscan mode!");
+                    createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+                    setCookie('scannerControlsStatus', 'on', 7); // Remember the status
                 }
             } else {
-                if (isTuneAuthenticated) {
-                    if (isScanOn) {
-                        sendScan('off');
-                    } else {
-                        sendScan('on');
-                    }
+                showCustomAlert("Admin must be logged in to use the autoscan mode!");
+            }
+        } else {
+            if (isTuneAuthenticated) {
+                if (isScanOn) {
+                    sendScan('off');
+                    setCookie('scannerControlsStatus', 'off', 7); // Remember the status
                 } else {
-					showCustomAlert("Admin must be logged in to use the autoscan mode!");
+                    sendScan('on');
+                    setCookie('scannerControlsStatus', 'on', 7); // Remember the status
                 }
+            } else {
+                showCustomAlert("Admin must be logged in to use the autoscan mode!");
             }
         }
-
-        // Start a timer for detecting long presses
-        function startPressTimer() {
-            isLongPress = false;
-            pressTimer = setTimeout(() => {
-                isLongPress = true;
-                toggleScan(true); // Trigger long press action
-            }, 1000); // 1 second
-        }
-
-        // Cancel the press timer
-        function cancelPressTimer() {
-            clearTimeout(pressTimer);
-            if (!isLongPress) {
-                toggleScan(false); // Trigger short press action
-            }
-        }
-
-        const ScanButton = document.getElementById('Scan-on-off');
-        ScanButton.addEventListener('mousedown', startPressTimer);
-        ScanButton.addEventListener('mouseup', cancelPressTimer);
     }
+
+    // Start a timer for detecting long presses
+    function startPressTimer() {
+        isLongPress = false;
+        pressTimer = setTimeout(() => {
+            isLongPress = true;
+            toggleScan(true); // Trigger long press action
+        }, 1000); // 1 second
+    }
+
+    // Cancel the press timer
+    function cancelPressTimer() {
+        clearTimeout(pressTimer);
+        if (!isLongPress) {
+            toggleScan(false); // Trigger short press action
+        }
+    }
+
+    const ScanButton = document.getElementById('Scan-on-off');
+    ScanButton.addEventListener('mousedown', startPressTimer);
+    ScanButton.addEventListener('mouseup', cancelPressTimer);
+
+    // Initialize scannerControls based on cookie
+    const scannerControlsStatus = getCookie('scannerControlsStatus');
+    if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
+        createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+    } else {
+        const scannerControls = document.getElementById('scanner-controls');
+        if (scannerControls) {
+            scannerControls.parentNode.removeChild(scannerControls);
+        }
+    }
+}
+
 
     // Function to check and update the signal unit values
     function checkSignalUnits() {
