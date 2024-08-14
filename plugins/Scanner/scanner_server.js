@@ -12,8 +12,8 @@
 ///  This plugin only works from web server version 1.2.3!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-const StartAutoScan = 'off'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
+const Search_PE5PVB_Mode = true; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
@@ -26,6 +26,8 @@ let defaultScannerMode = 'normal'; // Set the startmode: normal, blacklist, or w
 const pluginVersion = 'V2.0 BETA'; 
 
 const WebSocket = require('ws');
+const fs = require('fs');
+const path = require('path');
 const { logInfo, logError, logWarn } = require('./../../server/console');
 const config = require('./../../config.json');
 
@@ -541,50 +543,41 @@ function isInWhitelist(frequency, whitelist) {
 }
 
 function checkBlacklist() {
-    const blacklistProtocol = externalWsUrl.startsWith('ws:') ? 'http:' : 'https:';
-    const blacklistUrl = `${blacklistProtocol}//127.0.0.1:${webserverPort}/js/plugins/Scanner/blacklist.txt`;
+    // Determine the path to the file relative to the current directory
+    const filePath = path.join(__dirname, '../Scanner/Blacklist.txt');
 
-    fetch(blacklistUrl)
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                throw new Error(`Error fetching blacklist: ${response.status} ${response.statusText}`);
-            }
-        })
-        .then(data => {
-            blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
-            blacklist = blacklist.map(value => parseFloat(value).toString());
-            logInfo('Scanner initialized blacklist');
-        })
-        .catch(error => {
-            logInfo('Scanner checking blacklist: not found');
-            blacklist = [];
-        });
+    // Read the file
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            logInfo('Scanner checking Blacklist: not found');
+            Blacklist = [];
+            return;
+        }
+
+        Blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
+        Blacklist = Blacklist.map(value => parseFloat(value).toString());
+        logInfo('Scanner initialized Blacklist');
+    });
 }
 
 function checkWhitelist() {
-    const whitelistProtocol = externalWsUrl.startsWith('ws:') ? 'http:' : 'https:';
-    const whitelistUrl = `${whitelistProtocol}//127.0.0.1:${webserverPort}/js/plugins/Scanner/whitelist.txt`;
+    // Determine the path to the file relative to the current directory
+    const filePath = path.join(__dirname, '../Scanner/whitelist.txt');
 
-    fetch(whitelistUrl)
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                throw new Error(`Error fetching whitelist: ${response.status} ${response.statusText}`);
-            }
-        })
-        .then(data => {
-            whitelist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
-            whitelist = whitelist.map(value => parseFloat(value).toString());
-            logInfo('Scanner initialized whitelist');
-        })
-        .catch(error => {
+    // Read the file
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
             logInfo('Scanner checking whitelist: not found');
             whitelist = [];
-        });
+            return;
+        }
+
+        whitelist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
+        whitelist = whitelist.map(value => parseFloat(value).toString());
+        logInfo('Scanner initialized whitelist');
+    });
 }
+
 
        function checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter) {
                                   
