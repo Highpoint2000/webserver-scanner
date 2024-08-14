@@ -35,7 +35,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## History: 
 
-## v1.3e (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+### v1.3e (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - compatible with changed websocket data in version 1.2.6
 - Increase scan and search speed
 
