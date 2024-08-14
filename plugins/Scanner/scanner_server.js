@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)  last update: 14.08.24  ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)  last update: 15.08.24  ///
 ///                                                                                /// 
 ///  by Highpoint                                                                  ///
 ///  powered by PE5PVB                                                             ///     
@@ -12,8 +12,8 @@
 ///  This plugin only works from web server version 1.2.3!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = true; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
+const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+const StartAutoScan = 'off'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
@@ -110,6 +110,7 @@ async function TextWebSocket(messageData) {
                     try {
                         // Parse the incoming message data
                         const messageData = JSON.parse(event.data);
+						// console.log(messageData);
 
                         // Execute this block only once
                         const users = messageData.users;  
@@ -202,11 +203,53 @@ async function ExtraWebSocket() {
 										logInfo(`Scanner set sensitivity "${Sensitivity}" [IP: ${message.source}]`);
 									}
                                 }
-                                if (message.value.ScannerMode !== '' && message.value.ScannerMode !== '') {
+                                if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'normal') {
                                     ScannerMode = message.value.ScannerMode;
 									logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
                                 }
-                                if (message.value.ScanHoldTime !== '' && message.value.ScanHoldTime !== '') {
+								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'blacklist') {
+									if (blacklist.length > 0) {
+										ScannerMode = message.value.ScannerMode;
+										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
+									} else {
+										logInfo(`Scanner mode "${message.value.ScannerMode}" not available! [IP: ${message.source}]`);
+										ScannerMode = 'normal';			
+										
+										responseMessage = createMessage(
+											'response',
+											message.source,
+											Scan,
+											'',
+											Sensitivity,
+											ScannerMode,
+											ScanHoldTime
+										);
+								
+										extraSocket.send(JSON.stringify(responseMessage));
+									}
+								}
+								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'whitelist') {
+									if (whitelist.length > 0) {
+										ScannerMode = message.value.ScannerMode;
+										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
+									} else {
+										logInfo(`Scanner mode "${message.value.ScannerMode}" not available! [IP: ${message.source}]`);
+										ScannerMode = 'normal';			
+										
+										responseMessage = createMessage(
+											'response',
+											message.source,
+											Scan,
+											'',
+											Sensitivity,
+											ScannerMode,
+											ScanHoldTime
+										);
+								
+										extraSocket.send(JSON.stringify(responseMessage));
+									}
+								}
+                                if (message.value.ScanHoldTime !== undefined && message.value.ScanHoldTime !== '') {
                                     ScanHoldTime = message.value.ScanHoldTime;
 									if (ScanPE5PVB) {        
 										sendCommandToClient(`K${ScanHoldTime}`);
@@ -490,8 +533,7 @@ function startScan(direction) {
         currentFrequency = Math.round(currentFrequency * 10) / 10;
 
         if (!ScanPE5PVB) {
-            if (ScannerMode === 'blacklist') {
-				console.log('ja');
+            if (ScannerMode === 'blacklist' && Scan === 'on') {
                 while (isInBlacklist(currentFrequency, blacklist)) {
                     if (direction === 'up') {
                         currentFrequency += 0.1;
@@ -506,7 +548,7 @@ function startScan(direction) {
                     }
                     currentFrequency = Math.round(currentFrequency * 10) / 10;
                 }
-            } else if (ScannerMode === 'whitelist') {			
+            } else if (ScannerMode === 'whitelist' && Scan === 'on') {			
 				if (isInWhitelist(currentFrequency, whitelist)) {
                 }
                 while (!isInWhitelist(currentFrequency, whitelist)) {				
@@ -551,12 +593,12 @@ function checkBlacklist() {
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
             logInfo('Scanner checking Blacklist: not found');
-            Blacklist = [];
+            blacklist = [];
             return;
         }
 
-        Blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
-        Blacklist = Blacklist.map(value => parseFloat(value).toString());
+        blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
+        blacklist = blacklist.map(value => parseFloat(value).toString());
         logInfo('Scanner initialized Blacklist');
     });
 }
