@@ -12,8 +12,8 @@
 ///  This plugin only works from web server version 1.2.3!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-const StartAutoScan = 'off'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
+const Search_PE5PVB_Mode = true; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
@@ -48,7 +48,7 @@ let autoScanSocket;
 let blacklist = [];
 let whitelist = [];
 let isScanning = false;
-let currentFrequency = 87.5;
+let currentFrequency = 0;
 let previousFrequency = 0;
 let checkStrengthCounter = 0;
 let stereo_detect = false;
@@ -262,18 +262,22 @@ async function ExtraWebSocket() {
 									if (SearchPE5PVB) {
 										sendCommandToClient('C1');
 										logInfo(`Scanner (PE5PVB mode) search down [IP: ${message.source}]`);
+										console.log('down PE5PVB');
 									} else {
 										startSearch('down');
 										logInfo(`Scanner search down [IP: ${message.source}]`);
+										console.log('down');
 									}
                                 }
                                 if (message.value.Search === 'up') {
 									if (SearchPE5PVB) {
+																				console.log('up PE5PVB');
 										sendCommandToClient('C2');
 										logInfo(`Scanner (PE5PVB mode) search up [IP: ${message.source}] `);
 									} else {
 										startSearch('up');
 										logInfo(`Scanner search up [IP: ${message.source}]`);
+												console.log('up');
 									}
                                 }
 								
@@ -474,7 +478,7 @@ function handleSocketMessage(messageData) {
         currentFrequency = freq;
         checkStrengthCounter++;
 
-        if (checkStrengthCounter > 2) {
+        if (checkStrengthCounter > 15) {
             if (stereo) {
                 stereo_detect = true;
             }
@@ -516,8 +520,9 @@ function startScan(direction) {
             // logInfo('Scanning has been stopped.');
             return; // Exit the function if scanning has been stopped
         }
-
+		
         currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
+		
         if (direction === 'up') {
             currentFrequency += 0.1;
             if (currentFrequency > tuningUpperLimit) {
@@ -531,7 +536,7 @@ function startScan(direction) {
         }
 
         currentFrequency = Math.round(currentFrequency * 10) / 10;
-
+		
         if (!ScanPE5PVB) {
             if (ScannerMode === 'blacklist' && Scan === 'on') {
                 while (isInBlacklist(currentFrequency, blacklist)) {
@@ -569,7 +574,8 @@ function startScan(direction) {
         }
 
         sendDataToClient(currentFrequency);
-        setTimeout(updateFrequency, ScanHoldTime * 1000); // Dynamically apply ScanHoldTime
+		const ScanHoldTimeMiliseconds = ScanHoldTime * 1000;
+        setTimeout(updateFrequency, ScanHoldTimeMiliseconds); // Dynamically apply ScanHoldTime
     }
 
     isScanning = true;
