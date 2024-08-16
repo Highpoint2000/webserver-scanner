@@ -768,8 +768,8 @@ ExtraWebSocket();
 TextWebSocket();
 checkBlacklist();
 checkWhitelist();
-initializeAntennas(Antennas);
 
 setTimeout(() => {
+    initializeAntennas(Antennas);
     sendNextAntennaCommand();;
 }, 500);
