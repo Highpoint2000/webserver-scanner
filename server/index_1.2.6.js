@@ -535,16 +535,14 @@ ExtraWss.on('connection', (ws, request)  => {
 });
 
 
-// Websocket register for /text, /audio and /chat paths 
 httpServer.on('upgrade', (request, socket, head) => {
+  // Apply session middleware for WebSocket paths that need sessions
   if (request.url === '/text') {
-    //sessionMiddleware(request, {}, () => {
+    sessionMiddleware(request, {}, () => {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
-   // });
-  } else if (request.url === '/audio') {
-    proxy.ws(request, socket, head);
+    });
   } else if (request.url === '/chat') {
     sessionMiddleware(request, {}, () => {
       chatWss.handleUpgrade(request, socket, head, (ws) => {
@@ -557,17 +555,16 @@ httpServer.on('upgrade', (request, socket, head) => {
         rdsWss.emit('connection', ws, request);
       });
     });
-   } else if (request.url === '/extra') {
-	 sessionMiddleware(request, {}, () => {
-       ExtraWss.handleUpgrade(request, socket, head, (ws) => {
-		  ExtraWss.emit('connection', ws, request);
+  } else if (request.url === '/extra') {
+    sessionMiddleware(request, {}, () => {
+      ExtraWss.handleUpgrade(request, socket, head, (ws) => {
+        ExtraWss.emit('connection', ws, request);
       });
-	});
+    });
   } else {
-	socket.destroy();
+    socket.destroy();
   }
 });
-
 app.use(express.static(path.join(__dirname, '../web'))); // Serve the entire web folder to the user
 
 httpServer.listen(serverConfig.webserver.webserverPort, serverConfig.webserver.webserverIp, () => {
