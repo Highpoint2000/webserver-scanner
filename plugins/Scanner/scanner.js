@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)  /// 
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.0)       /// 
 ///                                                         ///
-///                                  last update: 16.08.24  ///
+///                             last update: 16.08.24       ///
 ///                                                         /// 
 ///  by Highpoint                                           ///
 ///  powered by PE5PVB                                      ///     
@@ -17,7 +17,7 @@
 
 (() => {
 
-    const pluginVersion = 'V2.0 BETA'; 
+    const pluginVersion = 'V2.0'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -153,7 +153,7 @@
 			
             if (eventData.type === 'Scanner' && eventData.source !== clientIp) {
                 const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime } = eventData.value;
-				console.log(eventData);		
+				// console.log(eventData);		
 				
                 if (status === 'response' && eventData.target === clientIp) {
 
