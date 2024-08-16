@@ -8,12 +8,12 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ### v2.0 SERVER BASED VERSION (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Automatic background scan when no user is connected or automatic start when the web server is started
+- Automatic antenna switching on upper band limit
 - Hide the control buttons when autoscan mode is active (blinking information!)
 - Activating the scanner control function is done by holding down the auto scan buttons
 - blacklist.txt and whitlist.txt are now loaded from the plugin path
 - Server plugins are activated/deactivated via the web server GUI
 - Proxy Server ready (Tnx to _zer0_gravity_)
-- Automatic antenna switching on upper band limit
 
 ## Installation notes:
 
@@ -26,6 +26,7 @@ This plugin provides scanning functions for the FM-DX web server.
 ## Important notes: 
 
 - Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!! 
+- The automatic antenna switching only works if more than 1 antenna is configured in the web server !!!
 - Add a white- or blacklist function: file ../plugins/Scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan and search function. However, the prerequisite is the installation of the latest PE5PVB firmware version. 
   You can switch the plugin's scan mode using a switch (true/false) in the header of scanner_server.js
@@ -35,6 +36,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## Known bugs:
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
+- If the server is locked, the scanner will no longer work
 
 ## History: 
 
