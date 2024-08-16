@@ -182,7 +182,7 @@
                 const ScanButton = document.getElementById('Scan-on-off');
                 const blinkTextElement = document.querySelector('#tune-buttons .blink');
                 if (ScanButton) {
-					if (Scan === 'off') {
+					if (Scan === 'off' || Scan === '') {
 						
                         ScanButton.setAttribute('data-scan-status', 'off');
                         ScanButton.classList.remove('bg-color-4');
