@@ -20,7 +20,7 @@
     const pluginVersion = 'V2.0 BETA'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
-    const WebserverPath = currentURL.pathname;
+    const WebserverPath = currentURL.pathname.replace(/setup/g, '');
     const WebserverPORT = currentURL.port || (currentURL.protocol === 'https:' ? '443' : '80');
     const protocol = currentURL.protocol === 'https:' ? 'wss:' : 'ws:';
     const WEBSOCKET_URL = `${protocol}//${WebserverURL}:${WebserverPORT}${WebserverPath}extra`;
