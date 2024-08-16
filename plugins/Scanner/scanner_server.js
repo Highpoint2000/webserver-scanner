@@ -36,6 +36,7 @@ const config = require('./../../config.json');
 
 const ServerName = config.identification.tunerName; 
 const DefaultFreq = config.defaultFreq;
+const enableDefaultFreq = config.enableDefaultFreq;
 const Antennas = config.antennas;
 const tuningLowerLimit = config.webserver.tuningLowerLimit;
 const tuningUpperLimit = config.webserver.tuningUpperLimit;
@@ -458,7 +459,7 @@ function checkUserCount(users) {
             stopAutoScan();
         }
 		
-		if (DefaultFreq !== '') {
+		if (DefaultFreq !== '' && enableDefaultFreq) {
 			sendDataToClient(DefaultFreq);
 		}
 		
