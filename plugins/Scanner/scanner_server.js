@@ -16,6 +16,7 @@
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
+const AntennaSwitch = 'on';  // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
@@ -34,6 +35,8 @@ const { logInfo, logError, logWarn } = require('./../../server/console');
 const config = require('./../../config.json');
 
 const ServerName = config.identification.tunerName; 
+const DefaultFreq = config.defaultFreq;
+const Antennas = config.antennas;
 const tuningLowerLimit = config.webserver.tuningLowerLimit;
 const tuningUpperLimit = config.webserver.tuningUpperLimit;
 const webserverPort = config.webserver.webserverPort || 8080; // Default to port 8080 if not specified
@@ -59,10 +62,16 @@ let modeValue = defaultScannerMode;
 let stereo_forced_user = 'stereo';
 let scanInterval = null; 
 let autoScanActive = false; 
+let autoScanTimer; 
+let autoScanScheduled = false; 
 let Sensitivity = defaultSensitivityValue;
 let ScannerMode = defaultScannerMode;
 let ScanHoldTime = defaultScanHoldTime;
 let Scan;
+let enabledAntennas = [];
+let currentIndex = 0;
+let ant;
+
 
 if (StartAutoScan !== 'auto') {
    Scan = StartAutoScan;
@@ -141,7 +150,6 @@ async function TextWebSocket(messageData) {
         }
     }
 }
-
 
 
 function startSearch(direction) {
@@ -264,22 +272,18 @@ async function ExtraWebSocket() {
 									if (SearchPE5PVB) {
 										sendCommandToClient('C1');
 										logInfo(`Scanner (PE5PVB mode) search down [IP: ${message.source}]`);
-										console.log('down PE5PVB');
 									} else {
 										startSearch('down');
 										logInfo(`Scanner search down [IP: ${message.source}]`);
-										console.log('down');
 									}
                                 }
                                 if (message.value.Search === 'up') {
 									if (SearchPE5PVB) {
-																				console.log('up PE5PVB');
 										sendCommandToClient('C2');
 										logInfo(`Scanner (PE5PVB mode) search up [IP: ${message.source}] `);
 									} else {
 										startSearch('up');
 										logInfo(`Scanner search up [IP: ${message.source}]`);
-												console.log('up');
 									}
                                 }
 								
@@ -379,41 +383,53 @@ function sendCommand(socket, command) {
     socket.send(command);
 }
 
-
 function checkUserCount(users) {
 
-    // If there are no users, auto-scan is not active, and StartAutoScan is set to 'auto'
+    // Check if the conditions for starting the auto-scan are met
     if (users === 0 && !autoScanActive && StartAutoScan === 'auto') {
+        if (!autoScanScheduled) {
 
-        // Activate auto-scan
-        autoScanActive = true;  
-        Scan = 'on';
+            // Set a timeout to start auto-scan after 5 seconds
+            autoScanTimer = setTimeout(() => {	
 
-        // Create and send a broadcast message to start the scan
-        const Message = createMessage(
-            'broadcast',
-            '255.255.255.255',
-            Scan,
-            '',
-            Sensitivity,
-            ScannerMode,
-            ScanHoldTime
-        );
-        extraSocket.send(JSON.stringify(Message));
+                // Activate auto-scan
+                autoScanActive = true;  
+                Scan = 'on';
 
-        // Log and handle the scan based on the mode
-        if (ScanPE5PVB) {
-            logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
-			logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
-            sendCommandToClient('J1');
-        } else {
-			logInfo(`Scanner starts auto-scan automatically [User: ${users}]`);
-			logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
-            isScanning = false;
-            AutoScan();
+                // Create and send a broadcast message to start the scan
+                const Message = createMessage(
+                    'broadcast',
+                    '255.255.255.255',
+                    Scan,
+                    '',
+                    Sensitivity,
+                    ScannerMode,
+                    ScanHoldTime
+                );
+                extraSocket.send(JSON.stringify(Message));
+
+                // Log and handle the scan based on the mode
+                if (ScanPE5PVB) {
+                    logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
+                    logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
+                    sendCommandToClient('J1');
+                } else {
+                    logInfo(`Scanner starts auto-scan automatically [User: ${users}]`);
+                    logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+                    isScanning = false;
+                    AutoScan();
+                }
+
+                // Reset the scheduling flag
+                autoScanScheduled = false;
+            }, 10000); // 10000 milliseconds = 5 seconds
+
+            // Set the scheduling flag to prevent overlapping timeouts
+            autoScanScheduled = true;
         }
-    }
-
+	}
+ 
+	
     // If there are users, auto-scan is active, and StartAutoScan is set to 'auto'
     if (users > 0 && autoScanActive && StartAutoScan === 'auto') {
 
@@ -441,6 +457,11 @@ function checkUserCount(users) {
 			logInfo(`Scanner stopped automatically auto-scan [User: ${users}]`);
             stopAutoScan();
         }
+		
+		if (DefaultFreq !== '') {
+			sendDataToClient(DefaultFreq);
+		}
+		
     }
 
 }
@@ -459,6 +480,8 @@ function handleSocketMessage(messageData) {
 		users = messageData.users;
         stereo_forced = messageData.stForced;
         station = txInfo.tx;
+		
+		ant = messageData.ant;
 
         if (isScanning) {
             if (stereo_forced && stereo_forced_user !== 'mono') {
@@ -496,6 +519,66 @@ function handleSocketMessage(messageData) {
     }, 0);
 }
 
+
+function initializeAntennas(Antennas) {
+    try {
+        // Check if antennas are enabled
+        if (!Antennas.enabled || AntennaSwitch !== 'on') {
+            // No antennas enabled
+            enabledAntennas = [];
+            currentIndex = 0;
+            return;
+        }
+
+        // Initialize the list of enabled antennas
+        enabledAntennas = [];
+        for (let i = 1; i <= 4; i++) {
+            const antenna = Antennas[`ant${i}`];
+            if (antenna && antenna.enabled) {
+                enabledAntennas.push({
+                    number: i,
+                    name: antenna.name
+                });
+            }
+        }
+
+        // Validate the number of enabled antennas
+        if (enabledAntennas.length < 2) {
+            enabledAntennas = [];
+            currentIndex = 0;
+            return;
+        }
+
+        // Set the current index to 0 if there are valid antennas
+        if (enabledAntennas.length > 0) {
+            logInfo('Scanner activated automatic antenna switching');
+            currentIndex = 0;
+        } else {
+            currentIndex = 0; // This else is redundant, but kept for clarity
+        }
+    } catch (error) {
+        logError('Scanner Error initializing antennas:', error.message);
+    }
+}
+
+
+// Function to send the command to the next activated antenna
+function sendNextAntennaCommand() {
+    if (enabledAntennas.length < 2 || AntennaSwitch !== 'on') {
+        // No need to switch if there's only one or no active antennas
+        // console.log('No need to switch antennas.');
+        return;
+    }
+
+    const ant = enabledAntennas[currentIndex];
+    logInfo(`Scanner switched to antenna ${ant.number}: ${ant.name}`);
+    sendCommandToClient(`Z${ant.number - 1}`); // Z0 to Z3 for ant1 to ant4
+
+    // Move to the next index
+    currentIndex = (currentIndex + 1) % enabledAntennas.length;
+}
+
+
 function AutoScan() {
     if (!isScanning) {
         startScan('up');		// Start scanning once
@@ -522,12 +605,15 @@ function startScan(direction) {
             // logInfo('Scanning has been stopped.');
             return; // Exit the function if scanning has been stopped
         }
-		
+
         currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
 		
         if (direction === 'up') {
             currentFrequency += 0.1;
             if (currentFrequency > tuningUpperLimit) {
+				if (Scan = 'on') {
+				   sendNextAntennaCommand();
+				}
                 currentFrequency = tuningLowerLimit;
             }
         } else if (direction === 'down') {
@@ -538,7 +624,7 @@ function startScan(direction) {
         }
 
         currentFrequency = Math.round(currentFrequency * 10) / 10;
-		
+			
         if (!ScanPE5PVB) {
             if (ScannerMode === 'blacklist' && Scan === 'on') {
                 while (isInBlacklist(currentFrequency, blacklist)) {
@@ -594,7 +680,7 @@ function isInWhitelist(frequency, whitelist) {
 
 function checkBlacklist() {
     // Determine the path to the file relative to the current directory
-    const filePath = path.join(__dirname, '../Scanner/Blacklist.txt');
+    const filePath = path.join(__dirname, '../Scanner/blacklist.txt');
 
     // Read the file
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -617,14 +703,14 @@ function checkWhitelist() {
     // Read the file
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
-            logInfo('Scanner checking whitelist: not found');
+            logInfo('Scanner checking Whitelist: not found');
             whitelist = [];
             return;
         }
 
         whitelist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
         whitelist = whitelist.map(value => parseFloat(value).toString());
-        logInfo('Scanner initialized whitelist');
+        logInfo('Scanner initialized Whitelist');
     });
 }
 
@@ -682,3 +768,8 @@ ExtraWebSocket();
 TextWebSocket();
 checkBlacklist();
 checkWhitelist();
+initializeAntennas(Antennas);
+
+setTimeout(() => {
+    sendNextAntennaCommand();;
+}, 500);
