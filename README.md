@@ -13,6 +13,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - blacklist.txt and whitlist.txt are now loaded from the plugin path
 - Server plugins are activated/deactivated via the web server GUI
 - Proxy Server ready (Tnx to _zer0_gravity_)
+- Automatic antenna switching on upper band limit
 
 ## Installation notes:
 
