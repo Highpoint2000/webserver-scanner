@@ -386,8 +386,6 @@ wss.on('connection', (ws, request) => {
     }
 
     const { isAdminAuthenticated, isTuneAuthenticated } = request.session || {};  
-	
-	
 
     if (serverConfig.publicTuner && !serverConfig.lockToAdmin) {
       output.write(`${command}\n`);
@@ -399,11 +397,7 @@ wss.on('connection', (ws, request) => {
       } else {
         if(isTuneAuthenticated) {
           output.write(`${command}\n`);
-        } else {
-			if (clientIp === '127.0.0.1') {
-				output.write(`${command}\n`);
-			}
-		}
+        }
       }
     }
     
