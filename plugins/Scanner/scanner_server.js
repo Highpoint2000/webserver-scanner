@@ -1,18 +1,20 @@
-//////////////////////////////////////////////////////////////////////////////////////
-///                                                                                ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)  last update: 15.08.24  ///
-///                                                                                /// 
-///  by Highpoint                                                                  ///
-///  powered by PE5PVB                                                             ///     
-///                                                                                ///
-///  https://github.com/Highpoint2000/webserver-scanner                            ///
-///                                                                                ///
-//////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+///                                                         ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.0 BETA)  /// 
+///                                                         ///
+///                                  last update: 16.08.24  ///
+///                                                         /// 
+///  by Highpoint                                           ///
+///  powered by PE5PVB                                      ///     
+///                                                         ///
+///  https://github.com/Highpoint2000/webserver-scanner     ///
+///                                                         ///
+///////////////////////////////////////////////////////////////
 
 ///  This plugin only works from web server version 1.2.3!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = true; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning if no user is connected)
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
@@ -477,8 +479,8 @@ function handleSocketMessage(messageData) {
         previousFrequency = freq;
         currentFrequency = freq;
         checkStrengthCounter++;
-
-        if (checkStrengthCounter > 15) {
+		
+        if (checkStrengthCounter > 3) {
             if (stereo) {
                 stereo_detect = true;
             }
@@ -574,10 +576,9 @@ function startScan(direction) {
         }
 
         sendDataToClient(currentFrequency);
-		const ScanHoldTimeMiliseconds = ScanHoldTime * 1000;
-        setTimeout(updateFrequency, ScanHoldTimeMiliseconds); // Dynamically apply ScanHoldTime
-    }
-
+		
+	}
+ 
     isScanning = true;
     updateFrequency();
 	scanInterval = setInterval(updateFrequency, 500);
@@ -632,20 +633,20 @@ function checkWhitelist() {
                                   
 			let ScanHoldTimeValue = ScanHoldTime * 10;	
             if (stereo_detect === true || PiCode.length > 1) {
-				
+
                 if (strength > Sensitivity || PiCode.length > 1) {					
 					// console.log(strength, Sensitivity);
 
                     if (PiCode.length > 1 && station === '') {
                         ScanHoldTimeValue += 50;
-                    }
-					// console.log(checkStrengthCounter, ScanHoldTimeValue);				
+                    }	
             
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
 					isScanning = false; // Updates a flag indicating scanning status		
 					
 							if (Scan === 'on') {
                                 if (checkStrengthCounter > ScanHoldTimeValue) {
+																		
 										startScan('up'); // Restart scanning after the delay
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
