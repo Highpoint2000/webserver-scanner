@@ -302,33 +302,29 @@ app.use('/', endpoints);
 wss.on('connection', (ws, request) => {
   const output = serverConfig.xdrd.wirelessConnection ? client : serialport;
   const clientIp = request.headers['x-forwarded-for'] || request.connection.remoteAddress;
-  
-  let clientIpTest = clientIp.split(',')[0].trim();
 
-	if (clientIp !== '127.0.0.1' || (request.connection && request.connection.remoteAddress && request.connection.remoteAddress !== '127.0.0.1') || (request.headers && request.headers['origin'] && request.headers['origin'].trim() !== '')) {
-		currentUsers++;
-	}
-	
-    dataHandler.showOnlineUsers(currentUsers);
-  if(currentUsers === 1 && serverConfig.autoShutdown === true && serverConfig.xdrd.wirelessConnection) {
+  let clientIpTest = clientIp.split(',')[0].trim();
+  if (clientIp !== '127.0.0.1' || (request.connection && request.connection.remoteAddress && request.connection.remoteAddress !== '127.0.0.1') || (request.headers && request.headers['origin'] && request.headers['origin'].trim() !== '')) {
+    currentUsers++;
+  }
+  dataHandler.showOnlineUsers(currentUsers);
+
+  if (currentUsers === 1 && serverConfig.autoShutdown === true && serverConfig.xdrd.wirelessConnection) {
     serverConfig.xdrd.wirelessConnection === true ? connectToXdrd() : serialport.write('x\n');
   }
 
-  // Use ipinfo.io API to get geolocation information
   https.get(`https://ipinfo.io/${clientIp}/json`, (response) => {
     let data = '';
-
     response.on('data', (chunk) => {
       data += chunk;
     });
-
     response.on('end', () => {
       try {
         const locationInfo = JSON.parse(data);
         const options = { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         const connectionTime = new Date().toLocaleString([], options);
 
-        if(locationInfo.country === undefined) {
+        if (locationInfo.country === undefined) {
           const userData = { ip: clientIp, location: 'Unknown', time: connectionTime, instance: ws };
           storage.connectedUsers.push(userData);
           logInfo(`Web client \x1b[32mconnected\x1b[0m (${clientIp}) \x1b[90m[${currentUsers}]\x1b[0m`);
@@ -336,7 +332,7 @@ wss.on('connection', (ws, request) => {
           const userLocation = `${locationInfo.city}, ${locationInfo.region}, ${locationInfo.country}`;
           const userData = { ip: clientIp, location: userLocation, time: connectionTime, instance: ws };
           storage.connectedUsers.push(userData);
-          logInfo(`Web client \x1b[32mconnected\x1b[0m (${clientIp}) \x1b[90m[${currentUsers}]\x1b[0m Location: ${locationInfo.city}, ${locationInfo.region}, ${locationInfo.country}`);
+          logInfo(`Web client \x1b[32mconnected\x1b[0m (${clientIp}) \x1b[90m[${currentUsers}]\x1b[0m Location: ${userLocation}`);
         }
       } catch (error) {
         logInfo(`Web client \x1b[32mconnected\x1b[0m (${clientIp}) \x1b[90m[${currentUsers}]\x1b[0m`);
@@ -348,41 +344,48 @@ wss.on('connection', (ws, request) => {
     const command = message.toString();
     logDebug(`Command received from \x1b[90m${clientIp}\x1b[0m: ${command}`);
 
-    if ((command.startsWith('X') || command.startsWith('Y')) && !request.session.isAdminAuthenticated) {
+    if (request.session && request.session.isAdminAuthenticated) {
+      if ((command.startsWith('X') || command.startsWith('Y')) && !request.session.isAdminAuthenticated) {
         logWarn(`User \x1b[90m${clientIp}\x1b[0m attempted to send a potentially dangerous command. You may consider blocking this user.`);
         return;
+      }
+    } else {
+      if ((command.startsWith('X') || command.startsWith('Y'))) {
+        logWarn(`User \x1b[90m${clientIp}\x1b[0m attempted to send a potentially dangerous command, but session is missing.`);
+        return;
+      }
     }
 
     if (command.includes("\'")) {
-        return;
+      return;
     }
 
-    if (command.startsWith('w') && request.session.isAdminAuthenticated) {
-        switch (command) {
-            case 'wL1':
-                serverConfig.lockToAdmin = true;
-                break;
-            case 'wL0':
-                serverConfig.lockToAdmin = false;
-                break;
-            case 'wT0':
-                serverConfig.publicTuner = true;
-                break;
-            case 'wT1':
-                serverConfig.publicTuner = false;
-                break;
-            default:
-                break;
-        }
+    if (command.startsWith('w') && request.session && request.session.isAdminAuthenticated) {
+      switch (command) {
+        case 'wL1':
+          serverConfig.lockToAdmin = true;
+          break;
+        case 'wL0':
+          serverConfig.lockToAdmin = false;
+          break;
+        case 'wT0':
+          serverConfig.publicTuner = true;
+          break;
+        case 'wT1':
+          serverConfig.publicTuner = false;
+          break;
+        default:
+          break;
+      }
     }
 
     if (command.startsWith('T')) {
-        const tuneFreq = Number(command.slice(1)) / 1000;
-        const { tuningLimit, tuningLowerLimit, tuningUpperLimit } = serverConfig.webserver;
-        
-        if (tuningLimit && (tuneFreq < tuningLowerLimit || tuneFreq > tuningUpperLimit) || isNaN(tuneFreq)) {
-            return;
-        }
+      const tuneFreq = Number(command.slice(1)) / 1000;
+      const { tuningLimit, tuningLowerLimit, tuningUpperLimit } = serverConfig.webserver;
+
+      if (tuningLimit && (tuneFreq < tuningLowerLimit || tuneFreq > tuningUpperLimit) || isNaN(tuneFreq)) {
+        return;
+      }
     }
 
     const { isAdminAuthenticated, isTuneAuthenticated } = request.session || {};  
@@ -391,56 +394,53 @@ wss.on('connection', (ws, request) => {
       output.write(`${command}\n`);
     } else {
       if (serverConfig.lockToAdmin) {
-        if(isAdminAuthenticated) {
+        if (isAdminAuthenticated) {
           output.write(`${command}\n`);
         }
       } else {
-        if(isTuneAuthenticated) {
+        if (isTuneAuthenticated) {
           output.write(`${command}\n`);
         }
       }
     }
-    
   });
 
   ws.on('close', (code, reason) => {
     if (clientIp !== '127.0.0.1' || (request.connection && request.connection.remoteAddress && request.connection.remoteAddress !== '127.0.0.1') || (request.headers && request.headers['origin'] && request.headers['origin'].trim() !== '')) {
-		currentUsers--;
-	}
+      currentUsers--;
+    }
     dataHandler.showOnlineUsers(currentUsers);
-  
-    // Find the index of the user's data in storage.connectedUsers array
+
     const index = storage.connectedUsers.findIndex(user => user.ip === clientIp);
     if (index !== -1) {
-      storage.connectedUsers.splice(index, 1); // Remove the user's data from storage.connectedUsers array
+      storage.connectedUsers.splice(index, 1);
     }
 
-    if(currentUsers === 0) {
+    if (currentUsers === 0) {
       storage.connectedUsers = [];
     }
 
     if (currentUsers === 0 && serverConfig.enableDefaultFreq === true && serverConfig.autoShutdown !== true && serverConfig.xdrd.wirelessConnection === true) {
-      setTimeout(function() {
-        if(currentUsers === 0) {
-          output.write('T' + Math.round(serverConfig.defaultFreq * 1000) +'\n');
+      setTimeout(() => {
+        if (currentUsers === 0) {
+          output.write('T' + Math.round(serverConfig.defaultFreq * 1000) + '\n');
           dataHandler.resetToDefault(dataHandler.dataToSend);
           dataHandler.dataToSend.freq = Number(serverConfig.defaultFreq).toFixed(3);
           dataHandler.initialData.freq = Number(serverConfig.defaultFreq).toFixed(3);
         }
-      }, 10000)
+      }, 10000);
     }
-  
+
     if (currentUsers === 0 && serverConfig.autoShutdown === true && serverConfig.xdrd.wirelessConnection === true) {
       client.write('X\n');
     }
 
     logInfo(`Web client \x1b[31mdisconnected\x1b[0m (${clientIp}) \x1b[90m[${currentUsers}]`);
-
   });  
 
   ws.on('error', console.error); 
-
 });
+
 
 
 // CHAT WEBSOCKET BLOCK
@@ -535,14 +535,16 @@ ExtraWss.on('connection', (ws, request)  => {
 });
 
 
+// Websocket register for /text, /audio and /chat paths 
 httpServer.on('upgrade', (request, socket, head) => {
-  // Apply session middleware for WebSocket paths that need sessions
   if (request.url === '/text') {
-    sessionMiddleware(request, {}, () => {
+    //sessionMiddleware(request, {}, () => {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
-    });
+   // });
+  } else if (request.url === '/audio') {
+    proxy.ws(request, socket, head);
   } else if (request.url === '/chat') {
     sessionMiddleware(request, {}, () => {
       chatWss.handleUpgrade(request, socket, head, (ws) => {
@@ -555,16 +557,17 @@ httpServer.on('upgrade', (request, socket, head) => {
         rdsWss.emit('connection', ws, request);
       });
     });
-  } else if (request.url === '/extra') {
-    sessionMiddleware(request, {}, () => {
-      ExtraWss.handleUpgrade(request, socket, head, (ws) => {
-        ExtraWss.emit('connection', ws, request);
+   } else if (request.url === '/extra') {
+	 sessionMiddleware(request, {}, () => {
+       ExtraWss.handleUpgrade(request, socket, head, (ws) => {
+		  ExtraWss.emit('connection', ws, request);
       });
-    });
+	});
   } else {
-    socket.destroy();
+	socket.destroy();
   }
 });
+
 app.use(express.static(path.join(__dirname, '../web'))); // Serve the entire web folder to the user
 
 httpServer.listen(serverConfig.webserver.webserverPort, serverConfig.webserver.webserverIp, () => {
