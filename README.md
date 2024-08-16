@@ -12,6 +12,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - Activating the scanner control function is done by holding down the auto scan buttons
 - blacklist.txt and whitlist.txt are now loaded from the plugin path
 - Server plugins are activated/deactivated via the web server GUI
+- Proxy Server ready (Tnx to _zer0_gravity_)
 
 ## Installation notes:
 
