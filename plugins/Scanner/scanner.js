@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.0)       /// 
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///                             last update: 16.08.24       ///
+///                             last update: 19.08.24       ///
 ///                                                         /// 
 ///  by Highpoint                                           ///
 ///  powered by PE5PVB                                      ///     
@@ -17,7 +17,7 @@
 
 (() => {
 
-    const pluginVersion = 'V2.0'; 
+    const pluginVersion = 'V2.1 BETA'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -32,7 +32,7 @@
     let signalValue = 'dBf';
     let isTuneAuthenticated = false; // Initially set to false
     let scannerButtonsExecuted = false; // Tracks if ScannerButtons have been executed
-	let Scan = 'off';
+    let Scan = 'off';
 
     // Create a status message object
     function createMessage(status, Scan = '', Search = '', Sensitivity = '', ScannerMode = '', ScanHoldTime = '') {
@@ -63,7 +63,7 @@
                 console.log("Scanner sent initial message sent:", initialMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send initial message.");
-				showCustomAlert('Scanner Error! WebSocket is not open. Cannot send initial message');
+                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send initial message');
             }
         } catch (error) {
             console.error(error);
@@ -79,7 +79,7 @@
                 console.log("Search message sent:", searchMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send search message.");
-				showCustomAlert('Scanner Error! WebSocket is not open. Cannot send search message');
+                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send search message');
             }
         } catch (error) {
             console.error(error);
@@ -95,7 +95,7 @@
                 console.log("Scanner sent message:", scanMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send scan message.");
-				showCustomAlert('Scanner Error! WebSocket is not open. Cannot send scan message');
+                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send scan message');
             }
         } catch (error) {
             console.error(error);
@@ -111,7 +111,7 @@
                 console.log("Value message sent:", valueMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send value message.");
-				showCustomAlert('Scanner Error! WebSocket is not open. Cannot send value message');
+                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send value message');
             }
         } catch (error) {
             console.error(error);
@@ -129,98 +129,146 @@
                 };
                 wsSendSocket.onmessage = handleWebSocketMessage;
                 wsSendSocket.onerror = (error) => {
-					console.error("Scanner Websocket Error:", error);
-					showCustomAlert('Scanner Websocket Error!');
-				};
+                    console.error("Scanner Websocket Error:", error);
+                    showCustomAlert('Scanner Websocket Error!');
+                };
                 wsSendSocket.onclose = (event) => {
                     console.log("Scanner Error! Websocket closed or not open:", event);
-					showCustomAlert('Scanner Error! Websocket closed or not open');
+                    showCustomAlert('Scanner Error! Websocket closed or not open');
                     setTimeout(setupSendSocket, 5000); // Reconnect after 5 seconds
                 };
             } catch (error) {
                 console.error("Failed to setup Send WebSocket:", error);
-				showCustomAlert('Scanner Error! Failed to setup Send WebSocket');
+                showCustomAlert('Scanner Error! Failed to setup Send WebSocket');
                 setTimeout(setupSendSocket, 5000);
             }
         }
     }
 
-    // Handle incoming WebSocket messages
     function handleWebSocketMessage(event) {
         try {
             const eventData = JSON.parse(event.data);
-			// console.log(eventData);
-			
-            if (eventData.type === 'Scanner' && eventData.source !== clientIp) {
-                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime } = eventData.value;
-				// console.log(eventData);		
-				
-                if (status === 'response' && eventData.target === clientIp) {
 
+            if (eventData.type === 'Scanner' ) {
+                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime } = eventData.value;
+
+                if (status === 'response' && eventData.target === clientIp) {
                     if (!scannerButtonsExecuted) {
                         ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
                         SearchButtons();
                         scannerButtonsExecuted = true; // Mark as executed
-			
-						if (isTuneAuthenticated) {
-							if (ScanPE5PVB) {
-								showCustomAlert(`Scanner settings activated ! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`); 
-							} else {
-								showCustomAlert(`Scanner settings activated ! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanholdtime: ${ScanHoldTime}`); 
-							}
-						}
+
+                        if (isTuneAuthenticated) {
+                            showCustomAlert(`Scanner settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`);
+                        }
                     }
-					
-					updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-					                  
-                } else if (status === 'broadcast') {
+
                     updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-                    // console.log(eventData);
+                    
+                } else if (status === 'broadcast' || status === 'send') {
+                    updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
                 }
 
                 // Handle Scan button state
                 const ScanButton = document.getElementById('Scan-on-off');
                 const blinkTextElement = document.querySelector('#tune-buttons .blink');
+                const scannerControls = document.getElementById('scanner-controls');
+                const HideElement = document.querySelector('.panel-33.hide-phone.no-bg');
+                const volumeSliderParent = document.getElementById('volumeSlider')?.parentNode;
+
                 if (ScanButton) {
-					if (Scan === 'off' || Scan === '') {
-						
+                    if (Scan === 'off') {
                         ScanButton.setAttribute('data-scan-status', 'off');
-                        ScanButton.classList.remove('bg-color-4');
                         ScanButton.classList.add('bg-color-3');
+                        ScanButton.classList.remove('bg-color-4');
 
-                        // Show frequency and search buttons
-                        document.getElementById('freq-down').style.display = 'block';
-                        document.getElementById('freq-up').style.display = 'block';
-                        document.getElementById('search-down').style.display = 'block';
-                        document.getElementById('search-up').style.display = 'block';
-                        document.getElementById('commandinput').style.display = 'block';
+                        const freqDownElement = document.getElementById('freq-down');
+                        if (freqDownElement) {
+                            freqDownElement.style.display = 'block';
+                        }
 
-                        // Hide the blink text
+                        const freqUpElement = document.getElementById('freq-up');
+                        if (freqUpElement) {
+                            freqUpElement.style.display = 'block';
+                        }
+
+                        const searchDownElement = document.getElementById('search-down');
+                        if (searchDownElement) {
+                            searchDownElement.style.display = 'block';
+                        }
+
+                        const searchUpElement = document.getElementById('search-up');
+                        if (searchUpElement) {
+                            searchUpElement.style.display = 'block';
+                        }
+
+                        const commandInputElement = document.getElementById('commandinput');
+                        if (commandInputElement) {
+                            commandInputElement.style.display = 'block';
+                        }
+
                         if (blinkTextElement) {
                             blinkTextElement.style.display = 'none';
                         }
-						
+
+                        if (window.innerWidth < 769) {
+                            if (volumeSliderParent) {
+                                volumeSliderParent.style.display = 'none';
+                            }
+                            if (scannerControls) {
+                                scannerControls.style.display = 'none';
+                            }
+                            if (HideElement) {
+                                HideElement.classList.add('hide-phone');
+                            }
+                        }
+                        
                     } else {
-						
                         ScanButton.setAttribute('data-scan-status', 'on');
-                        ScanButton.classList.remove('bg-color-3');
                         ScanButton.classList.add('bg-color-4');
+                        ScanButton.classList.remove('bg-color-3');
 
-                        // Hide frequency and search buttons
-                        document.getElementById('freq-down').style.display = 'none';
-                        document.getElementById('freq-up').style.display = 'none';
-                        document.getElementById('search-down').style.display = 'none';
-                        document.getElementById('search-up').style.display = 'none';
-                        document.getElementById('commandinput').style.display = 'none';
+                        const freqDownElement = document.getElementById('freq-down');
+                        if (freqDownElement) {
+                            freqDownElement.style.display = 'none';
+                        }
 
-                        // Show the blink text
+                        const freqUpElement = document.getElementById('freq-up');
+                        if (freqUpElement) {
+                            freqUpElement.style.display = 'none';
+                        }
+
+                        const searchDownElement = document.getElementById('search-down');
+                        if (searchDownElement) {
+                            searchDownElement.style.display = 'none';
+                        }
+
+                        const searchUpElement = document.getElementById('search-up');
+                        if (searchUpElement) {
+                            searchUpElement.style.display = 'none';
+                        }
+
+                        const commandInputElement = document.getElementById('commandinput');
+                        if (commandInputElement) {
+                            commandInputElement.style.display = 'none';
+                        }
+
                         if (blinkTextElement) {
                             blinkTextElement.style.display = 'block';
                         }
 
+                        if (window.innerWidth < 769) {
+                            if (volumeSliderParent) {
+                                volumeSliderParent.style.display = 'none';
+                            }
+                            if (scannerControls) {
+                                scannerControls.style.display = 'flex';
+                            }
+                            if (HideElement) {
+                                HideElement.classList.remove('hide-phone');
+                            }
+                        }
                     }
-					
-
                 }
             }
         } catch (error) {
@@ -235,6 +283,7 @@
             const sensitivityInput = document.querySelector('input[title="Scanner Sensitivity"]');
             if (sensitivityInput) {
                 sensitivityInput.value = `${Sensitivity} dBf`;
+                sensitivityInput.setAttribute('data-value', Sensitivity);
             }
         }
 
@@ -243,6 +292,7 @@
             const modeInput = document.querySelector('input[title="Scanner Mode"]');
             if (modeInput) {
                 modeInput.value = `${ScannerMode}`;
+                modeInput.setAttribute('data-value', ScannerMode);
             }
         }
 
@@ -251,6 +301,7 @@
             const holdTimeInput = document.querySelector('input[title="Scanhold Time"]');
             if (holdTimeInput) {
                 holdTimeInput.value = `${ScanHoldTime} sec.`;
+                holdTimeInput.setAttribute('data-value', ScanHoldTime);
             }
         }
     }
@@ -317,173 +368,193 @@
         });
     }
 
-function BlinkAutoScan() {
-    const element = document.getElementById('tune-buttons');
+    function BlinkAutoScan() {
+        const element = document.getElementById('tune-buttons');
 
-    if (element) {
-        element.classList.remove('no-bg');
+        if (element) {
+            element.classList.remove('no-bg');
 
-        const blinkText = document.createElement('span');
-        blinkText.textContent = 'Autoscan active!';
+            const blinkText = document.createElement('span');
+            blinkText.textContent = 'Autoscan active!';
 
-        blinkText.classList.add('blink');
-        blinkText.style.display = 'none'; // Initially hide the element
+            blinkText.classList.add('blink');
+            blinkText.style.display = 'none'; // Initially hide the element
 
-        // Append the blinkText element to the parent element
-        element.appendChild(blinkText);
+            // Append the blinkText element to the parent element
+            element.appendChild(blinkText);
 
-        // Add styles for blinking effect
-        const style = document.createElement('style');
-        style.textContent = `
-            #tune-buttons {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100%;
+            // Add styles for blinking effect
+            const style = document.createElement('style');
+            style.textContent = `
+                #tune-buttons {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100%;
+                }
+
+                .blink {
+                    font-size: 32px;
+                    font-weight: bold;
+                    font-family: Titillium Web, Calibri, sans-serif;
+                    color: red;
+                    animation: blink-animation 1s step-start 0s infinite;
+                }
+
+                @keyframes blink-animation {
+                    50% {
+                        opacity: 0;
+                    }
+                }
+            `;
+
+            document.head.appendChild(style);
+        }
+    }
+
+    // Helper functions to manage cookies
+    function setCookie(name, value, days) {
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+    }
+
+    function getCookie(name) {
+        return document.cookie.split('; ').reduce((r, v) => {
+            const parts = v.split('=');
+            return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+        }, '');
+    }
+
+    function eraseCookie(name) {
+        setCookie(name, '', -1);
+    }
+
+    // Create scanner control buttons
+    function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
+        const ScannerButton = document.createElement('button');
+        // ScannerButton.classList.add('hide-phone');
+        ScannerButton.id = 'Scan-on-off';
+        ScannerButton.setAttribute('aria-label', 'Scan');
+        // ScannerButton.setAttribute('data-tooltip', 'Auto Scan on/off');
+        ScannerButton.setAttribute('data-scan-status', 'off');
+        ScannerButton.style.borderRadius = '0px 0px 0px 0px';
+        ScannerButton.style.position = 'relative';
+        ScannerButton.style.top = '0px';
+        ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+        if (Scan === 'off') { 
+        ScannerButton.classList.add('bg-color-3');
+        }
+        ScannerButton.title = `Plugin Version ${pluginVersion}`;
+
+        // Funktion zur Anpassung des Stils basierend auf der Bildschirmbreite
+        function updateButtonStyle() {
+            if (window.innerWidth < 769) {
+                ScannerButton.style.right = '8px';
+                ScannerButton.style.width = '100%';
+                ScannerButton.style.borderRadius = '15px';
+            } else {
+                ScannerButton.style.right = '1px';
+                ScannerButton.style.left = '0px';
+                ScannerButton.style.borderRadius = '0px';
+                ScannerButton.style.width = '97.0%';
             }
+        }
 
-            .blink {
-                font-size: 32px;
-                font-weight: bold;
-                font-family: Titillium Web, Calibri, sans-serif;
-                color: red;
-                animation: blink-animation 1s step-start 0s infinite;
+        // Initiale Stil-Updates
+        updateButtonStyle();
+
+        // Event-Listener für Button-Klick
+        ScannerButton.addEventListener('click', function() {
+            const isActive = ScannerButton.getAttribute('data-scan-status') === 'on';
+            if (isActive) {
+                ScannerButton.setAttribute('data-scan-status', 'off');
+                ScannerButton.style.backgroundColor = 'var(--color-3)'; // Hintergrundfarbe für inaktiven Zustand
+            } else {
+                ScannerButton.setAttribute('data-scan-status', 'on');
+                ScannerButton.style.backgroundColor = 'var(--color-4)'; // Hintergrundfarbe für aktiven Zustand
             }
+        });
+        
+        // Button in den DOM einfügen
+        const buttonIms = document.querySelector('.button-ims');
+        const newDiv = document.createElement('div');
+        newDiv.className = 'panel-50 no-bg br-0 h-100 m-0';
+        newDiv.appendChild(ScannerButton);
+        buttonIms.parentNode.insertBefore(newDiv, buttonIms);
 
-            @keyframes blink-animation {
-                50% {
-                    opacity: 0;
+        let pressTimer;
+        let isLongPress = false;
+
+        // Toggle the scan mode based on press duration
+        function toggleScan(isLongPressAction) {
+            const ScanButton = document.getElementById('Scan-on-off');
+            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+            const scannerControls = document.getElementById('scanner-controls');
+            const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+            
+            if (isLongPressAction) {
+                if (isTuneAuthenticated) {
+                    const scannerControls = document.getElementById('scanner-controls');
+                    if (scannerControls) {
+                        scannerControls.parentNode.removeChild(scannerControls);
+                        const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+                        volumeSliderParent.style.display = 'block';
+                        setCookie('scannerControlsStatus', 'off', 7); // Remember the status
+                    } else {
+                        createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+                        setCookie('scannerControlsStatus', 'on', 7); // Remember the status
+                    }
+                } else {
+                    showCustomAlert("Admin must be logged in to use the autoscan mode!");
+                }
+            } else {
+                if (isTuneAuthenticated) {
+                    if (isScanOn) {                
+                        sendScan('off');
+                        setCookie('scannerControlsStatus', 'off', 7); // Remember the status
+                    } else {
+                        sendScan('on');
+                        setCookie('scannerControlsStatus', 'on', 7); // Remember the status
+                    }
+                } else {
+                    showCustomAlert("Admin must be logged in to use the autoscan mode!");
                 }
             }
-        `;
+        }
 
-        document.head.appendChild(style);
-    }
-}
+        // Start a timer for detecting long presses
+        function startPressTimer() {
+            isLongPress = false;
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                toggleScan(true); // Trigger long press action
+            }, 1000); // 1 second
+        }
 
+        // Cancel the press timer
+        function cancelPressTimer() {
+            clearTimeout(pressTimer);
+            if (!isLongPress) {
+                toggleScan(false); // Trigger short press action
+            }
+        }
 
-// Helper functions to manage cookies
-function setCookie(name, value, days) {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
-}
-
-function getCookie(name) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, '');
-}
-
-function eraseCookie(name) {
-    setCookie(name, '', -1);
-}
-
-// Create scanner control buttons
-function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
-    const ScannerButton = document.createElement('button');
-    ScannerButton.classList.add('hide-phone');
-    ScannerButton.id = 'Scan-on-off';
-    ScannerButton.setAttribute('aria-label', 'Scan');
-    ScannerButton.setAttribute('data-tooltip', 'Auto Scan on/off');
-    ScannerButton.setAttribute('data-scan-status', 'off');
-    ScannerButton.style.borderRadius = '0px 0px 0px 0px';
-    ScannerButton.style.position = 'relative';
-    ScannerButton.style.top = '0px';
-    ScannerButton.style.right = '0px';
-    ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
-    ScannerButton.classList.add('bg-color-3');
-    ScannerButton.title = `Plugin Version ${pluginVersion}`;
-
-    const muteButton = document.querySelector('button[aria-label="Mute"]');
-    if (muteButton) {
-        ScannerButton.style.width = 'calc(100% - 1px)';
-        ScannerButton.style.marginLeft = '-1px';
-    } else {
-        ScannerButton.style.width = 'calc(100% - 2px)';
-        ScannerButton.style.marginLeft = '0px';
-    }
-
-    const buttonEq = document.querySelector('.button-eq');
-    const buttonIms = document.querySelector('.button-ims');
-
-    const newDiv = document.createElement('div');
-    newDiv.className = "hide-phone panel-50 no-bg h-100 m-0";
-    newDiv.appendChild(ScannerButton);
-
-    buttonEq.parentNode.insertBefore(newDiv, buttonIms);
-
-    let pressTimer;
-    let isLongPress = false;
-
-    // Toggle the scan mode based on press duration
-    function toggleScan(isLongPressAction) {
         const ScanButton = document.getElementById('Scan-on-off');
-        const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+        ScanButton.addEventListener('mousedown', startPressTimer);
+        ScanButton.addEventListener('mouseup', cancelPressTimer);
 
-        if (isLongPressAction) {
-            if (isTuneAuthenticated) {
-                const scannerControls = document.getElementById('scanner-controls');
-                if (scannerControls) {
-                    scannerControls.parentNode.removeChild(scannerControls);
-                    const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-                    volumeSliderParent.style.display = 'block';
-                    setCookie('scannerControlsStatus', 'off', 7); // Remember the status
-                } else {
-                    createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
-                    setCookie('scannerControlsStatus', 'on', 7); // Remember the status
-                }
-            } else {
-                showCustomAlert("Admin must be logged in to use the autoscan mode!");
-            }
+        // Initialize scannerControls based on cookie
+        const scannerControlsStatus = getCookie('scannerControlsStatus');
+        if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
+            createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
         } else {
-            if (isTuneAuthenticated) {
-                if (isScanOn) {
-                    sendScan('off');
-                    setCookie('scannerControlsStatus', 'off', 7); // Remember the status
-                } else {
-                    sendScan('on');
-                    setCookie('scannerControlsStatus', 'on', 7); // Remember the status
-                }
-            } else {
-                showCustomAlert("Admin must be logged in to use the autoscan mode!");
+            const scannerControls = document.getElementById('scanner-controls');
+            if (scannerControls) {
+                scannerControls.parentNode.removeChild(scannerControls);
             }
         }
+
     }
-
-    // Start a timer for detecting long presses
-    function startPressTimer() {
-        isLongPress = false;
-        pressTimer = setTimeout(() => {
-            isLongPress = true;
-            toggleScan(true); // Trigger long press action
-        }, 1000); // 1 second
-    }
-
-    // Cancel the press timer
-    function cancelPressTimer() {
-        clearTimeout(pressTimer);
-        if (!isLongPress) {
-            toggleScan(false); // Trigger short press action
-        }
-    }
-
-    const ScanButton = document.getElementById('Scan-on-off');
-    ScanButton.addEventListener('mousedown', startPressTimer);
-    ScanButton.addEventListener('mouseup', cancelPressTimer);
-
-    // Initialize scannerControls based on cookie
-    const scannerControlsStatus = getCookie('scannerControlsStatus');
-    if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
-        createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
-    } else {
-        const scannerControls = document.getElementById('scanner-controls');
-        if (scannerControls) {
-            scannerControls.parentNode.removeChild(scannerControls);
-        }
-    }
-}
-
 
     // Function to check and update the signal unit values
     function checkSignalUnits() {
@@ -508,6 +579,10 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
         scannerControls.style.marginTop = "0px";
         scannerControls.style.marginRight = "10px";
         scannerControls.style.position = 'relative'; // Ensure it's on top
+        
+        if (window.innerWidth < 769) {
+          scannerControls.style.marginBottom = "0px";
+        }
 
         const sensitivityContainer = document.createElement('div');
         sensitivityContainer.className = "dropdown";
@@ -525,7 +600,7 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
         modeContainer.style.marginLeft = "0px";
         modeContainer.style.width = "100%";
         modeContainer.style.height = "99%";
-        modeContainer.style.position = 'relative'; // Ensure it's on top		
+        modeContainer.style.position = 'relative'; // Ensure it's on top        
         modeContainer.innerHTML = `
             <input type="text" placeholder="${ScannerMode}" title="Scanner Mode" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -537,7 +612,7 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
 
         const delayContainer = document.createElement('div');
         delayContainer.className = "dropdown";
-        delayContainer.style.marginLeft = "0px";	
+        delayContainer.style.marginLeft = "0px";    
         delayContainer.style.width = "100%";
         delayContainer.style.height = "99%";
         delayContainer.style.position = 'relative'; // Ensure it's on top
@@ -553,7 +628,7 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
             delayContainer.style.marginRight = "5px";
         }
 
-        if (signalValue === 'dBf') {		
+        if (signalValue === 'dBf') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBf" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -571,7 +646,7 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
                     <li data-value="60" class="option">60 dBf</li>
                 </ul>
             `;
-        } else if (signalValue === 'dBµV') {		
+        } else if (signalValue === 'dBµV') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBµV" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -589,7 +664,7 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
                     <li data-value="60" class="option">60 dBµV</li>
                 </ul>
             `;
-        } else if (signalValue === 'dBm') {		
+        } else if (signalValue === 'dBm') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBm" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -637,7 +712,8 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
 
         const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
         volumeSliderParent.style.display = 'none'; // Hide volume slider
-        volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);
+        volumeSliderParent.parentNode.insertBefore(scannerControls, volumeSliderParent.nextSibling);    
+    
     }
 
     // Initialize dropdown functionality
@@ -685,8 +761,8 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
             dropdown.style.display = 'none';
         });
     }
-	
-	function showCustomAlert(message) {
+    
+    function showCustomAlert(message) {
         const notification = document.createElement('div');
         notification.textContent = message;
         notification.style.position = 'fixed';
@@ -736,7 +812,7 @@ function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-		BlinkAutoScan();
+        BlinkAutoScan();
         checkAdminMode();
         setupSendSocket();
     });
