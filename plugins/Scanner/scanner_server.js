@@ -47,6 +47,11 @@ const SearchPE5PVB = Search_PE5PVB_Mode;
 const status = '';
 const Search = '';
 const source = '127.0.0.1';
+const logDir = path.join(__dirname, 'log');
+
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir);
+}
 
 let textSocket;
 let extraSocket;
@@ -71,13 +76,48 @@ let ScanHoldTime = defaultScanHoldTime;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let ant;
-
+let picode, Savepicode, ps, Saveps, freq, strength, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid;
+let LogfilePath;
+let LogfilePath_filtered;
 
 if (StartAutoScan !== 'auto') {
    Scan = StartAutoScan;
 } else {
    Scan = 'off';
+}
+
+// Auxiliary function to get the current date and time in the desired format
+function getFormattedDateTime() {
+    const now = new Date();
+    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    return `${date}_${time}`;
+}
+
+function FileCreationCSV() {
+    const LogfileName_filtered = `${getFormattedDateTime()}_filtered.csv`;
+    LogfilePath_filtered = path.join(logDir, LogfileName_filtered); // Correctly assign the value here
+    const header = 'date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n';
+
+    try {
+        fs.writeFileSync(LogfilePath_filtered, header, { flag: 'w' });
+        logInfo('Scanner created /log/' + LogfileName_filtered);
+    } catch (error) {
+        logError('Failed to create /log/' + LogfileName_filtered, ':', error.message);
+    }
+}
+
+function FileCreationCSV_formated() {
+    const LogfileName = `${getFormattedDateTime()}.csv`;
+    LogfilePath = path.join(logDir, LogfileName); // Correctly assign the value here
+    const header = 'date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n';
+
+    try {
+        fs.writeFileSync(LogfilePath, header, { flag: 'w' });
+        logInfo('Scanner created /log/' + LogfileName);
+    } catch (error) {
+        logError('Failed to create /log/'+ LogfileName, ':', error.message);
+    }
 }
 
 // Create a status message object
@@ -299,8 +339,10 @@ async function ExtraWebSocket() {
                                 );
 								
                                 if (message.value.Scan === 'on' && Scan === 'off') {
+									
 									Scan = message.value.Scan;
 									extraSocket.send(JSON.stringify(responseMessage));
+									
 									if (ScanPE5PVB) {
 										logInfo(`Scanner (PE5PVB mode) starts auto-scan [IP: ${message.source}]`);
 										logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
@@ -310,10 +352,17 @@ async function ExtraWebSocket() {
 										logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 										AutoScan();
 									}
+									
+									// generate Logfiles
+									FileCreationCSV_formated();
+									FileCreationCSV();
+									
                                 }
                                 if (message.value.Scan === 'off' && Scan === 'on') {
+									
 									Scan = message.value.Scan;
 									extraSocket.send(JSON.stringify(responseMessage));
+									
 									if (ScanPE5PVB) {
 										logInfo(`Scanner (PE5PVB mode) stops auto-scan [${message.source}]`);
 									    sendCommandToClient('J0');
@@ -341,7 +390,6 @@ async function ExtraWebSocket() {
         }
     }
 }
-
 
 function InitialMessage() {
     const ws = new WebSocket(externalWsUrl + '/extra');
@@ -420,7 +468,11 @@ function checkUserCount(users) {
                     isScanning = false;
                     AutoScan();
                 }
-
+				
+				// generate Logfiles
+				FileCreationCSV_formated();
+				FileCreationCSV();
+				
                 // Reset the scheduling flag
                 autoScanScheduled = false;
             }, 10000); // 10000 milliseconds = 5 seconds
@@ -467,24 +519,28 @@ function checkUserCount(users) {
 
 }
 
-
 function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
 
-    let PiCode, freq, strength, stereo, stereo_forced, station;
-
     setTimeout(() => {
-        PiCode = messageData.pi;
+        picode = messageData.pi;
+		ps = messageData.ps;
         freq = messageData.freq;
         strength = messageData.sig;
         stereo = messageData.st;
 		users = messageData.users;
         stereo_forced = messageData.stForced;
-        station = txInfo.tx;
-		
 		ant = messageData.ant;
-
-        if (isScanning) {
+        station = messageData.txInfo.tx;
+	    pol = messageData.txInfo.pol;
+        erp = messageData.txInfo.erp;
+        city = messageData.txInfo.city;
+        itu = messageData.txInfo.itu;
+        distance = messageData.txInfo.dist;
+        azimuth = messageData.txInfo.azi;
+		stationid = messageData.txInfo.id;
+			
+		if (isScanning) {
             if (stereo_forced && stereo_forced_user !== 'mono') {
                 stereo_forced_user = 'mono';
                 sendCommandToClient('B0');
@@ -511,7 +567,7 @@ function handleSocketMessage(messageData) {
         }
 
         if (!ScanPE5PVB) {
-            checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter);
+            checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter);
         }
 
         // Check user count and handle scanning if needed
@@ -715,30 +771,43 @@ function checkWhitelist() {
     });
 }
 
-
-       function checkStereo(stereo_detect, freq, strength, PiCode, station, checkStrengthCounter) {
+       function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
                                   
 			let ScanHoldTimeValue = ScanHoldTime * 10;	
-            if (stereo_detect === true || PiCode.length > 1) {
+            if (stereo_detect === true || picode.length > 1) {
 
-                if (strength > Sensitivity || PiCode.length > 1) {					
+                if (strength > Sensitivity || picode.length > 1) {					
 					// console.log(strength, Sensitivity);
 
-                    if (PiCode.length > 1 && station === '') {
+                    if (picode.length > 1 && station === '') {
                         ScanHoldTimeValue += 50;
                     }	
-            
+					           
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
 					isScanning = false; // Updates a flag indicating scanning status		
 					
 							if (Scan === 'on') {
+								
+								date = new Date().toLocaleDateString();
+								time = new Date().toLocaleTimeString();
+								
+								if ((Savepicode !== picode || Saveps !== ps) && picode !== '?') {								
+									writeLogEntry(date, time);
+								}		
+								
+								Savepicode = picode;
+								Saveps = ps;
+								
                                 if (checkStrengthCounter > ScanHoldTimeValue) {
-																		
+
+									if (picode.length > 1) {
+										writeLogEntryFiltered(date, time);
+									}
+										
 										startScan('up'); // Restart scanning after the delay
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
 										station = '';
-										startScan('up');
                                 }
                  			}	
                   
@@ -763,6 +832,39 @@ function checkWhitelist() {
 				}
             }
         }
+		
+		
+
+function writeLogEntry(date, time) {
+    if (!LogfilePath) {
+        logError("LogfilePath is not defined.");
+        return;
+    }
+    let psWithUnderscores = ps.replace(/ /g, '_');
+    const line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
+
+    try {
+        fs.appendFileSync(LogfilePath, line, { flag: 'a' });
+    } catch (error) {
+        logError("Failed to write log entry to " + LogfilePath + ":", error.message);
+    }
+}
+
+function writeLogEntryFiltered(date, time) {
+    if (!LogfilePath_filtered) {
+        logError("LogfilePath_filtered is not defined.");
+        return;
+    }
+    let psWithUnderscores = ps.replace(/ /g, '_');
+    const line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
+
+    try {
+        fs.appendFileSync(LogfilePath_filtered, line, { flag: 'a' });
+    } catch (error) {
+        logError("Failed to write log entry to " + LogfilePath_filtered + ":", error.message);
+    }
+}
+
 
 InitialMessage();
 ExtraWebSocket();
