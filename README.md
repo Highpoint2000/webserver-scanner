@@ -6,14 +6,11 @@ This plugin provides scanning functions for the FM-DX web server.
 
 
 
-### v2.0 SERVER BASED VERSION (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- Automatic background scan when no user is connected or automatic start when the web server is started
-- Automatic antenna switching on upper band limit
-- Hide the control buttons when autoscan mode is active (blinking information!)
-- Activating the scanner control function is done by holding down the auto scan buttons
-- blacklist.txt and whitlist.txt are now loaded from the plugin path
-- Server plugins are activated/deactivated via the web server GUI
-- Proxy Server ready (Tnx to _zer0_gravity_)
+### v2.1 BETA (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Mobile control for autoscan
+
+
+
 
 ## Installation notes:
 
@@ -39,6 +36,15 @@ This plugin provides scanning functions for the FM-DX web server.
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.0 SERVER BASED VERSION (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Automatic background scan when no user is connected or automatic start when the web server is started
+- Automatic antenna switching on upper band limit
+- Hide the control buttons when autoscan mode is active (blinking information!)
+- Activating the scanner control function is done by holding down the auto scan buttons
+- blacklist.txt and whitlist.txt are now loaded from the plugin path
+- Server plugins are activated/deactivated via the web server GUI
+- Proxy Server ready (Tnx to _zer0_gravity_)
 
 ### v1.3e (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - compatible with changed websocket data in version 1.2.6
