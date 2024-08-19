@@ -223,7 +223,7 @@
                             }
                         }
                         
-                    } else {
+                    } else if (Scan === 'on') { 
                         ScanButton.setAttribute('data-scan-status', 'on');
                         ScanButton.classList.add('bg-color-4');
                         ScanButton.classList.remove('bg-color-3');
