@@ -8,7 +8,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ### v2.1 BETA (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Mobile control for autoscan
-
+- CSV-Logfiles (RDS raw + filtered) are writing with autoscan (../plugins/Scanner/logs) 
 
 
 
