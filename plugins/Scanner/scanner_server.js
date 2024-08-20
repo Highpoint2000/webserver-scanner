@@ -2,9 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///                             last update: 19.08.24       ///
-///                                                         /// 
-///  by Highpoint                                           ///
+///  by Highpoint                    last update: 20.08.24  ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -20,9 +18,13 @@ const AntennaSwitch = 'off';  // Set to "off/on" for automatic switching with mo
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
+let defaultScannerMode = 'normal'; // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
 
-// Only valid for Autoscan_PE5PVB_Mode = false 
-let defaultScannerMode = 'normal'; // Set the startmode: normal, blacklist, or whitelist
+/// LOGGER OPTIONS ////
+const FilteredLog = true; // Set to "true" for filtered data logging
+const RAWLog = true; // Set to "true" for RAW data logging
+const UTCtime = true; // Set to "true" for logging with UTC Time
+const FMLIST_OM_ID = ''; // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -35,19 +37,23 @@ const { logInfo, logError, logWarn } = require('./../../server/console');
 const config = require('./../../config.json');
 
 const ServerName = config.identification.tunerName; 
+const ServerDescription = config.identification.tunerDesc; 
 const DefaultFreq = config.defaultFreq;
 const enableDefaultFreq = config.enableDefaultFreq;
 const Antennas = config.antennas;
 const tuningLowerLimit = config.webserver.tuningLowerLimit;
 const tuningUpperLimit = config.webserver.tuningUpperLimit;
 const webserverPort = config.webserver.webserverPort || 8080; // Default to port 8080 if not specified
+const LAT = config.identification.lat; 
+const LON = config.identification.lon; 
+
 const externalWsUrl = `ws://127.0.0.1:${webserverPort}`;
 const ScanPE5PVB = Autoscan_PE5PVB_Mode;
 const SearchPE5PVB = Search_PE5PVB_Mode;
 const status = '';
 const Search = '';
 const source = '127.0.0.1';
-const logDir = path.join(__dirname, 'log');
+const logDir = path.resolve(__dirname, '../../web/logs'); // Absoluter Pfad zum Log-Verzeichnis
 
 if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir);
@@ -76,48 +82,17 @@ let ScanHoldTime = defaultScanHoldTime;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, freq, strength, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid;
-let LogfilePath;
-let LogfilePath_filtered;
+let picode, Savepicode, ps, Saveps, freq, Savefreq, strength, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid;
+let CSV_LogfilePath;
+let CSV_LogfilePath_filtered;
+let HTML_LogfilePath;
+let HTML_LogfilePath_filtered;
+let stationidAll;
 
 if (StartAutoScan !== 'auto') {
    Scan = StartAutoScan;
 } else {
    Scan = 'off';
-}
-
-// Auxiliary function to get the current date and time in the desired format
-function getFormattedDateTime() {
-    const now = new Date();
-    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-    return `${date}_${time}`;
-}
-
-function FileCreationCSV() {
-    const LogfileName_filtered = `${getFormattedDateTime()}_filtered.csv`;
-    LogfilePath_filtered = path.join(logDir, LogfileName_filtered); // Correctly assign the value here
-    const header = 'date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n';
-
-    try {
-        fs.writeFileSync(LogfilePath_filtered, header, { flag: 'w' });
-        logInfo('Scanner created /log/' + LogfileName_filtered);
-    } catch (error) {
-        logError('Failed to create /log/' + LogfileName_filtered, ':', error.message);
-    }
-}
-
-function FileCreationCSV_formated() {
-    const LogfileName = `${getFormattedDateTime()}.csv`;
-    LogfilePath = path.join(logDir, LogfileName); // Correctly assign the value here
-    const header = 'date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n';
-
-    try {
-        fs.writeFileSync(LogfilePath, header, { flag: 'w' });
-        logInfo('Scanner created /log/' + LogfileName);
-    } catch (error) {
-        logError('Failed to create /log/'+ LogfileName, ':', error.message);
-    }
 }
 
 // Create a status message object
@@ -321,10 +296,10 @@ async function ExtraWebSocket() {
                                 if (message.value.Search === 'up') {
 									if (SearchPE5PVB) {
 										sendCommandToClient('C2');
-										logInfo(`Scanner (PE5PVB mode) search up [IP: ${message.source}] `);
+										// logInfo(`Scanner (PE5PVB mode) search up [IP: ${message.source}] `);
 									} else {
 										startSearch('up');
-										logInfo(`Scanner search up [IP: ${message.source}]`);
+										// logInfo(`Scanner search up [IP: ${message.source}]`);
 									}
                                 }
 								
@@ -354,8 +329,10 @@ async function ExtraWebSocket() {
 									}
 									
 									// generate Logfiles
-									FileCreationCSV_formated();
-									FileCreationCSV();
+									// FileCreationCSV_filtered();
+									// FileCreationCSV();
+									// FileCreationHTML_filtered();
+									// FileCreationHTML();
 									
                                 }
                                 if (message.value.Scan === 'off' && Scan === 'on') {
@@ -470,8 +447,10 @@ function checkUserCount(users) {
                 }
 				
 				// generate Logfiles
-				FileCreationCSV_formated();
-				FileCreationCSV();
+				// FileCreationCSV_filtered();
+				// FileCreationCSV();
+				// FileCreationHTML_filtered();
+				// FileCreationHTML();
 				
                 // Reset the scheduling flag
                 autoScanScheduled = false;
@@ -556,6 +535,7 @@ function handleSocketMessage(messageData) {
             checkStrengthCounter = 0;
             stereo_detect = false;
         }
+		
         previousFrequency = freq;
         currentFrequency = freq;
         checkStrengthCounter++;
@@ -784,26 +764,37 @@ function checkWhitelist() {
                     }	
 					           
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
-					isScanning = false; // Updates a flag indicating scanning status		
-					
+					isScanning = false; // Updates a flag indicating scanning status	
+
+							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
+								if (RAWLog) {
+									writeCSVLogEntry(false); // activate non filtered log
+									writeHTMLLogEntry(false); // activate non filtered log
+									Savepicode = picode;
+									Saveps = ps;
+									Savestationid = stationid;
+								}
+							}			
+								
+							if (FilteredLog && Scan !== 'on' && picode.length > 1 && !picode.includes('?') && stationid && freq !== Savefreq) {
+								writeCSVLogEntry(true); // filtered log
+								writeHTMLLogEntry(true); // filtered log
+								Savefreq = freq;
+							}
+		
 							if (Scan === 'on') {
 								
 								date = new Date().toLocaleDateString();
-								time = new Date().toLocaleTimeString();
-								
-								if ((Savepicode !== picode || Saveps !== ps) && picode !== '?') {								
-									writeLogEntry(date, time);
-								}		
-								
-								Savepicode = picode;
-								Saveps = ps;
+								time = new Date().toLocaleTimeString();							
 								
                                 if (checkStrengthCounter > ScanHoldTimeValue) {
-
-									if (picode.length > 1) {
-										writeLogEntryFiltered(date, time);
-									}
-										
+									
+										if (FilteredLog && !picode.includes('?') && stationid && freq !== Savefreq) {
+											writeCSVLogEntry(true); // filtered log
+											writeHTMLLogEntry(true); // filtered log
+											Savefreq = freq;
+										}
+									
 										startScan('up'); // Restart scanning after the delay
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
@@ -833,38 +824,177 @@ function checkWhitelist() {
             }
         }
 		
+function getLogFilePathCSV(date, time, isFiltered) {
+    // Bestimme den Dateinamen basierend auf dem isFiltered-Flag
+    const fileName = isFiltered ? `SCANNER_${date}_filtered.csv` : `SCANNER_${date}.csv`;
+    
+    // Erstelle den vollständigen Pfad zur Datei
+    const filePath = path.join(logDir, fileName);
+
+    // Prüfe, ob der Ordner existiert, wenn nicht, erstelle ihn
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    // Prüfe, ob die Datei existiert, wenn nicht, erstelle sie
+    if (!fs.existsSync(filePath)) {
+         // Update the header content as per your requirements
+		let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly  
 		
+		let header = `"${ServerName}"\n"${formattedServerDescription}"\n`;
+		header += isFiltered ? `SCANNER LOG [FILTER MODE] ${date} ${time}\n\n` : `SCANNER LOG ${date} ${time}\n\n`;
+		header += UTCtime ? `date;time(utc);freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n` : `date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n`;
 
-function writeLogEntry(date, time) {
-    if (!LogfilePath) {
-        logError("LogfilePath is not defined.");
-        return;
+		try {
+			fs.writeFileSync(filePath, header, { flag: 'w' });
+			logInfo('Scanner created /logs/' + fileName);
+		} catch (error) {
+			logError('Failed to create /logs/' + fileName, ':', error.message);
+		}
     }
+	
+    return filePath
+}
+
+function writeCSVLogEntry(isFiltered) {
+	
+	const now = new Date();
+	const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+	let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+	
+    // Bestimme den Pfad zur Log-Datei basierend auf dem aktuellen Datum und dem isFiltered-Flag
+    const logFilePath = getLogFilePathCSV(date, time, isFiltered);
+	
+	if (UTCtime) {
+		time = getCurrentUTC(); // time in UTC
+	}
+
+    // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
-    const line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
+
+    // Create the log entry line with the relevant data
+    let line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
 
     try {
-        fs.appendFileSync(LogfilePath, line, { flag: 'a' });
+        // Append the log entry to the CSV file
+        fs.appendFileSync(logFilePath, line, { flag: 'a' });
     } catch (error) {
-        logError("Failed to write log entry to " + LogfilePath + ":", error.message);
+        logError("Failed to write log entry:", error.message);
     }
 }
 
-function writeLogEntryFiltered(date, time) {
-    if (!LogfilePath_filtered) {
-        logError("LogfilePath_filtered is not defined.");
-        return;
+function getLogFilePathHTML(date, time, isFiltered) {
+    // Bestimme den Dateinamen basierend auf dem isFiltered-Flag
+    const fileName = isFiltered ? `SCANNER_${date}_filtered.html` : `SCANNER_${date}.html`;
+    
+    // Erstelle den vollständigen Pfad zur Datei
+    const filePath = path.join(logDir, fileName);
+
+    // Prüfe, ob der Ordner existiert, wenn nicht, erstelle ihn
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
     }
+	
+	if (UTCtime) {
+		time = getCurrentUTC(); // time in UTC
+	}
+
+    // Prüfe, ob die Datei existiert, wenn nicht, erstelle sie
+    if (!fs.existsSync(filePath)) {
+        // Update the header content as per your requirements
+        let header = isFiltered 
+            ? `<html><head><title>SCANNER LOG [FILTER MODE]</title><meta http-equiv="refresh" content="5"></head><body><pre>` 
+            : `<html><head><title>SCANNER LOG</title><meta http-equiv="refresh" content="5"></head><body><pre>`;
+
+        header += `${ServerName}<br>${ServerDescription}<br>`;
+        header += isFiltered 
+            ? `SCANNER LOG [FILTER MODE] ${date} ${time}<br><br>` 
+            : `SCANNER LOG ${date} ${time}<br><br>`; 
+        header += UTCtime 
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>` 
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>`;
+
+        try {
+            fs.writeFileSync(filePath, header, { flag: 'w' });
+            logInfo('Scanner created /logs/' + fileName);
+        } catch (error) {
+            logError('Failed to create /logs/' + fileName, ':', error.message);
+        }
+    }
+	
+    return filePath
+}
+
+function writeHTMLLogEntry(isFiltered) {
+	
+	const now = new Date();
+	const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+	let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+	
+    // Bestimme den Pfad zur Log-Datei basierend auf dem aktuellen Datum und dem isFiltered-Flag
+    const logFilePath = getLogFilePathHTML(date, time, isFiltered);
+
+    // Initialize stationidAll if necessary
+    if (typeof stationidAll === 'undefined' || stationidAll === null) {
+        stationidAll = ''; // Initialize as an empty string if undefined
+    }
+
+    // Generate dynamic links based on stationid
+    let link1 = stationid !== '' ? `<a href="https://maps.fmdx.pl/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">FMDX</a>` : '';
+    let link2 = stationid !== '' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
+
+    // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
-    const line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
+	
+	if (UTCtime) {
+		time = getCurrentUTC(); // time in UTC
+	}
+
+    // Create the log entry line with the relevant data
+    let line = UTCtime ? `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n` : `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n`;;
+
+    // Update stationidAll if the current stationid is valid and not already included
+    if (stationid !== "" && stationid >= 0) {
+        if (!stationidAll.split(',').includes(stationid.toString())) {
+            stationidAll += stationidAll ? `,${stationid}` : stationid;
+        }
+    }
+
+    // Generate the final link including all station IDs
+    let finalLink = `https://maps.fmdx.pl/#qth=${LAT},${LON}&id=${stationidAll}&findId=*`;
+    let finalLinkHtml = `</table></pre><pre><a href="${finalLink}" target="_blank">FMDX ALL</a></pre></body></html>`;
 
     try {
-        fs.appendFileSync(LogfilePath_filtered, line, { flag: 'a' });
+        // Read the existing content of the HTML file
+        let fileContent = fs.readFileSync(logFilePath, 'utf8');
+
+        // Remove the old final link and closing tags
+        let updatedContent = fileContent.replace(/<\/table><\/pre><pre><a href="https:\/\/maps\.fmdx\.pl\/#qth=.*<\/a><\/pre><\/body><\/html>/, '');
+
+        // Append the new line and the final link
+        updatedContent += line + finalLinkHtml;
+
+        // Write the updated content back to the file
+        fs.writeFileSync(logFilePath, updatedContent, 'utf8');
     } catch (error) {
-        logError("Failed to write log entry to " + LogfilePath_filtered + ":", error.message);
+        logError("Failed to update the log file:", error.message);
     }
 }
 
+function getCurrentUTC() {
+    // Hole die aktuelle Zeit in UTC
+    const now = new Date();
+    
+    // Extrahiere die UTC-Stunden, -Minuten und -Sekunden
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    
+    // Formatiere die Zeit im HH:MM:SS-Format
+    const utcTime = `${hours}:${minutes}:${seconds}`;
+
+    return utcTime;
+}
 
 InitialMessage();
 ExtraWebSocket();
