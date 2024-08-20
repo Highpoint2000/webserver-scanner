@@ -8,8 +8,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ### v2.1 BETA (Logger Version - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Mobile control for autoscan
-- CSV-Logfiles (RDS raw + filtered) are writing with autoscan (../plugins/Scanner/logs) 
-
+- CSV log files (RAW + filtered) and HTML log files (RAW + filtered) can be saved automatically in /web/logs
+- Time in Logfiles can be set to UTC
+- HTML-Logfiles has 5 seconds autorefresh inside
+- Logfiles can be download with RDS-Logger CSV- & HTML Buttons (You need RDS-Logger Plugin from v1.4a)
 
 
 ## Installation notes:
@@ -28,7 +30,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan and search function. However, the prerequisite is the installation of the latest PE5PVB firmware version. 
   You can switch the plugin's scan mode using a switch (true/false) in the header of scanner_server.js
 - In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
-- Auto scanner preferences can be configured in the scanner_server.js header
+- Auto scanner and logging preferences can be configured in the scanner_server.js header
 - After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
 ## Known bugs:
