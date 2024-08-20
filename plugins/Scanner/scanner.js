@@ -2,9 +2,7 @@
 ///                                                         ///
 ///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///                             last update: 19.08.24       ///
-///                                                         /// 
-///  by Highpoint                                           ///
+///  by Highpoint                    last update: 20.08.24  ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
