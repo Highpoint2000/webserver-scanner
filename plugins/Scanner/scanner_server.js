@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///  by Highpoint                    last update: 20.08.24  ///
+///  by Highpoint                    last update: 21.08.24  ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -21,10 +21,11 @@ let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30
 let defaultScannerMode = 'normal'; // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
 
 /// LOGGER OPTIONS ////
-const FilteredLog = true; // Set to "true" for filtered data logging
-const RAWLog = true; // Set to "true" for RAW data logging
-const UTCtime = true; // Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
+const RAWLog = true;			// Set to "true" or "false" for RAW data logging
+const OnlyFirstLog = true; // coming soon	 // For only first seen logging, set each station found to “true” or “false”. 
+const UTCtime = true; 			// Set to "true" for logging with UTC Time
+const FMLIST_OM_ID = '8082'; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -82,7 +83,7 @@ let ScanHoldTime = defaultScanHoldTime;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, freq, Savefreq, strength, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
@@ -327,13 +328,7 @@ async function ExtraWebSocket() {
 										logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 										AutoScan();
 									}
-									
-									// generate Logfiles
-									// FileCreationCSV_filtered();
-									// FileCreationCSV();
-									// FileCreationHTML_filtered();
-									// FileCreationHTML();
-									
+																	
                                 }
                                 if (message.value.Scan === 'off' && Scan === 'on') {
 									
@@ -409,94 +404,96 @@ function sendCommand(socket, command) {
     socket.send(command);
 }
 
+
+let counter = 0; // Declare the counter variable
+
 function checkUserCount(users) {
 
     // Check if the conditions for starting the auto-scan are met
-    if (users === 0 && !autoScanActive && StartAutoScan === 'auto') {
-        if (!autoScanScheduled) {
+    if (users === 0) {
+        counter++; // Increment the counter when users === 0
+        if (counter >= 5) { // Check if the counter has reached 5
+            if (!autoScanActive && StartAutoScan === 'auto') {
+                if (!autoScanScheduled) {
+                    // Set a timeout to start the auto-scan after 10 seconds
+                    autoScanTimer = setTimeout(() => {	
+                        // Activate auto-scan
+                        autoScanActive = true;  
+                        Scan = 'on';
 
-            // Set a timeout to start auto-scan after 5 seconds
-            autoScanTimer = setTimeout(() => {	
+                        // Create and send a broadcast message to start the scan
+                        const Message = createMessage(
+                            'broadcast',
+                            '255.255.255.255',
+                            Scan,
+                            '',
+                            Sensitivity,
+                            ScannerMode,
+                            ScanHoldTime
+                        );
 
-                // Activate auto-scan
-                autoScanActive = true;  
-                Scan = 'on';
+                        if (users === 0) {
+                            extraSocket.send(JSON.stringify(Message));
 
-                // Create and send a broadcast message to start the scan
-                const Message = createMessage(
-                    'broadcast',
-                    '255.255.255.255',
-                    Scan,
-                    '',
-                    Sensitivity,
-                    ScannerMode,
-                    ScanHoldTime
-                );
-                extraSocket.send(JSON.stringify(Message));
+                            // Log and handle the scan based on the mode
+                            if (ScanPE5PVB) {
+                                logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
+                                logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
+                                sendCommandToClient('J1');
+                            } else {
+                                logInfo(`Scanner starts auto-scan automatically [User: ${users}]`);
+                                logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+                                isScanning = false;
+                                AutoScan();
+                            }
+                                
+                            // Reset the scheduling flag
+                            autoScanScheduled = false;
+                        }
+                    }, 10000); // 10000 milliseconds = 10 seconds
 
-                // Log and handle the scan based on the mode
-                if (ScanPE5PVB) {
-                    logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
-                    logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
-                    sendCommandToClient('J1');
-                } else {
-                    logInfo(`Scanner starts auto-scan automatically [User: ${users}]`);
-                    logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
-                    isScanning = false;
-                    AutoScan();
+                    // Set the scheduling flag to prevent overlapping timeouts
+                    autoScanScheduled = true;
                 }
-				
-				// generate Logfiles
-				// FileCreationCSV_filtered();
-				// FileCreationCSV();
-				// FileCreationHTML_filtered();
-				// FileCreationHTML();
-				
-                // Reset the scheduling flag
-                autoScanScheduled = false;
-            }, 10000); // 10000 milliseconds = 5 seconds
-
-            // Set the scheduling flag to prevent overlapping timeouts
-            autoScanScheduled = true;
+            }
+            counter = 0; // Reset the counter after processing
         }
-	}
- 
-	
-    // If there are users, auto-scan is active, and StartAutoScan is set to 'auto'
-    if (users > 0 && autoScanActive && StartAutoScan === 'auto') {
+    } else if (users > 0) {
+        counter = 0;
+        if (autoScanActive && StartAutoScan === 'auto') {  // If there are users, auto-scan is active, and StartAutoScan is set to 'auto'
+            // Deactivate auto-scan
+            autoScanActive = false; 
+            Scan = 'off';
 
-        // Deactivate auto-scan
-        autoScanActive = false; 
-        Scan = 'off';
+            // Create and send a broadcast message to stop the scan
+            const Message = createMessage(
+                'broadcast',
+                '255.255.255.255',
+                Scan,
+                '',
+                Sensitivity,
+                ScannerMode,
+                ScanHoldTime
+            );
+            extraSocket.send(JSON.stringify(Message));
 
-        // Create and send a broadcast message to stop the scan
-        const Message = createMessage(
-            'broadcast',
-            '255.255.255.255',
-            Scan,
-            '',
-            Sensitivity,
-            ScannerMode,
-            ScanHoldTime
-        );
-        extraSocket.send(JSON.stringify(Message));
-
-        // Log and handle the scan stop based on the mode
-        if (ScanPE5PVB) {
-            logInfo(`Scanner (PE5PVB mode) stopped automatically auto-scan [User: ${users}]`);
-            sendCommandToClient('J0');
-        } else {
-			logInfo(`Scanner stopped automatically auto-scan [User: ${users}]`);
-            stopAutoScan();
+            // Log and handle the scan stop based on the mode
+            if (ScanPE5PVB) {
+                logInfo(`Scanner (PE5PVB mode) stopped automatically auto-scan [User: ${users}]`);
+                sendCommandToClient('J0');
+            } else {
+                logInfo(`Scanner stopped automatically auto-scan [User: ${users}]`);
+                stopAutoScan();
+            }
+            
+            if (DefaultFreq !== '' && enableDefaultFreq) {
+                sendDataToClient(DefaultFreq);
+            }
         }
-		
-		if (DefaultFreq !== '' && enableDefaultFreq) {
-			sendDataToClient(DefaultFreq);
-		}
-		
     }
-
 }
+
+
 
 function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
@@ -518,6 +515,10 @@ function handleSocketMessage(messageData) {
         distance = messageData.txInfo.dist;
         azimuth = messageData.txInfo.azi;
 		stationid = messageData.txInfo.id;
+		
+        if ((messageData.ps_errors !== "0,0,0,0,0,0,0,1") && (messageData.ps_errors !== "0,0,0,0,0,0,0,0")) {
+            ps += "?";
+            }
 			
 		if (isScanning) {
             if (stereo_forced && stereo_forced_user !== 'mono') {
@@ -786,20 +787,19 @@ function checkWhitelist() {
 								
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();							
-								
-                                if (checkStrengthCounter > ScanHoldTimeValue) {
+
+							if ((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && !ps.includes('?') && stationid && checkStrengthCounter > ScanHoldTime * 5)) {
 									
-										if (FilteredLog && !picode.includes('?') && stationid && freq !== Savefreq) {
+										if (FilteredLog && picode !== '?') {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
-											Savefreq = freq;
 										}
 									
 										startScan('up'); // Restart scanning after the delay
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
 										station = '';
-                                }
+                                }						
                  			}	
                   
                 } else {
