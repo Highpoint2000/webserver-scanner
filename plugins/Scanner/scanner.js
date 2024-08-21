@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///  by Highpoint                    last update: 20.08.24  ///
+///  by Highpoint                    last update: 21.08.24  ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -147,6 +147,10 @@
         try {
             const eventData = JSON.parse(event.data);
 
+			if (eventData.source !== clientIp) {
+				console.log(eventData);
+			}
+			
             if (eventData.type === 'Scanner' ) {
                 const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime } = eventData.value;
 
@@ -173,7 +177,7 @@
                 const scannerControls = document.getElementById('scanner-controls');
                 const HideElement = document.querySelector('.panel-33.hide-phone.no-bg');
                 const volumeSliderParent = document.getElementById('volumeSlider')?.parentNode;
-
+    
                 if (ScanButton) {
                     if (Scan === 'off') {
                         ScanButton.setAttribute('data-scan-status', 'off');
@@ -464,13 +468,15 @@
         // Event-Listener für Button-Klick
         ScannerButton.addEventListener('click', function() {
             const isActive = ScannerButton.getAttribute('data-scan-status') === 'on';
-            if (isActive) {
-                ScannerButton.setAttribute('data-scan-status', 'off');
-                ScannerButton.style.backgroundColor = 'var(--color-3)'; // Hintergrundfarbe für inaktiven Zustand
-            } else {
-                ScannerButton.setAttribute('data-scan-status', 'on');
-                ScannerButton.style.backgroundColor = 'var(--color-4)'; // Hintergrundfarbe für aktiven Zustand
-            }
+            if (!isLongPress) {
+				if (isActive) {
+					ScannerButton.setAttribute('data-scan-status', 'off');
+					ScannerButton.style.backgroundColor = 'var(--color-3)'; // Hintergrundfarbe für inaktiven Zustand
+				} else {
+					ScannerButton.setAttribute('data-scan-status', 'on');
+					ScannerButton.style.backgroundColor = 'var(--color-4)'; // Hintergrundfarbe für aktiven Zustand
+				}
+			}
         });
         
         // Button in den DOM einfügen
@@ -483,42 +489,54 @@
         let pressTimer;
         let isLongPress = false;
 
-        // Toggle the scan mode based on press duration
-        function toggleScan(isLongPressAction) {
-            const ScanButton = document.getElementById('Scan-on-off');
-            const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
-            const scannerControls = document.getElementById('scanner-controls');
-            const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-            
-            if (isLongPressAction) {
-                if (isTuneAuthenticated) {
-                    const scannerControls = document.getElementById('scanner-controls');
-                    if (scannerControls) {
-                        scannerControls.parentNode.removeChild(scannerControls);
-                        const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
-                        volumeSliderParent.style.display = 'block';
-                        setCookie('scannerControlsStatus', 'off', 7); // Remember the status
-                    } else {
-                        createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
-                        setCookie('scannerControlsStatus', 'on', 7); // Remember the status
-                    }
-                } else {
-                    showCustomAlert("Admin must be logged in to use the autoscan mode!");
-                }
+function toggleScan(isLongPressAction) {
+    const ScanButton = document.getElementById('Scan-on-off');
+    const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+    const scannerControls = document.getElementById('scanner-controls');
+    const volumeSliderParent = document.getElementById('volumeSlider').parentNode;
+
+    // If long press action is triggered
+    if (isLongPressAction) {
+        if (isTuneAuthenticated) {
+            const currentScanStatus = isScanOn;  // Store the current scan status
+
+            // Check if the scanner controls are already present
+            if (scannerControls) {
+                scannerControls.parentNode.removeChild(scannerControls);
+                volumeSliderParent.style.display = 'block';
+                setCookie('scannerControlsStatus', 'off', 7); // Remember the status
             } else {
-                if (isTuneAuthenticated) {
-                    if (isScanOn) {                
-                        sendScan('off');
-                        setCookie('scannerControlsStatus', 'off', 7); // Remember the status
-                    } else {
-                        sendScan('on');
-                        setCookie('scannerControlsStatus', 'on', 7); // Remember the status
-                    }
-                } else {
-                    showCustomAlert("Admin must be logged in to use the autoscan mode!");
-                }
+                createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+                setCookie('scannerControlsStatus', 'on', 7); // Remember the status
             }
+
+            // Restore the original scan status after the long press action
+            if (currentScanStatus) {
+                ScanButton.setAttribute('data-scan-status', 'on');
+            } else {
+                ScanButton.setAttribute('data-scan-status', 'off');
+            }
+
+        } else {
+            showCustomAlert("Admin must be logged in to use the autoscan mode!");
         }
+
+    } else {  // Normal press action
+        if (isTuneAuthenticated) {
+            if (isScanOn) {
+                sendScan('off');
+                setCookie('scannerControlsStatus', 'off', 7); // Remember the status
+            } else {
+                sendScan('on');
+                setCookie('scannerControlsStatus', 'on', 7); // Remember the status
+            }
+        } else {
+            showCustomAlert("Admin must be logged in to use the autoscan mode!");
+        }
+    }
+}
+
+
 
         // Start a timer for detecting long presses
         function startPressTimer() {
@@ -541,7 +559,7 @@
         ScanButton.addEventListener('mousedown', startPressTimer);
         ScanButton.addEventListener('mouseup', cancelPressTimer);
 
-        // Initialize scannerControls based on cookie
+        // Initialize scannerControls
         const scannerControlsStatus = getCookie('scannerControlsStatus');
         if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
             createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
