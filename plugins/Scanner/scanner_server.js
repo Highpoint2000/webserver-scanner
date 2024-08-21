@@ -23,7 +23,7 @@ let defaultScannerMode = 'normal'; // Only valid for Autoscan_PE5PVB_Mode = fals
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = true; // coming soon	 // For only first seen logging, set each station found to “true” or “false”. 
+const OnlyFirstLog = false; // coming soon	 // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
 const FMLIST_OM_ID = ''; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
@@ -728,8 +728,17 @@ function checkBlacklist() {
             return;
         }
 
-        blacklist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
-        blacklist = blacklist.map(value => parseFloat(value).toString());
+		blacklist = data.split('\n')
+		.map(frequency => frequency.trim())
+		.filter(Boolean);
+
+		blacklist = blacklist.map(value => {
+		// Check if the value has a decimal point and enough digits
+		if (value.includes('.')) {
+			return parseFloat(value).toFixed(value.split('.')[1].length);
+		}
+			return value;
+		});
         logInfo('Scanner initialized Blacklist');
     });
 }
@@ -746,8 +755,17 @@ function checkWhitelist() {
             return;
         }
 
-        whitelist = data.split('\n').map(frequency => frequency.trim()).filter(Boolean);
-        whitelist = whitelist.map(value => parseFloat(value).toString());
+		whitelist = data.split('\n')
+		.map(frequency => frequency.trim())
+		.filter(Boolean);
+
+		whitelist = whitelist.map(value => {
+		// Check if the value has a decimal point and enough digits
+		if (value.includes('.')) {
+			return parseFloat(value).toFixed(value.split('.')[1].length);
+		}
+			return value;
+		});
         logInfo('Scanner initialized Whitelist');
     });
 }
@@ -858,6 +876,14 @@ function getLogFilePathCSV(date, time, isFiltered) {
 
 function writeCSVLogEntry(isFiltered) {
 	
+	if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist') {
+        return;
+    }
+	
+	if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist') {
+        return;
+    }
+
 	const now = new Date();
 	const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
 	let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
@@ -875,6 +901,33 @@ function writeCSVLogEntry(isFiltered) {
     // Create the log entry line with the relevant data
     let line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
 
+    // Check if OnlyFirstLog is true and if the combination of freq, picode, and station already exists
+    if (OnlyFirstLog) {
+        try {
+            // Read the existing log file content
+            if (fs.existsSync(logFilePath)) {
+                const logContent = fs.readFileSync(logFilePath, 'utf-8');
+                
+                // Split the log content into lines
+                const logLines = logContent.split('\n');
+
+                // Check if any line contains the combination of freq, picode, and station
+                const entryExists = logLines.some(logLine => {
+                    const columns = logLine.split(';');
+                    return columns[2] === freq && columns[3] === picode && columns[5] === station;
+                });
+
+                // If the entry exists, do not proceed with writing the new entry
+                if (entryExists) {
+                    return;
+                }
+            }
+        } catch (error) {
+            logError("Failed to read log file:", error.message);
+            return;
+        }
+    }
+
     try {
         // Append the log entry to the CSV file
         fs.appendFileSync(logFilePath, line, { flag: 'a' });
@@ -882,6 +935,7 @@ function writeCSVLogEntry(isFiltered) {
         logError("Failed to write log entry:", error.message);
     }
 }
+
 
 function getLogFilePathHTML(date, time, isFiltered) {
     // Bestimme den Dateinamen basierend auf dem isFiltered-Flag
@@ -926,12 +980,20 @@ function getLogFilePathHTML(date, time, isFiltered) {
 }
 
 function writeHTMLLogEntry(isFiltered) {
+    
+    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist') {
+        return;
+    }
 	
-	const now = new Date();
-	const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
-	let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-	
-    // Bestimme den Pfad zur Log-Datei basierend auf dem aktuellen Datum und dem isFiltered-Flag
+	if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist') {
+        return;
+    }
+
+    const now = new Date();
+    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    
+    // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
 
     // Initialize stationidAll if necessary
@@ -945,13 +1007,34 @@ function writeHTMLLogEntry(isFiltered) {
 
     // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
-	
-	if (UTCtime) {
-		time = getCurrentUTC(); // time in UTC
-	}
+    
+    if (UTCtime) {
+        time = getCurrentUTC(); // time in UTC
+    }
 
     // Create the log entry line with the relevant data
-    let line = UTCtime ? `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n` : `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n`;;
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n`;
+
+    // Check if OnlyFirstLog is true and if the combination of freq, picode, and station already exists
+    if (OnlyFirstLog) {
+        try {
+            // Read the existing log file content
+            if (fs.existsSync(logFilePath)) {
+                const logContent = fs.readFileSync(logFilePath, 'utf-8');
+
+                // Check if any line contains the combination of freq, picode, and station
+                const entryExists = logContent.includes(`<td>${freq}</td>`) && logContent.includes(`<td>${picode}</td>`) && logContent.includes(`<td>${station}</td>`);
+
+                // If the entry exists, do not proceed with writing the new entry
+                if (entryExists) {
+                    return;
+                }
+            }
+        } catch (error) {
+            logError("Failed to read log file:", error.message);
+            return;
+        }
+    }
 
     // Update stationidAll if the current stationid is valid and not already included
     if (stationid !== "" && stationid >= 0) {
@@ -968,7 +1051,7 @@ function writeHTMLLogEntry(isFiltered) {
         // Read the existing content of the HTML file
         let fileContent = fs.readFileSync(logFilePath, 'utf8');
 
-        // Remove the old final link and closing tags
+        // Remove the old final link and closing tags if present
         let updatedContent = fileContent.replace(/<\/table><\/pre><pre><a href="https:\/\/maps\.fmdx\.pl\/#qth=.*<\/a><\/pre><\/body><\/html>/, '');
 
         // Append the new line and the final link
@@ -980,6 +1063,8 @@ function writeHTMLLogEntry(isFiltered) {
         logError("Failed to update the log file:", error.message);
     }
 }
+
+
 
 function getCurrentUTC() {
     // Hole die aktuelle Zeit in UTC
