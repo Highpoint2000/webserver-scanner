@@ -6,7 +6,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 
 
-### v2.1 BETA (Logger Version - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+### v2.1 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Mobile control for autoscan
 - CSV log files (RAW + filtered) and HTML log files (RAW + filtered) can be saved automatically in /web/logs
 - Time in Logfiles can be set to UTC
@@ -39,7 +39,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## History: 
 
-### v2.0 SERVER BASED VERSION (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+### v2.0 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Automatic background scan when no user is connected or automatic start when the web server is started
 - Automatic antenna switching on upper band limit
 - Hide the control buttons when autoscan mode is active (blinking information!)
