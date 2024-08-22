@@ -1,15 +1,15 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.1)       /// 
 ///                                                         ///
-///  by Highpoint                    last update: 22.08.24  ///
+///  by Highpoint               last update: 22.08.24       ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works from web server version 1.2.3!!!
+///  This plugin only works from web server version 1.2.6!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
