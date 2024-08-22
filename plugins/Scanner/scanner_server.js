@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///  by Highpoint                    last update: 21.08.24  ///
+///  by Highpoint                    last update: 22.08.24  ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -23,9 +23,9 @@ let defaultScannerMode = 'normal'; // Only valid for Autoscan_PE5PVB_Mode = fals
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
+const OnlyFirstLog = false;      // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; 	    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FMLIST_OM_ID = '8082'; 	    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -795,7 +795,7 @@ function checkWhitelist() {
 								}
 							}			
 								
-							if (FilteredLog && Scan !== 'on' && picode.length > 1 && !picode.includes('?') && stationid && freq !== Savefreq) {
+							if (FilteredLog && Scan !== 'on' && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
 								writeCSVLogEntry(true); // filtered log
 								writeHTMLLogEntry(true); // filtered log
 								Savefreq = freq;
@@ -806,9 +806,9 @@ function checkWhitelist() {
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();							
 
-							if ((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && !ps.includes('?') && stationid && checkStrengthCounter > ScanHoldTime * 5)) {
+							if ((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && stationid && checkStrengthCounter > ScanHoldTime * 5)) {
 									
-										if (FilteredLog && picode !== '?') {
+										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
 										}
