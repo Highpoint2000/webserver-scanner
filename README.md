@@ -11,7 +11,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - CSV log files (RAW + filtered) and HTML log files (RAW + filtered) can be saved automatically in /web/logs
 - Time in Logfiles can be set to UTC
 - HTML-Logfiles has 5 seconds autorefresh inside
-- Logfiles can be download with RDS-Logger CSV- & HTML Buttons (You need RDS-Logger Plugin from v1.4a) or via DX-Alert (You need DX-Alert Plugin v. 2.0a)
+- Logfiles can be download with RDS-Logger CSV- & HTML Buttons (You need RDS-Logger Plugin from v1.5) or via DX-Alert email (You need DX-Alert Plugin v. 2.0a)
 
 
 ## Installation notes:
