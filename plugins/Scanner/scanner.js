@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.1 BETA)  /// 
 ///                                                         ///
-///  by Highpoint                    last update: 21.08.24  ///
+///  by Highpoint                    last update: 22.08.24  ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -483,6 +483,7 @@
         const buttonIms = document.querySelector('.button-ims');
         const newDiv = document.createElement('div');
         newDiv.className = 'panel-50 no-bg br-0 h-100 m-0';
+		newDiv.id = 'ScannerButton';
         newDiv.appendChild(ScannerButton);
         buttonIms.parentNode.insertBefore(newDiv, buttonIms);
 
