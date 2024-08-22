@@ -31,7 +31,8 @@ This plugin provides scanning functions for the FM-DX web server.
   You can switch the plugin's scan mode using a switch (true/false) in the header of scanner_server.js
 - In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
 - Auto scanner and logging preferences can be configured in the scanner_server.js header
-- After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
+
+After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
 ## Known bugs:
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
