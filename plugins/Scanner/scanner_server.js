@@ -866,6 +866,7 @@ function getLogFilePathCSV(date, time, isFiltered) {
 		try {
 			fs.writeFileSync(filePath, header, { flag: 'w' });
 			logInfo('Scanner created /logs/' + fileName);
+			stationidAll = '';
 		} catch (error) {
 			logError('Failed to create /logs/' + fileName, ':', error.message);
 		}
@@ -971,6 +972,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
             logInfo('Scanner created /logs/' + fileName);
+			// Initialize stationidAll if necessary
+			stationidAll = '';
         } catch (error) {
             logError('Failed to create /logs/' + fileName, ':', error.message);
         }
