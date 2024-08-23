@@ -15,6 +15,11 @@
             box-sizing: border-box;
         }
 
+        /* Flexible area for the search input */
+        #searchContainer {
+            flex: 1;
+        }
+
         /* Styling for the search input */
         #searchInput {
             padding: 5px;
@@ -23,20 +28,53 @@
             box-sizing: border-box;
         }
 
-        /* Styling for the refresh button */
-        #refreshButton {
+        /* Container for the buttons */
+        #buttonContainer {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Styling for the buttons */
+        .button {
             padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-left: 10px;
+            color: white;
+            margin-left: 10px; /* Space between buttons */
+        }
+
+        /* Styling for the refresh button */
+        #refreshButton {
+            background-color: #007bff;
+        }
+
+        /* Styling for the dark mode button */
+        #darkModeButton {
+            background-color: #6c757d;
         }
 
         /* Styling for the refresh button when auto-refresh is off */
         #refreshButton.off {
             background-color: #6c757d;
+        }
+
+        /* Dark mode styling */
+        body.dark-mode {
+            background-color: #121212;
+            color: white;
+        }
+
+        body.dark-mode table {
+            color: white;
+        }
+
+        body.dark-mode th {
+            background-color: #1f1f1f;
+        }
+
+        body.dark-mode td {
+            border-color: #333;
         }
 
         /* Make table headers clickable */
@@ -62,11 +100,54 @@
         th {
             background-color: #f2f2f2;
         }
+		
+		/* Dark mode styling for links */
+		body.dark-mode a {
+			color: #d6a8f5; /* Light purple color */
+		}
+
+		body.dark-mode a:hover {
+			color: #b57edc; /* Slightly darker purple for hover effect */
+		}
+		
+		/* Dark mode styling for the search input */
+			body.dark-mode #searchInput {
+			background-color: #6c757d; /* Match the color of the dark mode toggle button */
+			color: white; /* Ensure text is readable */
+		}
+
+		/* Dark mode styling for the search input placeholder */
+			body.dark-mode #searchInput::placeholder {
+			color: white; /* Light gray placeholder text for better readability */
+		}	
+		
     </style>
     <script>
         let autoRefresh = true; // Controls whether auto-refresh is enabled
         let refreshInterval = 5000; // Refresh interval in milliseconds (5 seconds)
         let refreshTimeout; // Timeout ID for the refresh function
+
+        /* Get the value of a cookie by name */
+        function getCookie(name) {
+            const cookieName = name + "=";
+            const cookies = decodeURIComponent(document.cookie).split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i];
+                while (cookie.charAt(0) === ' ') {
+                    cookie = cookie.substring(1);
+                }
+                if (cookie.indexOf(cookieName) === 0) {
+                    return cookie.substring(cookieName.length, cookie.length);
+                }
+            }
+            return "";
+        }
+
+        /* Set a cookie with a specific name, value, and expiration (in days) */
+        function setCookie(name, value, days) {
+            const expires = "expires=" + new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
 
         /* Toggle the auto-refresh functionality */
         function toggleRefresh() {
@@ -160,28 +241,66 @@
             }
         }
 
-        /* Initializes controls and auto-refresh on window load */
-        window.onload = () => {
+        /* Toggle Dark Mode */
+        function toggleDarkMode() {
+            const body = document.body;
+            const isDarkMode = body.classList.toggle("dark-mode");
+            setCookie("darkMode", isDarkMode, 365); // Save preference for 1 year
+        }
+
+        /* Apply Dark Mode based on cookie */
+        function applyDarkMode() {
+            const darkMode = getCookie("darkMode");
+            if (darkMode === "true") {
+                document.body.classList.add("dark-mode");
+            }
+        }
+
+        /* Initializes controls and auto-refresh on DOMContentLoaded */
+        document.addEventListener('DOMContentLoaded', () => {
+            applyDarkMode(); // Apply Dark Mode preference
+
             const controlsContainer = document.createElement('div');
             controlsContainer.id = 'controls';
 
-            /* Create and append the search input */
+            /* Create and append the search input container */
+            const searchContainer = document.createElement('div');
+            searchContainer.id = 'searchContainer';
+
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.id = 'searchInput';
             searchInput.placeholder = 'Search table ...';
             searchInput.onkeyup = filterTable;
-            controlsContainer.appendChild(searchInput);
+            searchContainer.appendChild(searchInput);
+
+            controlsContainer.appendChild(searchContainer);
+
+            /* Create and append the button container */
+            const buttonContainer = document.createElement('div');
+            buttonContainer.id = 'buttonContainer';
+
+            /* Create and append the dark mode button */
+            const darkModeButton = document.createElement('button');
+            darkModeButton.id = 'darkModeButton';
+            darkModeButton.className = 'button';
+            darkModeButton.innerText = 'Toggle Dark Mode';
+            darkModeButton.addEventListener('click', toggleDarkMode);
+            buttonContainer.appendChild(darkModeButton);
 
             /* Create and append the refresh button */
-            const button = document.createElement('button');
-            button.id = 'refreshButton';
-            button.innerText = 'Auto Refresh: ON';
-            button.addEventListener('click', () => {
+            const refreshButton = document.createElement('button');
+            refreshButton.id = 'refreshButton';
+            refreshButton.className = 'button';
+            refreshButton.innerText = 'Auto Refresh: ON';
+            refreshButton.addEventListener('click', () => {
                 toggleRefresh();
-                button.innerText = `Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
+                refreshButton.innerText = `Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
             });
-            controlsContainer.appendChild(button);
+            buttonContainer.appendChild(refreshButton);
+
+            /* Append the button container to the controls container */
+            controlsContainer.appendChild(buttonContainer);
 
             /* Insert controls above the table */
             document.body.insertBefore(controlsContainer, document.querySelector("pre"));
@@ -205,7 +324,7 @@
             headers[10].addEventListener("click", () => sortTable(10, true)); // DIST
             headers[11].addEventListener("click", () => sortTable(11, true)); // AZ
             headers[12].addEventListener("click", () => sortTable(12)); // ID
-        };
+        });
     </script>
 </head>
 <body>
