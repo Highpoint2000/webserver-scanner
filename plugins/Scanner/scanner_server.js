@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.1)       /// 
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.2 BETA)  /// 
 ///                                                         ///
-///  by Highpoint               last update: 22.08.24       ///
+///  by Highpoint               last update: 23.08.24       ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -12,18 +12,18 @@
 ///  This plugin only works from web server version 1.2.6!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'off';  // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const Search_PE5PVB_Mode = false;   // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+const StartAutoScan = 'auto';       // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
+const AntennaSwitch = 'off';        // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
-let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
-let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
-let defaultScannerMode = 'normal'; // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
+let defaultSensitivityValue = 25;   // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
+let defaultScanHoldTime = 7;        // Value in s: 1,3,5,7,1,15,20,30 
+let defaultScannerMode = 'normal';  // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
 
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = false;      // For only first seen logging, set each station found to “true” or “false”. 
+const OnlyFirstLog = false;     // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
 const FMLIST_OM_ID = ''; 	    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
@@ -954,31 +954,48 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		time = getCurrentUTC(); // time in UTC
 	}
 
-    // Prüfe, ob die Datei existiert, wenn nicht, erstelle sie
-    if (!fs.existsSync(filePath)) {
-        // Update the header content as per your requirements
-        let header = isFiltered 
-            ? `<html><head><title>SCANNER LOG [FILTER MODE]</title><meta http-equiv="refresh" content="5"></head><body><pre>` 
-            : `<html><head><title>SCANNER LOG</title><meta http-equiv="refresh" content="5"></head><body><pre>`;
+	// Check if the file exists; if not, create it
+	if (!fs.existsSync(filePath)) {
+		let header = '';
 
-        header += `${ServerName}<br>${ServerDescription}<br>`;
-        header += isFiltered 
-            ? `SCANNER LOG [FILTER MODE] ${date} ${time}<br><br>` 
-            : `SCANNER LOG ${date} ${time}<br><br>`; 
-        header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>`;
+		try {
+			// Read the contents of the FilteredTemplate.html file
+			const templateFilePath = path.join(__dirname, 'FilteredTemplate.html');
+			if (fs.existsSync(templateFilePath)) {
+				const templateContent = fs.readFileSync(templateFilePath, 'utf8');
+				header += templateContent;
+			} else {
+				logError('FilteredTemplate.html does not exist');
+				// Handle the case where the template file is missing
+			}
+		} catch (error) {
+			logError('Failed to read FilteredTemplate.html:', error.message);
+		}
 
-        try {
-            fs.writeFileSync(filePath, header, { flag: 'w' });
-            logInfo('Scanner created /logs/' + fileName);
+		// Update the header content as per your requirements
+		header += isFiltered 
+			? `<html><head><title>SCANNER LOG [FILTER MODE]</title><meta http-equiv="refresh" content="5"></head><body><pre>` 
+			: `<html><head><title>SCANNER LOG</title><meta http-equiv="refresh" content="5"></head><body><pre>`;
+
+		header += `${ServerName}<br>${ServerDescription}<br>`;
+		header += isFiltered 
+			? `SCANNER LOG [FILTER MODE] ${date} ${time}<br><br>` 
+			: `SCANNER LOG ${date} ${time}<br><br>`; 
+
+		header += UTCtime 
+			? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>` 
+			: `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>`;
+
+		try {
+			fs.writeFileSync(filePath, header, { flag: 'w' });
+			logInfo('Scanner created /logs/' + fileName);
 			// Initialize stationidAll if necessary
 			stationidAll = '';
-        } catch (error) {
-            logError('Failed to create /logs/' + fileName, ':', error.message);
-        }
-    }
-	
+		} catch (error) {
+			logError('Failed to create /logs/' + fileName, ':', error.message);
+		}
+	}
+
     return filePath
 }
 
