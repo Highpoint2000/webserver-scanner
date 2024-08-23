@@ -972,11 +972,6 @@ function getLogFilePathHTML(date, time, isFiltered) {
 			logError('Failed to read FilteredTemplate.html:', error.message);
 		}
 
-		// Update the header content as per your requirements
-		header += isFiltered 
-			? `<html><head><title>SCANNER LOG [FILTER MODE]</title><meta http-equiv="refresh" content="5"></head><body><pre>` 
-			: `<html><head><title>SCANNER LOG</title><meta http-equiv="refresh" content="5"></head><body><pre>`;
-
 		header += `${ServerName}<br>${ServerDescription}<br>`;
 		header += isFiltered 
 			? `SCANNER LOG [FILTER MODE] ${date} ${time}<br><br>` 
