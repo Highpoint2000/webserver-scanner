@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCANNER LOG [FILTER MODE]</title>
+    <style>
+        /* Container for the search and refresh controls */
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Styling for the search input */
+        #searchInput {
+            padding: 5px;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        /* Styling for the refresh button */
+        #refreshButton {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        /* Styling for the refresh button when auto-refresh is off */
+        #refreshButton.off {
+            background-color: #6c757d;
+        }
+
+        /* Make table headers clickable */
+        th {
+            cursor: pointer;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto; /* Ensure columns are auto-sized */
+        }
+
+        /* Styling for table cells */
+        th, td {
+            padding: 3px;
+            text-align: left;
+            white-space: nowrap; /* Prevents text from wrapping */
+        }
+
+        /* Background color for table headers */
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+    <script>
+        let autoRefresh = true; // Controls whether auto-refresh is enabled
+        let refreshInterval = 5000; // Refresh interval in milliseconds (5 seconds)
+        let refreshTimeout; // Timeout ID for the refresh function
+
+        /* Toggle the auto-refresh functionality */
+        function toggleRefresh() {
+            autoRefresh = !autoRefresh;
+            const button = document.getElementById('refreshButton');
+            button.classList.toggle('off', !autoRefresh);
+            if (autoRefresh) {
+                startAutoRefresh();
+            } else {
+                clearTimeout(refreshTimeout);
+            }
+        }
+
+        /* Starts the auto-refresh function */
+        function startAutoRefresh() {
+            refreshTimeout = setTimeout(() => {
+                location.reload();
+            }, refreshInterval);
+        }
+
+        /* Sorts the table based on column index (n) */
+        function sortTable(n, isNumeric = false) {
+            const table = document.querySelector("table");
+            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            switching = true;
+            dir = "asc";
+
+            /* Keep switching rows until sorting is complete */
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+
+                /* Loop through the rows, skipping the header */
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                    /* Compare based on numeric or string content */
+                    let xContent = isNumeric ? parseFloat(x.innerHTML) || 0 : x.innerHTML.toLowerCase();
+                    let yContent = isNumeric ? parseFloat(y.innerHTML) || 0 : y.innerHTML.toLowerCase();
+
+                    /* Determine if a switch is needed based on direction */
+                    if (dir == "asc") {
+                        if (xContent > yContent) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (xContent < yContent) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    /* Make the switch and mark switching as true */
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    /* If no switching happened, change the direction */
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        /* Filters table rows based on input value */
+        function filterTable() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toLowerCase();
+            const table = document.querySelector("table");
+            const tr = table.getElementsByTagName("tr");
+
+            /* Loop through all table rows */
+            for (let i = 1; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td");
+                let display = false;
+                for (let j = 0; j < td.length; j++) {
+                    /* Check if any cell contains the filter text */
+                    if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                        display = true;
+                        break;
+                    }
+                }
+                /* Show or hide the row based on the filter */
+                tr[i].style.display = display ? "" : "none";
+            }
+        }
+
+        /* Initializes controls and auto-refresh on window load */
+        window.onload = () => {
+            const controlsContainer = document.createElement('div');
+            controlsContainer.id = 'controls';
+
+            /* Create and append the search input */
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.id = 'searchInput';
+            searchInput.placeholder = 'Search table ...';
+            searchInput.onkeyup = filterTable;
+            controlsContainer.appendChild(searchInput);
+
+            /* Create and append the refresh button */
+            const button = document.createElement('button');
+            button.id = 'refreshButton';
+            button.innerText = 'Auto Refresh: ON';
+            button.addEventListener('click', () => {
+                toggleRefresh();
+                button.innerText = `Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
+            });
+            controlsContainer.appendChild(button);
+
+            /* Insert controls above the table */
+            document.body.insertBefore(controlsContainer, document.querySelector("pre"));
+
+            /* Start auto-refresh if enabled */
+            if (autoRefresh) {
+                startAutoRefresh();
+            }
+
+            /* Add click event listeners to table headers for sorting */
+            const headers = document.querySelectorAll("th");
+            headers[1].addEventListener("click", () => sortTable(1)); // TIME(UTC)
+            headers[2].addEventListener("click", () => sortTable(2, true)); // FREQ
+            headers[3].addEventListener("click", () => sortTable(3)); // PI
+            headers[4].addEventListener("click", () => sortTable(4)); // PS
+            headers[5].addEventListener("click", () => sortTable(5)); // NAME
+            headers[6].addEventListener("click", () => sortTable(6)); // CITY
+            headers[7].addEventListener("click", () => sortTable(7)); // ITU
+            headers[8].addEventListener("click", () => sortTable(8)); // P
+            headers[9].addEventListener("click", () => sortTable(9, true)); // ERP
+            headers[10].addEventListener("click", () => sortTable(10, true)); // DIST
+            headers[11].addEventListener("click", () => sortTable(11, true)); // AZ
+            headers[12].addEventListener("click", () => sortTable(12)); // ID
+        };
+    </script>
+</head>
+<body>
+<pre>
