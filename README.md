@@ -2,16 +2,11 @@
 
 This plugin provides scanning functions for the FM-DX web server.
 
-![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)
+![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)![image](https://github.com/user-attachments/assets/7e7bdb20-8bd5-4410-915a-30bc583750b1)
 
 
-
-### v2.1 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- Mobile control for autoscan
-- CSV log files (RAW + filtered) and HTML log files (RAW + filtered) can be saved automatically in /web/logs
-- Time in Logfiles can be set to UTC
-- HTML-Logfiles has 5 seconds autorefresh inside
-- Logfiles can be download with RDS-Logger CSV- & HTML Buttons (You need RDS-Logger Plugin from v1.5) or via DX-Alert email (You need DX-Alert Plugin v. 2.0a)
+## v2.2 BETA (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- New layout for HTML logfile with search/sort Options and Toggle Button for auto refresh
 
 
 ## Installation notes:
@@ -31,6 +26,7 @@ This plugin provides scanning functions for the FM-DX web server.
   You can switch the plugin's scan mode using a switch (true/false) in the header of scanner_server.js
 - In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
 - Auto scanner and logging preferences can be configured in the scanner_server.js header
+- In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
 
 After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
@@ -39,6 +35,13 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.1 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Mobile control for autoscan
+- CSV log files (RAW + filtered) and HTML log files (RAW + filtered) can be saved automatically in /web/logs
+- Time in Logfiles can be set to UTC
+- HTML-Logfiles has 5 seconds autorefresh inside
+- Logfiles can be download with RDS-Logger CSV- & HTML Buttons (You need RDS-Logger Plugin from v1.5) or via DX-Alert email (You need DX-Alert Plugin v. 2.0a)
 
 ### v2.0 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Automatic background scan when no user is connected or automatic start when the web server is started
