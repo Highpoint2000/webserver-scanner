@@ -6,7 +6,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 
 ## v2.2 BETA (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- New layout for HTML logfile with search/sort Options and Toggle Button for auto refresh
+- New layout for HTML logfile with search/sort Options, Toggle Button for auto refresh and dark mode
 
 
 ## Installation notes:
