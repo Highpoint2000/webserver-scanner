@@ -2,7 +2,9 @@
 
 This plugin provides scanning functions for the FM-DX web server.
 
-![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)![image](https://github.com/user-attachments/assets/7e7bdb20-8bd5-4410-915a-30bc583750b1)
+![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)
+![image](https://github.com/user-attachments/assets/40294ce0-a39c-498a-9d90-b6bdf0ab1adb)
+
 
 
 ## v2.2 BETA (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
