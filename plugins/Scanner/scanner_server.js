@@ -12,20 +12,20 @@
 ///  This plugin only works from web server version 1.2.6!!!
 
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false;   // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-const StartAutoScan = 'auto';       // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'off';        // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
+const AntennaSwitch = 'off';  // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
-let defaultSensitivityValue = 25;   // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
-let defaultScanHoldTime = 7;        // Value in s: 1,3,5,7,1,15,20,30 
-let defaultScannerMode = 'normal';  // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
+let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
+let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
+let defaultScannerMode = 'blacklist'; // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
 
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = false;     // For only first seen logging, set each station found to “true” or “false”. 
-const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; 	    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const OnlyFirstLog = false;      // For only first seen logging, set each station found to “true” or “false”. 
+const UTCtime = false; 			// Set to "true" for logging with UTC Time
+const FMLIST_OM_ID = '8082'; 	    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -784,6 +784,7 @@ function checkWhitelist() {
 					           
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
 					isScanning = false; // Updates a flag indicating scanning status	
+					
 
 							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
 								if (RAWLog) {
@@ -812,11 +813,11 @@ function checkWhitelist() {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
 										}
-									
+
 										startScan('up'); // Restart scanning after the delay
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
-										station = '';
+										station = '';								
                                 }						
                  			}	
                   
@@ -887,7 +888,7 @@ function writeCSVLogEntry(isFiltered) {
 
 	const now = new Date();
 	const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
-	let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+	let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
 	
     // Bestimme den Pfad zur Log-Datei basierend auf dem aktuellen Datum und dem isFiltered-Flag
     const logFilePath = getLogFilePathCSV(date, time, isFiltered);
@@ -1006,7 +1007,7 @@ function writeHTMLLogEntry(isFiltered) {
 
     const now = new Date();
     const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    let time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
     
     // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
@@ -1079,8 +1080,6 @@ function writeHTMLLogEntry(isFiltered) {
     }
 }
 
-
-
 function getCurrentUTC() {
     // Hole die aktuelle Zeit in UTC
     const now = new Date();
@@ -1095,6 +1094,28 @@ function getCurrentUTC() {
 
     return utcTime;
 }
+// const { startStopRecording, formatUrl } = require('./airchecker.js');
+
+// let recordingInstance = null;
+
+// async function startRecording() {
+    // const websocketBaseUrl = 'http://127.0.0.1:9080';
+    // const outputFilename = `${freq}.mp3`;
+
+    // const wsUrlWithAudio = formatUrl(websocketBaseUrl, 'audio');
+
+    // console.log('Starting recording...');
+    // recordingInstance = await startStopRecording(wsUrlWithAudio, outputFilename);
+// }
+
+// function stopRecording() {
+    // if (recordingInstance) {
+        // recordingInstance.stop(); // Stelle sicher, dass `stop` die Methode ist, die das Recording stoppt
+        // console.log('Recording stopped.');
+    // } else {
+        // console.log('No recording instance found.');
+    // }
+// }
 
 InitialMessage();
 ExtraWebSocket();
