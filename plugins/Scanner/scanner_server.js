@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.2 BETA)  /// 
 ///                                                         ///
-///  by Highpoint               last update: 23.08.24       ///
+///  by Highpoint               last update: 26.08.24       ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,22 +14,22 @@
 const Autoscan_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; // Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'off';  // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const AntennaSwitch = 'false';  // Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
 let defaultSensitivityValue = 25; // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; // Value in s: 1,3,5,7,1,15,20,30 
-let defaultScannerMode = 'blacklist'; // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
+let defaultScannerMode = 'normal'; // Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: normal, blacklist, or whitelist
 
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = false;      // For only first seen logging, set each station found to “true” or “false”. 
+const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
 const FMLIST_OM_ID = ''; 	    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-const pluginVersion = 'V2.0'; 
+const pluginVersion = 'V2.2 BETA'; 
 
 const WebSocket = require('ws');
 const fs = require('fs');
@@ -42,8 +42,6 @@ const ServerDescription = config.identification.tunerDesc;
 const DefaultFreq = config.defaultFreq;
 const enableDefaultFreq = config.enableDefaultFreq;
 const Antennas = config.antennas;
-const tuningLowerLimit = config.webserver.tuningLowerLimit;
-const tuningUpperLimit = config.webserver.tuningUpperLimit;
 const webserverPort = config.webserver.webserverPort || 8080; // Default to port 8080 if not specified
 const LAT = config.identification.lat; 
 const LON = config.identification.lon; 
@@ -89,6 +87,17 @@ let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
 let HTML_LogfilePath_filtered;
 let stationidAll;
+let tuningLowerLimit = config.webserver.tuningLowerLimit;
+let tuningUpperLimit = config.webserver.tuningUpperLimit;
+let tuningLimit = config.webserver.tuningLimit;
+
+if (tuningUpperLimit === '' || !tuningLimit) {
+	tuningUpperLimit = '108.0';
+}
+
+if (tuningLowerLimit === '' || !tuningLimit) {
+	tuningLowerLimit = '87.5';
+}
 
 if (StartAutoScan !== 'auto') {
    Scan = StartAutoScan;
@@ -637,6 +646,8 @@ function startScan(direction) {
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
         currentFrequency = tuningLowerLimit;
     }
+	
+
 
     function updateFrequency() {
         if (!isScanning) {
@@ -644,10 +655,13 @@ function startScan(direction) {
             return; // Exit the function if scanning has been stopped
         }
 
-        currentFrequency = Math.round(currentFrequency * 10) / 10; // Round to one decimal place
-		
+        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
         if (direction === 'up') {
-            currentFrequency += 0.1;
+			if (currentFrequency < '74.01') {
+			    currentFrequency += 0.01;
+			} else {
+				currentFrequency += 0.1;
+			}
             if (currentFrequency > tuningUpperLimit) {
 				if (Scan = 'on') {
 				   sendNextAntennaCommand();
@@ -655,46 +669,66 @@ function startScan(direction) {
                 currentFrequency = tuningLowerLimit;
             }
         } else if (direction === 'down') {
-            currentFrequency -= 0.1;
+			if (currentFrequency < '74.01') {
+			    currentFrequency -= 0.01;
+			} else {
+				currentFrequency -= 0.1;
+			}
             if (currentFrequency < tuningLowerLimit) {
                 currentFrequency = tuningUpperLimit;
             }
         }
 
-        currentFrequency = Math.round(currentFrequency * 10) / 10;
+        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
 			
         if (!ScanPE5PVB) {
             if (ScannerMode === 'blacklist' && Scan === 'on') {
                 while (isInBlacklist(currentFrequency, blacklist)) {
                     if (direction === 'up') {
-                        currentFrequency += 0.1;
+						if (currentFrequency < '74.01') {
+							currentFrequency += 0.01;
+						} else {
+							currentFrequency += 0.1;
+						}
                         if (currentFrequency > tuningUpperLimit) {
                             currentFrequency = tuningLowerLimit;
                         }
                     } else if (direction === 'down') {
-                        currentFrequency -= 0.1;
+						if (currentFrequency < '74.01') {
+							currentFrequency -= 0.01;
+						} else {
+							currentFrequency -= 0.1;
+						}
                         if (currentFrequency < tuningLowerLimit) {
                             currentFrequency = tuningUpperLimit;
                         }
                     }
-                    currentFrequency = Math.round(currentFrequency * 10) / 10;
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
                 }
             } else if (ScannerMode === 'whitelist' && Scan === 'on') {			
 				if (isInWhitelist(currentFrequency, whitelist)) {
                 }
                 while (!isInWhitelist(currentFrequency, whitelist)) {				
                     if (direction === 'up') {
-                        currentFrequency += 0.1;
+						if (currentFrequency < '74.01') {
+							currentFrequency += 0.01;
+						} else {
+							currentFrequency += 0.1;
+						}
                         if (currentFrequency > tuningUpperLimit) {
                             currentFrequency = tuningLowerLimit;
                         }
                     } else if (direction === 'down') {
-                        currentFrequency -= 0.1;
+						if (currentFrequency < '74.01') {
+							currentFrequency -= 0.01;
+						} else {
+							currentFrequency -= 0.1;
+						}
                         if (currentFrequency < tuningLowerLimit) {
                             currentFrequency = tuningUpperLimit;
                         }
                     }
-                    currentFrequency = Math.round(currentFrequency * 10) / 10;
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
                 }
             }
         }
