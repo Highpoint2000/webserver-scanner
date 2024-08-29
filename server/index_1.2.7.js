@@ -32,6 +32,7 @@ const storage = require('./storage');
 const { serverConfig, configExists } = require('./server_config');
 const pjson = require('../package.json');
 const config = require('./../config.json');
+
 // Function to find server files based on the plugins listed in config
 function findServerFiles(plugins) {
   let results = [];
@@ -418,7 +419,9 @@ wss.on('connection', (ws, request) => {
   });
 
   ws.on('close', (code, reason) => {
-    currentUsers--;
+    if (clientIp !== '127.0.0.1' || (request.connection && request.connection.remoteAddress && request.connection.remoteAddress !== '127.0.0.1') || (request.headers && request.headers['origin'] && request.headers['origin'].trim() !== '')) {
+      currentUsers--;
+    }
     dataHandler.showOnlineUsers(currentUsers);
   
     // Find the index of the user's data in storage.connectedUsers array
