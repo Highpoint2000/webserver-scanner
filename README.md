@@ -41,14 +41,14 @@ After activating/deactivating the plugin or making changes to the scanner server
 
 ## History: 
 
-### v2.1 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+### v2.1 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Mobile control for autoscan
 - CSV log files (RAW + filtered) and HTML log files (RAW + filtered) can be saved automatically in /web/logs
 - Time in Logfiles can be set to UTC
 - HTML-Logfiles has 5 seconds autorefresh inside
 - Logfiles can be download with RDS-Logger CSV- & HTML Buttons (You need RDS-Logger Plugin from v1.5) or via DX-Alert email (You need DX-Alert Plugin v. 2.0a)
 
-### v2.0 (SERVER BASED VERSION - only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+### v2.0 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Automatic background scan when no user is connected or automatic start when the web server is started
 - Automatic antenna switching on upper band limit
 - Hide the control buttons when autoscan mode is active (blinking information!)
