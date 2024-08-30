@@ -1161,29 +1161,6 @@ function getCurrentUTC() {
     return { utcDate, utcTime };
 }
 
-// const { startStopRecording, formatUrl } = require('./airchecker.js');
-
-// let recordingInstance = null;
-
-// async function startRecording() {
-    // const websocketBaseUrl = 'http://127.0.0.1:9080';
-    // const outputFilename = `${freq}.mp3`;
-
-    // const wsUrlWithAudio = formatUrl(websocketBaseUrl, 'audio');
-
-    // console.log('Starting recording...');
-    // recordingInstance = await startStopRecording(wsUrlWithAudio, outputFilename);
-// }
-
-// function stopRecording() {
-    // if (recordingInstance) {
-        // recordingInstance.stop(); // Stelle sicher, dass `stop` die Methode ist, die das Recording stoppt
-        // console.log('Recording stopped.');
-    // } else {
-        // console.log('No recording instance found.');
-    // }
-// }
-
 InitialMessage();
 ExtraWebSocket();
 TextWebSocket();
