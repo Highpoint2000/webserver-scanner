@@ -878,6 +878,13 @@ function checkWhitelist() {
         }
 		
 function getLogFilePathCSV(date, time, isFiltered) {
+	
+	if (UTCtime) {
+		const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+		time = utcTime;
+		date = utcDate;
+	}
+	
     // Bestimme den Dateinamen basierend auf dem isFiltered-Flag
     const fileName = isFiltered ? `SCANNER_${date}_filtered.csv` : `SCANNER_${date}.csv`;
     
@@ -895,7 +902,13 @@ function getLogFilePathCSV(date, time, isFiltered) {
 		let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly  
 		
 		let header = `"${ServerName}"\n"${formattedServerDescription}"\n`;
-		header += isFiltered ? `SCANNER LOG [FILTER MODE] ${date} ${time}\n\n` : `SCANNER LOG ${date} ${time}\n\n`;
+		
+		if (UTCtime) {
+			header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}(UTC)\n\n` : `SCANNER LOG ${date} ${time}(UTC)\n\n`;
+		} else {
+			header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}\n\n` : `SCANNER LOG ${date} ${time}\n\n`;
+		}
+					
 		header += UTCtime ? `date;time(utc);freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n` : `date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n`;
 
 		try {
@@ -921,16 +934,18 @@ function writeCSVLogEntry(isFiltered) {
     }
 
 	const now = new Date();
-	const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+	let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
 	let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
+	
+	if (UTCtime) {
+		const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+		time = utcTime;
+		date = utcDate;
+	}
 	
     // Bestimme den Pfad zur Log-Datei basierend auf dem aktuellen Datum und dem isFiltered-Flag
     const logFilePath = getLogFilePathCSV(date, time, isFiltered);
 	
-	if (UTCtime) {
-		time = getCurrentUTC(); // time in UTC
-	}
-
     // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
 
@@ -974,6 +989,13 @@ function writeCSVLogEntry(isFiltered) {
 
 
 function getLogFilePathHTML(date, time, isFiltered) {
+	
+	if (UTCtime) {
+		const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+		time = utcTime;
+		date = utcDate;
+	}
+	
     // Bestimme den Dateinamen basierend auf dem isFiltered-Flag
     const fileName = isFiltered ? `SCANNER_${date}_filtered.html` : `SCANNER_${date}.html`;
     
@@ -984,10 +1006,6 @@ function getLogFilePathHTML(date, time, isFiltered) {
     if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
     }
-	
-	if (UTCtime) {
-		time = getCurrentUTC(); // time in UTC
-	}
 
 	// Check if the file exists; if not, create it
 	if (!fs.existsSync(filePath)) {
@@ -1008,9 +1026,12 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 
 		header += `${ServerName}<br>${ServerDescription}<br>`;
-		header += isFiltered 
-			? `SCANNER LOG [FILTER MODE] ${date} ${time}<br><br>` 
-			: `SCANNER LOG ${date} ${time}<br><br>`; 
+		
+		if (UTCtime) {
+			header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}(UTC)<br><br>` : `SCANNER LOG ${date} ${time}(UTC)<br><br>`; 
+		} else {
+			header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}<br><br>` : `SCANNER LOG ${date} ${time}<br><br>`; 
+		}
 
 		header += UTCtime 
 			? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>` 
@@ -1040,8 +1061,14 @@ function writeHTMLLogEntry(isFiltered) {
     }
 
     const now = new Date();
-    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
+	
+	if (UTCtime) {
+		const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+		time = utcTime;
+		date = utcDate;
+	}
     
     // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
@@ -1058,9 +1085,7 @@ function writeHTMLLogEntry(isFiltered) {
     // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
     
-    if (UTCtime) {
-        time = getCurrentUTC(); // time in UTC
-    }
+
 
     // Create the log entry line with the relevant data
     let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n`;
@@ -1115,19 +1140,27 @@ function writeHTMLLogEntry(isFiltered) {
 }
 
 function getCurrentUTC() {
-    // Hole die aktuelle Zeit in UTC
+    // Get the current time in UTC
     const now = new Date();
     
-    // Extrahiere die UTC-Stunden, -Minuten und -Sekunden
+    // Extract the UTC year, month, and day
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0'); // Month is zero-based
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    
+    // Extract the UTC hours, minutes, and seconds
     const hours = String(now.getUTCHours()).padStart(2, '0');
     const minutes = String(now.getUTCMinutes()).padStart(2, '0');
     const seconds = String(now.getUTCSeconds()).padStart(2, '0');
     
-    // Formatiere die Zeit im HH:MM:SS-Format
+    // Format the date and time
+    const utcDate = `${year}-${month}-${day}`;
     const utcTime = `${hours}:${minutes}:${seconds}`;
 
-    return utcTime;
+    // Return an object with date and time
+    return { utcDate, utcTime };
 }
+
 // const { startStopRecording, formatUrl } = require('./airchecker.js');
 
 // let recordingInstance = null;
