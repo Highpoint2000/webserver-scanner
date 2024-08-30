@@ -7,11 +7,8 @@ This plugin provides scanning functions for the FM-DX web server.
 
 
 
-## v2.2 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- New layout for HTML logfile with search/sort Options, Toggle Button for auto refresh and dark mode
-- Time display corrected for local time
-- Scan step size implemented for OIRT band
-- Default selection 87.5-108 MHz if no limits are set (caused problems in previous versions!)
+## v2.2a BETA (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- 0.01 MHz Fixed error when exceeding OIRT upper limit
 
 
 ## Installation notes:
@@ -40,6 +37,12 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.2 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- New layout for HTML logfile with search/sort Options, Toggle Button for auto refresh and dark mode
+- Time display corrected for local time
+- Scan step size implemented for OIRT band
+- Default selection 87.5-108 MHz if no limits are set (caused problems in previous versions!)
 
 ### v2.1 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Mobile control for autoscan
