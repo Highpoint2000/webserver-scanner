@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.2)       /// 
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.2a BETA) /// 
 ///                                                         ///
-///  by Highpoint               last update: 26.08.24       ///
+///  by Highpoint               last update: 30.08.24       ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 (() => {
 
-    const pluginVersion = 'V2.2'; 
+    const pluginVersion = 'V2.2a BETA'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -132,7 +132,7 @@
                 };
                 wsSendSocket.onclose = (event) => {
                     console.log("Scanner Error! Websocket closed or not open:", event);
-                    showCustomAlert('Scanner Error! Websocket closed or not open');
+                    // showCustomAlert('Scanner Error! Websocket closed or not open');
                     setTimeout(setupSendSocket, 5000); // Reconnect after 5 seconds
                 };
             } catch (error) {
