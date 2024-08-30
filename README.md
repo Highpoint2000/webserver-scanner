@@ -9,6 +9,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## v2.2a BETA (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - 0.01 MHz Fixed error when exceeding OIRT upper limit
+- Fixed bug when crossing the date line at UTC
 
 
 ## Installation notes:
