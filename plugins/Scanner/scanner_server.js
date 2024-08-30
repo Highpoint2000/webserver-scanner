@@ -14,7 +14,7 @@
 const Autoscan_PE5PVB_Mode = false; 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; 			// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'false';  		// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const AntennaSwitch = 'off';  			// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
 let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; 			// Value in s: 1,3,5,7,10,15,20,30 
@@ -25,7 +25,7 @@ const FilteredLog = true; 		// Set to "true" or "false" for filtered data loggin
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
 const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = '8082'; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FMLIST_OM_ID = ''; 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -502,69 +502,141 @@ function checkUserCount(users) {
     }
 }
 
+// Variable to cache the file content
+let cachedData = null;
+
+async function fetchstationid(freq, picode, city) {
+    try {
+        // Check if data is already cached
+        if (!cachedData) {
+            // Fetch the content from the specified URL if not cached
+            const response = await fetch("https://tef.noobish.eu/logos/scripts/StationID_PL.txt");
+
+            // Check if the response is successful
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Read the text content from the response
+            cachedData = await response.text();
+        } else {
+            // logInfo('Scanner Info: Using cached data.');
+        }
+
+        // Remove the period from freq
+        const cleanedFreq = freq.replace('.', '');
+
+        // Remove all special characters from city and convert to lowercase
+        const cleanedCity = city.replace(/[^a-z]/gi, '').toLowerCase();
+
+        // Extract the first four characters of the cleaned city
+        const cityPrefix = cleanedCity.substring(0, 4);
+
+        // Create a pattern with wildcards around each of the first four characters of the cleaned city
+        const cityPattern = cityPrefix
+            .split('')
+            .map(char => `.*${char}`)
+            .join('');
+        
+        // Build the target string based on the provided variables with wildcards
+        const targetString = `${cleanedFreq};${picode};${cityPattern}.*`;
+        // logInfo(`Scanner Info: Searching for specified combination: ${targetString}`);
+
+        // Create a case-insensitive regular expression to match the target string
+        const regex = new RegExp(targetString, 'i');
+
+        // Find the line that matches the target regex
+        const targetLine = cachedData.split('\n').find(line => regex.test(line));
+
+        if (targetLine) {
+            // Split the line by semicolons to get all the parts
+            const parts = targetLine.split(';');
+
+            // Extract and clean the station ID from the last column
+            let StationID = parts[parts.length - 1].trim();
+
+            // Further cleaning can be done here if needed (e.g., removing specific characters)
+            StationID = StationID.replace(/[^0-9]/g, ''); // Example: remove all non-alphanumeric characters
+
+            // logInfo(`Station ID: ${StationID}`);
+            return StationID;
+        } else {
+            // logInfo(`Scanner Info: The specified combination of ${cleanedFreq};*${picode}*;*${cityPattern}* was not found in the stationid_PL.txt.`);
+            return null;
+        }
+    } catch (error) {
+        logError('Scanner Error:', error);
+        return null;
+    }
+}
 
 
-function handleSocketMessage(messageData) {
+async function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
 
-    setTimeout(() => {
-        picode = messageData.pi;
-		ps = messageData.ps;
-        freq = messageData.freq;
-        strength = messageData.sig;
-        stereo = messageData.st;
-		users = messageData.users;
-        stereo_forced = messageData.stForced;
-		ant = messageData.ant;
-        station = messageData.txInfo.tx;
-	    pol = messageData.txInfo.pol;
-        erp = messageData.txInfo.erp;
-        city = messageData.txInfo.city;
-        itu = messageData.txInfo.itu;
-        distance = messageData.txInfo.dist;
-        azimuth = messageData.txInfo.azi;
-		stationid = messageData.txInfo.id;
-		
-        if ((messageData.ps_errors !== "0,0,0,0,0,0,0,1") && (messageData.ps_errors !== "0,0,0,0,0,0,0,0")) {
-            ps += "?";
-            }
-			
-		if (isScanning) {
-            if (stereo_forced && stereo_forced_user !== 'mono') {
-                stereo_forced_user = 'mono';
-                sendCommandToClient('B0');
-            }
-        } else {
-            if (stereo_forced_user === 'mono') {
-                sendCommandToClient('B1');
-                stereo_forced_user = 'stereo'; // Update stereo_forced_user after sending 'B1'
-            }
+    // Now you don't need to use setTimeout, unless you need an explicit delay
+    picode = messageData.pi;
+    ps = messageData.ps;
+    freq = messageData.freq;
+    strength = messageData.sig;
+    stereo = messageData.st;
+    users = messageData.users;
+    stereo_forced = messageData.stForced;
+    ant = messageData.ant;
+    station = messageData.txInfo.tx;
+    pol = messageData.txInfo.pol;
+    erp = messageData.txInfo.erp;
+    city = messageData.txInfo.city;
+    itu = messageData.txInfo.itu;
+    distance = messageData.txInfo.dist;
+    azimuth = messageData.txInfo.azi;
+    
+    // Determine station ID for Polish stations
+    if (itu === "POL") {
+        stationid = await fetchstationid(freq, picode, city); 
+	} else {
+        stationid = messageData.txInfo.id;
+    }
+    
+    if ((messageData.ps_errors !== "0,0,0,0,0,0,0,1") && (messageData.ps_errors !== "0,0,0,0,0,0,0,0")) {
+        ps += "?";
+    }
+    
+    if (isScanning) {
+        if (stereo_forced && stereo_forced_user !== 'mono') {
+            stereo_forced_user = 'mono';
+            sendCommandToClient('B0');
         }
-
-        if (freq !== previousFrequency) {
-            checkStrengthCounter = 0;
-            stereo_detect = false;
+    } else {
+        if (stereo_forced_user === 'mono') {
+            sendCommandToClient('B1');
+            stereo_forced_user = 'stereo'; // Update stereo_forced_user after sending 'B1'
         }
-		
-        previousFrequency = freq;
-        currentFrequency = freq;
-        checkStrengthCounter++;
-		
-        if (checkStrengthCounter > 3) {
-            if (stereo) {
-                stereo_detect = true;
-            }
+    }
+
+    if (freq !== previousFrequency) {
+        checkStrengthCounter = 0;
+        stereo_detect = false;
+    }
+    
+    previousFrequency = freq;
+    currentFrequency = freq;
+    checkStrengthCounter++;
+    
+    if (checkStrengthCounter > 3) {
+        if (stereo) {
+            stereo_detect = true;
         }
+    }
 
-        if (!ScanPE5PVB) {
-            checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter);
-        }
+    if (!ScanPE5PVB) {
+        checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter);
+    }
 
-        // Check user count and handle scanning if needed
-        checkUserCount(users);
-
-    }, 0);
+    // Check user count and handle scanning if needed
+    checkUserCount(users);
 }
+
 
 
 function initializeAntennas(Antennas) {
