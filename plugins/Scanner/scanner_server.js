@@ -662,7 +662,6 @@ function startScan(direction) {
 			} else {
 				currentFrequency += 0.1;
 			}
-			console.log(currentFrequency, tuningUpperLimit);
             if (currentFrequency > tuningUpperLimit) {
 				if (Scan = 'on') {
 				   sendNextAntennaCommand();
