@@ -1141,7 +1141,7 @@ function writeHTMLLogEntry(isFiltered) {
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
 
     // Generate dynamic links based on stationid
-    let link1 = stationid !== '' ? `<a href="https://maps.fmdx.pl/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">FMDX</a>` : '';
+    let link1 = stationid !== '' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">FMDX</a>` : '';
     let link2 = stationid !== '' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
     // Replace spaces with underscores in the PS string
@@ -1195,7 +1195,7 @@ function writeHTMLLogEntry(isFiltered) {
     }
 
     // Generate the final link including all station IDs
-    let finalLink = `https://maps.fmdx.pl/#qth=${LAT},${LON}&id=${stationidAll}&findId=*`;
+    let finalLink = `https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationidAll}&findId=*`;
     let finalLinkHtml = `</table></pre><pre><a href="${finalLink}" target="_blank">FMDX ALL</a></pre></body></html>`;
 
     try {
