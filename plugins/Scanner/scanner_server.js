@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.2a BETA) /// 
 ///                                                         ///
-///  by Highpoint               last update: 30.08.24       ///
+///  by Highpoint               last update: 01.09.24       ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 const Autoscan_PE5PVB_Mode = false; 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; 			// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'off';  			// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const AntennaSwitch = 'off';  		// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
 let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; 			// Value in s: 1,3,5,7,10,15,20,30 
@@ -25,7 +25,7 @@ const FilteredLog = true; 		// Set to "true" or "false" for filtered data loggin
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
 const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FMLIST_OM_ID = '8082'; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -530,7 +530,7 @@ async function fetchstationid(freq, picode, city) {
         const cleanedCity = city.replace(/[^a-z]/gi, '').toLowerCase();
 
         // Extract the first four characters of the cleaned city
-        const cityPrefix = cleanedCity.substring(0, 4);
+        const cityPrefix = cleanedCity.substring(0, 3);
 
         // Create a pattern with wildcards around each of the first four characters of the cleaned city
         const cityPattern = cityPrefix
@@ -1127,27 +1127,27 @@ function writeHTMLLogEntry(isFiltered) {
     if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist') {
         return;
     }
-	
-	if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist') {
+
+    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist') {
         return;
     }
 
     const now = new Date();
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
-	
-	if (UTCtime) {
-		const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
-		time = utcTime;
-		date = utcDate;
-	}
-    
+
+    if (UTCtime) {
+        const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+        time = utcTime;
+        date = utcDate;
+    }
+
     // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
 
     // Initialize stationidAll if necessary
     if (typeof stationidAll === 'undefined' || stationidAll === null) {
-        stationidAll = ''; // Initialize as an empty string if undefined
+        stationidAll = ''; // Initialize as an empty string if undefined or null
     }
 
     // Generate dynamic links based on stationid
@@ -1156,8 +1156,6 @@ function writeHTMLLogEntry(isFiltered) {
 
     // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
-    
-
 
     // Create the log entry line with the relevant data
     let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n`;
@@ -1184,7 +1182,7 @@ function writeHTMLLogEntry(isFiltered) {
     }
 
     // Update stationidAll if the current stationid is valid and not already included
-    if (stationid !== "" && stationid >= 0) {
+    if (stationid !== null && stationid !== "" && stationid >= 0) {
         if (!stationidAll.split(',').includes(stationid.toString())) {
             stationidAll += stationidAll ? `,${stationid}` : stationid;
         }
@@ -1210,6 +1208,7 @@ function writeHTMLLogEntry(isFiltered) {
         logError("Failed to update the log file:", error.message);
     }
 }
+
 
 function getCurrentUTC() {
     // Get the current time in UTC
