@@ -14,7 +14,7 @@
 const Autoscan_PE5PVB_Mode = false; 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; 			// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'off';  		// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const AntennaSwitch = 'off';  			// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
 let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
 let defaultScanHoldTime = 7; 			// Value in s: 1,3,5,7,10,15,20,30 
@@ -23,9 +23,9 @@ let defaultScannerMode = 'blacklist'; 	// Only valid for Autoscan_PE5PVB_Mode = 
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
+const OnlyFirstLog = false;		// For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = '8082'; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FMLIST_OM_ID = ''; 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +86,6 @@ let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
 let HTML_LogfilePath_filtered;
-let stationidAll;
 let tuningLowerLimit = config.webserver.tuningLowerLimit;
 let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
@@ -986,7 +985,6 @@ function getLogFilePathCSV(date, time, isFiltered) {
 		try {
 			fs.writeFileSync(filePath, header, { flag: 'w' });
 			logInfo('Scanner created /logs/' + fileName);
-			stationidAll = '';
 		} catch (error) {
 			logError('Failed to create /logs/' + fileName, ':', error.message);
 		}
@@ -1112,8 +1110,6 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		try {
 			fs.writeFileSync(filePath, header, { flag: 'w' });
 			logInfo('Scanner created /logs/' + fileName);
-			// Initialize stationidAll if necessary
-			stationidAll = '';
 		} catch (error) {
 			logError('Failed to create /logs/' + fileName, ':', error.message);
 		}
@@ -1123,7 +1119,6 @@ function getLogFilePathHTML(date, time, isFiltered) {
 }
 
 function writeHTMLLogEntry(isFiltered) {
-    
     if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist') {
         return;
     }
@@ -1144,11 +1139,6 @@ function writeHTMLLogEntry(isFiltered) {
 
     // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
-
-    // Initialize stationidAll if necessary
-    if (typeof stationidAll === 'undefined' || stationidAll === null) {
-        stationidAll = ''; // Initialize as an empty string if undefined or null
-    }
 
     // Generate dynamic links based on stationid
     let link1 = stationid !== '' ? `<a href="https://maps.fmdx.pl/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">FMDX</a>` : '';
@@ -1181,6 +1171,22 @@ function writeHTMLLogEntry(isFiltered) {
         }
     }
 
+    // Initialize stationidAll from the existing file content
+    let stationidAll = '';
+    try {
+        if (fs.existsSync(logFilePath)) {
+            let fileContent = fs.readFileSync(logFilePath, 'utf8');
+            // Extract stationidAll from the last occurrence of the final link
+            const match = fileContent.match(/<a href="https:\/\/maps\.fmdx\.pl\/#qth=.*?&id=([^&]+)&findId=\*" target="_blank">FMDX ALL<\/a>/);
+            if (match && match[1]) {
+                stationidAll = match[1]; // Extract existing station IDs
+            }
+        }
+    } catch (error) {
+        logError("Failed to read the stationidAll from log file:", error.message);
+        return;
+    }
+
     // Update stationidAll if the current stationid is valid and not already included
     if (stationid !== null && stationid !== "" && stationid >= 0) {
         if (!stationidAll.split(',').includes(stationid.toString())) {
@@ -1208,6 +1214,7 @@ function writeHTMLLogEntry(isFiltered) {
         logError("Failed to update the log file:", error.message);
     }
 }
+
 
 
 function getCurrentUTC() {
