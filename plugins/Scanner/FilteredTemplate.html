@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCANNER LOG [FILTER MODE]</title>
     <style>
+        /* Einheitlicher Schriftstil für das gesamte Dokument */
+        body, label {
+            font-family: Arial, sans-serif;
+			font-size: 14px;
+        }
+
         /* Container for the search and refresh controls */
         #controls {
             display: flex;
@@ -18,14 +24,23 @@
         /* Flexible area for the search input */
         #searchContainer {
             flex: 1;
+            display: flex;
+            align-items: center;
         }
 
         /* Styling for the search input */
         #searchInput {
             padding: 5px;
             width: 100%;
-            max-width: 400px;
+            max-width: 300px;
             box-sizing: border-box;
+            margin-right: 10px;
+        }
+
+        /* Container for the distance filter checkboxes */
+        #filterContainer {
+            display: flex;
+            gap: 10px;
         }
 
         /* Container for the buttons */
@@ -100,31 +115,30 @@
         th {
             background-color: #f2f2f2;
         }
-		
-		/* Dark mode styling for links */
-		body.dark-mode a {
-			color: #d6a8f5; /* Light purple color */
-		}
 
-		body.dark-mode a:hover {
-			color: #b57edc; /* Slightly darker purple for hover effect */
-		}
-		
-		/* Dark mode styling for the search input */
-			body.dark-mode #searchInput {
-			background-color: #6c757d; /* Match the color of the dark mode toggle button */
-			color: white; /* Ensure text is readable */
-		}
+        /* Dark mode styling for links */
+        body.dark-mode a {
+            color: #d6a8f5; /* Light purple color */
+        }
 
-		/* Dark mode styling for the search input placeholder */
-			body.dark-mode #searchInput::placeholder {
-			color: white; /* Light gray placeholder text for better readability */
-		}	
-		
+        body.dark-mode a:hover {
+            color: #b57edc; /* Slightly darker purple for hover effect */
+        }
+
+        /* Dark mode styling for the search input */
+        body.dark-mode #searchInput {
+            background-color: #6c757d; /* Match the color of the dark mode toggle button */
+            color: white; /* Ensure text is readable */
+        }
+
+        /* Dark mode styling for the search input placeholder */
+        body.dark-mode #searchInput::placeholder {
+            color: white; /* Light gray placeholder text for better readability */
+        }
     </style>
     <script>
         let autoRefresh = true; // Controls whether auto-refresh is enabled
-        let refreshInterval = 5000; // Refresh interval in milliseconds (5 seconds)
+        let refreshInterval = 10000; // Refresh interval in milliseconds (10 seconds)
         let refreshTimeout; // Timeout ID for the refresh function
 
         /* Get the value of a cookie by name */
@@ -218,27 +232,67 @@
             }
         }
 
-        /* Filters table rows based on input value */
+        /* Filters table rows based on input value and distance filters */
         function filterTable() {
             const input = document.getElementById("searchInput");
             const filter = input.value.toLowerCase();
             const table = document.querySelector("table");
             const tr = table.getElementsByTagName("tr");
 
-            /* Loop through all table rows */
+            // Checkbox-Filter
+            const filter200 = document.getElementById("filter200").checked;
+            const filter450 = document.getElementById("filter450").checked;
+            const filter750 = document.getElementById("filter750").checked;
+            const filter1200 = document.getElementById("filter1200").checked;
+
+            let distanceFilter = 0;
+
+            if (filter200) {
+                distanceFilter = 200;
+            } else if (filter450) {
+                distanceFilter = 450;
+            } else if (filter750) {
+                distanceFilter = 750;
+            } else if (filter1200) {
+                distanceFilter = 1200;
+            }
+
+            // Loop through all table rows
             for (let i = 1; i < tr.length; i++) {
                 let td = tr[i].getElementsByTagName("td");
                 let display = false;
-                for (let j = 0; j < td.length; j++) {
-                    /* Check if any cell contains the filter text */
-                    if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
-                        display = true;
-                        break;
+
+                // Filter based on search input
+                if (filter) {
+                    for (let j = 0; j < td.length; j++) {
+                        if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                            display = true;
+                            break;
+                        }
+                    }
+                } else {
+                    display = true;
+                }
+
+                // Filter based on distance
+                if (display && distanceFilter > 0) {
+                    let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
+                    if (distanceFilter === 200 && distValue <= 200) {
+                        display = false;
+                    } else if (distanceFilter === 450 && distValue <= 450) {
+                        display = false;
+                    } else if (distanceFilter === 750 && distValue <= 750) {
+                        display = false;
+                    } else if (distanceFilter === 1200 && distValue <= 1200) {
+                        display = false;
                     }
                 }
-                /* Show or hide the row based on the filter */
+
+                // Show or hide the row based on the filter
                 tr[i].style.display = display ? "" : "none";
             }
+
+            generateDynamicLink(); // Update the link after filtering
         }
 
         /* Toggle Dark Mode */
@@ -253,6 +307,45 @@
             const darkMode = getCookie("darkMode");
             if (darkMode === "true") {
                 document.body.classList.add("dark-mode");
+            }
+        }
+
+        /* Generates a dynamic link based on visible table rows */
+        function generateDynamicLink() {
+            const table = document.querySelector("table");
+            const rows = table.getElementsByTagName("tr");
+            const uniqueIds = new Set();
+
+            // Loop through table rows to collect IDs
+            for (let i = 1; i < rows.length; i++) {
+                if (rows[i].style.display !== "none") { // Only consider visible rows
+                    const cells = rows[i].getElementsByTagName("td");
+                    const idCell = cells[cells.length - 3]; // The ID cell (3rd last cell)
+                    if (idCell) {
+                        const idValue = idCell.textContent.trim();
+                        if (idValue) {
+                            uniqueIds.add(idValue);
+                        }
+                    }
+                }
+            }
+
+            // Check if IDs were found
+            if (uniqueIds.size > 0) {
+                const idsString = Array.from(uniqueIds).join(",");
+                const baseUrl = "https://maps.fmdx.org/#qth=51.292626,12.446437&id=";
+                const dynamicLink = baseUrl + idsString + "&findId=*";
+
+                // Create or update link element
+                let dynamicLinkElement = document.getElementById("dynamicLink");
+                if (!dynamicLinkElement) {
+                    dynamicLinkElement = document.createElement("a");
+                    dynamicLinkElement.id = "dynamicLink";
+                    dynamicLinkElement.target = "_blank";
+                    document.body.appendChild(document.createElement("pre")).appendChild(dynamicLinkElement);
+                }
+                dynamicLinkElement.href = dynamicLink;
+                dynamicLinkElement.textContent = "FMDX ALL";
             }
         }
 
@@ -274,6 +367,18 @@
             searchInput.onkeyup = filterTable;
             searchContainer.appendChild(searchInput);
 
+            /* Create and append the distance filter container */
+            const filterContainer = document.createElement('div');
+            filterContainer.id = 'filterContainer';
+
+            filterContainer.innerHTML = `
+                <label><input type="checkbox" id="filter200" onclick="filterTable()"> >200 km</label>
+                <label><input type="checkbox" id="filter450" onclick="filterTable()"> >450 km</label>
+                <label><input type="checkbox" id="filter750" onclick="filterTable()"> >750 km</label>
+                <label><input type="checkbox" id="filter1200" onclick="filterTable()"> >1200 km</label>
+            `;
+
+            searchContainer.appendChild(filterContainer);
             controlsContainer.appendChild(searchContainer);
 
             /* Create and append the button container */
@@ -304,8 +409,8 @@
 
             /* Insert controls above the table */
             document.body.insertBefore(controlsContainer, document.querySelector("pre"));
-
-            /* Start auto-refresh if enabled */
+			
+			/* Start auto-refresh if enabled */
             if (autoRefresh) {
                 startAutoRefresh();
             }
@@ -324,6 +429,20 @@
             headers[10].addEventListener("click", () => sortTable(10, true)); // DIST
             headers[11].addEventListener("click", () => sortTable(11, true)); // AZ
             headers[12].addEventListener("click", () => sortTable(12)); // ID
+
+            // Event listeners to ensure only one checkbox is selected
+            document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((checkbox) => {
+                checkbox.addEventListener('change', function () {
+                    if (this.checked) {
+                        document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((cb) => {
+                            if (cb !== this) cb.checked = false;
+                        });
+                    }
+                    filterTable(); // Update the table after changing a checkbox
+                });
+            });
+
+            generateDynamicLink();
         });
     </script>
 </head>
