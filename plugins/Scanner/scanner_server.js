@@ -1104,8 +1104,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 
 		header += UTCtime 
-			? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>` 
-			: `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>`;
+			? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>\n` 
+			: `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>FMDX</th><th>FMLIST</th></tr>\n`;
 
 		try {
 			fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -1137,78 +1137,51 @@ function writeHTMLLogEntry(isFiltered) {
         date = utcDate;
     }
 
-    // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
 
-    // Generate dynamic links based on stationid
     let link1 = stationid !== '' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">FMDX</a>` : '';
     let link2 = stationid !== '' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
-    // Replace spaces with underscores in the PS string
     let psWithUnderscores = ps.replace(/ /g, '_');
 
-    // Create the log entry line with the relevant data
     let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td></tr>\n`;
 
-    // Check if OnlyFirstLog is true and if the combination of freq, picode, and station already exists
-    if (OnlyFirstLog) {
+    let logContent = '';
+    if (fs.existsSync(logFilePath)) {
         try {
-            // Read the existing log file content
-            if (fs.existsSync(logFilePath)) {
-                const logContent = fs.readFileSync(logFilePath, 'utf-8');
-
-                // Check if any line contains the combination of freq, picode, and station
-                const entryExists = logContent.includes(`<td>${freq}</td>`) && logContent.includes(`<td>${picode}</td>`) && logContent.includes(`<td>${station}</td>`);
-
-                // If the entry exists, do not proceed with writing the new entry
-                if (entryExists) {
-                    return;
-                }
-            }
+            logContent = fs.readFileSync(logFilePath, 'utf8');
         } catch (error) {
             logError("Failed to read log file:", error.message);
             return;
         }
     }
 
-    // Initialize stationidAll from the existing file content
-    let stationidAll = '';
-    try {
-        if (fs.existsSync(logFilePath)) {
-            let fileContent = fs.readFileSync(logFilePath, 'utf8');
-            // Extract stationidAll from the last occurrence of the final link
-            const match = fileContent.match(/<a href="https:\/\/maps\.fmdx\.pl\/#qth=.*?&id=([^&]+)&findId=\*" target="_blank">FMDX ALL<\/a>/);
-            if (match && match[1]) {
-                stationidAll = match[1]; // Extract existing station IDs
-            }
+    if (OnlyFirstLog) {
+        const entryExists = logContent.includes(`<td>${freq}</td>`) && logContent.includes(`<td>${picode}</td>`) && logContent.includes(`<td>${station}</td>`);
+        if (entryExists) {
+            return;
         }
-    } catch (error) {
-        logError("Failed to read the stationidAll from log file:", error.message);
-        return;
     }
 
-    // Update stationidAll if the current stationid is valid and not already included
+    let stationidAllSet = new Set();
+    const idRegex = /<a href="https:\/\/maps\.fmdx\.org\/#qth=.*?&id=([^&]+)&findId=\*" target="_blank">FMDX<\/a>/g;
+    let match;
+    while ((match = idRegex.exec(logContent)) !== null) {
+        stationidAllSet.add(match[1]);
+    }
+
     if (stationid !== null && stationid !== "" && stationid >= 0) {
-        if (!stationidAll.split(',').includes(stationid.toString())) {
-            stationidAll += stationidAll ? `,${stationid}` : stationid;
-        }
+        stationidAllSet.add(stationid.toString());
     }
 
-    // Generate the final link including all station IDs
+    let stationidAll = Array.from(stationidAllSet).join(',');
+
     let finalLink = `https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationidAll}&findId=*`;
     let finalLinkHtml = `</table></pre><pre><a href="${finalLink}" target="_blank">FMDX ALL</a></pre></body></html>`;
 
     try {
-        // Read the existing content of the HTML file
-        let fileContent = fs.readFileSync(logFilePath, 'utf8');
-
-        // Remove the old final link and closing tags if present
-        let updatedContent = fileContent.replace(/<\/table><\/pre><pre><a href="https:\/\/maps\.fmdx\.pl\/#qth=.*<\/a><\/pre><\/body><\/html>/, '');
-
-        // Append the new line and the final link
+        let updatedContent = logContent.replace(/<\/table><\/pre><pre><a href="https:\/\/maps\.fmdx\.org\/#qth=.*<\/a><\/pre><\/body><\/html>/, '');
         updatedContent += line + finalLinkHtml;
-
-        // Write the updated content back to the file
         fs.writeFileSync(logFilePath, updatedContent, 'utf8');
     } catch (error) {
         logError("Failed to update the log file:", error.message);
