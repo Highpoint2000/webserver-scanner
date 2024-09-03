@@ -284,7 +284,11 @@
         if (Sensitivity) {
             const sensitivityInput = document.querySelector('input[title="Scanner Sensitivity"]');
             if (sensitivityInput) {
-                sensitivityInput.value = `${Sensitivity} dBf`;
+				if (ScanPE5PVB) {
+					sensitivityInput.value = `${Sensitivity}`;
+				} else {
+					sensitivityInput.value = `${Sensitivity} dBf`;
+				}
                 sensitivityInput.setAttribute('data-value', Sensitivity);
             }
         }
@@ -644,8 +648,20 @@ function toggleScan(isLongPressAction) {
         } else {
             delayContainer.style.marginRight = "5px";
         }
-
-        if (signalValue === 'dBf') {        
+ if (ScanPE5PVB) {
+        sensitivityContainer.innerHTML = `
+            <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
+            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                <li data-value="1" class="option">1</li>
+                <li data-value="5" class="option">5</li>
+                <li data-value="10" class="option">10</li>
+                <li data-value="15" class="option">15</li>
+                <li data-value="20" class="option">20</li>
+                <li data-value="25" class="option">25</li>
+                <li data-value="30" class="option">30</li>
+            </ul>
+        `;
+    } else if (signalValue === 'dBf') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBf" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
