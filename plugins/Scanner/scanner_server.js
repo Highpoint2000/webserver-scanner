@@ -631,7 +631,7 @@ async function handleSocketMessage(messageData) {
     if (!ScanPE5PVB) {
         checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter);
     } else {
-		PE5PVBlog(freq, picode, station)
+		PE5PVBlog(freq, picode, station, checkStrengthCounter)
 	}
 
     // Check user count and handle scanning if needed
@@ -954,8 +954,10 @@ function checkWhitelist() {
             }
         }	
 		
-      function PE5PVBlog(freq, picode, station) {
-                                  
+      function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
+		  
+			let ScanHoldTimeValue = ScanHoldTime * 6;	
+		                                  
             if (picode.length > 1) {
 
 							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {						
@@ -967,27 +969,23 @@ function checkWhitelist() {
 									Savestationid = stationid;
 								}
 							}			
-								
 
-		
 							if (Scan === 'on') {
 								
 								date = new Date().toLocaleDateString();
-								time = new Date().toLocaleTimeString();							
+								time = new Date().toLocaleTimeString();						
 
-								if (ps.length > 1 && stationid) {
-									
-										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
+								if (FilteredLog && ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
-										}
+											Savefreq = freq;	
+								}
 
-										station = '';	
-										Savefreq = freq;			
-                                }						
+								station = '';	
+																
                  			} else {
 								
-								if (FilteredLog && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
+								if (FilteredLog && ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
 									writeHTMLLogEntry(true); // filtered log
 									Savefreq = freq;
