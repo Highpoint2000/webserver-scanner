@@ -148,320 +148,329 @@
             color: white; /* Light gray placeholder text for better readability */
         }
     </style>
-    <script>
-        let autoRefresh = true; // Controls whether auto-refresh is enabled
-        let refreshInterval = 10000; // Refresh interval in milliseconds (10 seconds)
-        let refreshTimeout; // Timeout ID for the refresh function
+<script>
+    let autoRefresh = true; // Controls whether auto-refresh is enabled
+    let refreshInterval = 10000; // Refresh interval in milliseconds (10 seconds)
+    let refreshTimeout; // Timeout ID for the refresh function
+    let baseUrl = ""; // Variable to store the dynamic base URL
 
-        /* Get the value of a cookie by name */
-        function getCookie(name) {
-            const cookieName = name + "=";
-            const cookies = decodeURIComponent(document.cookie).split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                let cookie = cookies[i];
-                while (cookie.charAt(0) === ' ') {
-                    cookie = cookie.substring(1);
-                }
-                if (cookie.indexOf(cookieName) === 0) {
-                    return cookie.substring(cookieName.length, cookie.length);
+    /* Get the value of a cookie by name */
+    function getCookie(name) {
+        const cookieName = name + "=";
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i];
+            while (cookie.charAt(0) === ' ') {
+                cookie = cookie.substring(1);
+            }
+            if (cookie.indexOf(cookieName) === 0) {
+                return cookie.substring(cookieName.length, cookie.length);
+            }
+        }
+        return "";
+    }
+
+    /* Set a cookie with a specific name, value, and expiration (in days) */
+    function setCookie(name, value, days) {
+        const expires = "expires=" + new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+
+    /* Toggle the auto-refresh functionality */
+    function toggleRefresh() {
+        autoRefresh = !autoRefresh;
+        const button = document.getElementById('refreshButton');
+        button.classList.toggle('off', !autoRefresh);
+        if (autoRefresh) {
+            startAutoRefresh();
+        } else {
+            clearTimeout(refreshTimeout);
+        }
+    }
+
+    /* Starts the auto-refresh function */
+    function startAutoRefresh() {
+        refreshTimeout = setTimeout(() => {
+            location.reload();
+        }, refreshInterval);
+    }
+
+    /* Extracts the base URL from the first entry */
+    function extractBaseUrl() {
+        const firstLink = document.querySelector("table tr:nth-child(2) td a").href;
+        const splitLink = firstLink.split('&id=')[0]; // Extract the base part up to '&id='
+        baseUrl = splitLink + "&id="; // Add the '&id=' back to form the correct base URL
+    }
+
+    /* Sorts the table based on column index (n) */
+    function sortTable(n, isNumeric = false) {
+        const table = document.querySelector("table");
+        let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        switching = true;
+        dir = "asc";
+
+        /* Keep switching rows until sorting is complete */
+        while (switching) {
+            switching = false;
+            rows = table.rows;
+
+            /* Loop through the rows, skipping the header */
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                /* Compare based on numeric or string content */
+                let xContent = isNumeric ? parseFloat(x.innerHTML) || 0 : x.innerHTML.toLowerCase();
+                let yContent = isNumeric ? parseFloat(y.innerHTML) || 0 : y.innerHTML.toLowerCase();
+
+                /* Determine if a switch is needed based on direction */
+                if (dir == "asc") {
+                    if (xContent > yContent) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir == "desc") {
+                    if (xContent < yContent) {
+                        shouldSwitch = true;
+                        break;
+                    }
                 }
             }
-            return "";
-        }
-
-        /* Set a cookie with a specific name, value, and expiration (in days) */
-        function setCookie(name, value, days) {
-            const expires = "expires=" + new Date(Date.now() + days * 864e5).toUTCString();
-            document.cookie = name + "=" + value + ";" + expires + ";path=/";
-        }
-
-        /* Toggle the auto-refresh functionality */
-        function toggleRefresh() {
-            autoRefresh = !autoRefresh;
-            const button = document.getElementById('refreshButton');
-            button.classList.toggle('off', !autoRefresh);
-            if (autoRefresh) {
-                startAutoRefresh();
+            if (shouldSwitch) {
+                /* Make the switch and mark switching as true */
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
             } else {
-                clearTimeout(refreshTimeout);
-            }
-        }
-
-        /* Starts the auto-refresh function */
-        function startAutoRefresh() {
-            refreshTimeout = setTimeout(() => {
-                location.reload();
-            }, refreshInterval);
-        }
-
-        /* Sorts the table based on column index (n) */
-        function sortTable(n, isNumeric = false) {
-            const table = document.querySelector("table");
-            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-            switching = true;
-            dir = "asc";
-
-            /* Keep switching rows until sorting is complete */
-            while (switching) {
-                switching = false;
-                rows = table.rows;
-
-                /* Loop through the rows, skipping the header */
-                for (i = 1; i < (rows.length - 1); i++) {
-                    shouldSwitch = false;
-                    x = rows[i].getElementsByTagName("TD")[n];
-                    y = rows[i + 1].getElementsByTagName("TD")[n];
-
-                    /* Compare based on numeric or string content */
-                    let xContent = isNumeric ? parseFloat(x.innerHTML) || 0 : x.innerHTML.toLowerCase();
-                    let yContent = isNumeric ? parseFloat(y.innerHTML) || 0 : y.innerHTML.toLowerCase();
-
-                    /* Determine if a switch is needed based on direction */
-                    if (dir == "asc") {
-                        if (xContent > yContent) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    } else if (dir == "desc") {
-                        if (xContent < yContent) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    }
-                }
-                if (shouldSwitch) {
-                    /* Make the switch and mark switching as true */
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                /* If no switching happened, change the direction */
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
                     switching = true;
-                    switchcount++;
-                } else {
-                    /* If no switching happened, change the direction */
-                    if (switchcount == 0 && dir == "asc") {
-                        dir = "desc";
-                        switching = true;
+                }
+            }
+        }
+    }
+
+    /* Filter table based on user input and distance */
+    function filterTable() {
+        const input = document.getElementById("searchInput");
+        const filter = input.value.toLowerCase();
+        const table = document.querySelector("table");
+        const tr = table.getElementsByTagName("tr");
+
+        // Checkbox filter
+        const filter150 = document.getElementById("filter150").checked;
+        const filter300 = document.getElementById("filter300").checked;
+        const filter700 = document.getElementById("filter700").checked;
+        const filter1300 = document.getElementById("filter1300").checked;
+        const filterFreeDistance = document.getElementById("filterFreeDistance").checked;
+        const freeDistanceInput = parseFloat(document.getElementById("freeDistanceInput").value);
+
+        let distanceFilter = null; // Start with no distance filter
+
+        if (filter150) {
+            distanceFilter = 150;
+        } else if (filter300) {
+            distanceFilter = 300;
+        } else if (filter700) {
+            distanceFilter = 700;
+        } else if (filter1300) {
+            distanceFilter = 1300;
+        } else if (filterFreeDistance && !isNaN(freeDistanceInput)) {
+            distanceFilter = freeDistanceInput; // Use custom distance if checkbox is checked and value is valid
+        }
+
+        // Loop through all table rows
+        for (let i = 1; i < tr.length; i++) {
+            let td = tr[i].getElementsByTagName("td");
+            let display = true; // Start assuming the row should be displayed
+
+            // Filter based on search input
+            if (filter) {
+                let rowMatches = false; // Assume no match initially
+                for (let j = 0; j < td.length; j++) {
+                    if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                        rowMatches = true; // Set match to true if any cell matches
+                        break;
+                    }
+                }
+                if (!rowMatches) {
+                    display = false; // If no cells matched the filter, hide the row
+                }
+            }
+
+            // Filter based on distance
+            if (display && distanceFilter !== null) {
+                let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
+                if (distValue <= distanceFilter) {
+                    display = false; // Hide row if distance is less than or equal to the filter value
+                }
+            }
+
+            // Show or hide the row based on the filters
+            tr[i].style.display = display ? "" : "none";
+        }
+
+        generateDynamicLink(); // Update the link after filtering
+    }
+
+    /* Toggle Dark Mode */
+    function toggleDarkMode() {
+        const body = document.body;
+        const isDarkMode = body.classList.toggle("dark-mode");
+        setCookie("darkMode", isDarkMode, 365); // Save preference for 1 year
+    }
+
+    /* Apply Dark Mode based on cookie */
+    function applyDarkMode() {
+        const darkMode = getCookie("darkMode");
+        if (darkMode === "true") {
+            document.body.classList.add("dark-mode");
+        }
+    }
+
+    /* Generates a dynamic link based on visible table rows */
+    function generateDynamicLink() {
+        const table = document.querySelector("table");
+        const rows = table.getElementsByTagName("tr");
+        const uniqueIds = new Set();
+
+        // Loop through table rows to collect IDs
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i].style.display !== "none") { // Only consider visible rows
+                const cells = rows[i].getElementsByTagName("td");
+                const idCell = cells[cells.length - 3]; // The ID cell (3rd last cell)
+                if (idCell) {
+                    const idValue = idCell.textContent.trim();
+                    if (idValue) {
+                        uniqueIds.add(idValue);
                     }
                 }
             }
         }
 
-        function filterTable() {
-            const input = document.getElementById("searchInput");
-            const filter = input.value.toLowerCase();
-            const table = document.querySelector("table");
-            const tr = table.getElementsByTagName("tr");
+        // Check if IDs were found
+        if (uniqueIds.size > 0) {
+            const idsString = Array.from(uniqueIds).join(",");
+            const dynamicLink = baseUrl + idsString + "&findId=*"; // Use dynamic base URL
 
-            // Checkbox filter
-            const filter150 = document.getElementById("filter150").checked;
-            const filter300 = document.getElementById("filter300").checked;
-            const filter700 = document.getElementById("filter700").checked;
-            const filter1300 = document.getElementById("filter1300").checked;
-            const filterFreeDistance = document.getElementById("filterFreeDistance").checked;
-            const freeDistanceInput = parseFloat(document.getElementById("freeDistanceInput").value);
-
-            let distanceFilter = null; // Start with no distance filter
-
-            if (filter150) {
-                distanceFilter = 150;
-            } else if (filter300) {
-                distanceFilter = 300;
-            } else if (filter700) {
-                distanceFilter = 700;
-            } else if (filter1300) {
-                distanceFilter = 1300;
-            } else if (filterFreeDistance && !isNaN(freeDistanceInput)) {
-                distanceFilter = freeDistanceInput; // Use custom distance if checkbox is checked and value is valid
+            // Create or update link element
+            let dynamicLinkElement = document.getElementById("dynamicLink");
+            if (!dynamicLinkElement) {
+                dynamicLinkElement = document.createElement("a");
+                dynamicLinkElement.id = "dynamicLink";
+                dynamicLinkElement.target = "_blank";
+                document.body.appendChild(document.createElement("pre")).appendChild(dynamicLinkElement);
             }
-
-            // Loop through all table rows
-            for (let i = 1; i < tr.length; i++) {
-                let td = tr[i].getElementsByTagName("td");
-                let display = true; // Start assuming the row should be displayed
-
-                // Filter based on search input
-                if (filter) {
-                    let rowMatches = false; // Assume no match initially
-                    for (let j = 0; j < td.length; j++) {
-                        if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
-                            rowMatches = true; // Set match to true if any cell matches
-                            break;
-                        }
-                    }
-                    if (!rowMatches) {
-                        display = false; // If no cells matched the filter, hide the row
-                    }
-                }
-
-                // Filter based on distance
-                if (display && distanceFilter !== null) {
-                    let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
-                    if (distValue <= distanceFilter) {
-                        display = false; // Hide row if distance is less than or equal to the filter value
-                    }
-                }
-
-                // Show or hide the row based on the filters
-                tr[i].style.display = display ? "" : "none";
-            }
-
-            generateDynamicLink(); // Update the link after filtering
+            dynamicLinkElement.href = dynamicLink;
+            dynamicLinkElement.textContent = "MAP ALL";
         }
+    }
 
-        /* Toggle Dark Mode */
-        function toggleDarkMode() {
-            const body = document.body;
-            const isDarkMode = body.classList.toggle("dark-mode");
-            setCookie("darkMode", isDarkMode, 365); // Save preference for 1 year
-        }
+    /* Initializes controls and auto-refresh on DOMContentLoaded */
+    document.addEventListener('DOMContentLoaded', () => {
+        applyDarkMode(); // Apply Dark Mode preference
+        extractBaseUrl(); // Extract base URL from the first entry
 
-        /* Apply Dark Mode based on cookie */
-        function applyDarkMode() {
-            const darkMode = getCookie("darkMode");
-            if (darkMode === "true") {
-                document.body.classList.add("dark-mode");
-            }
-        }
+        const controlsContainer = document.createElement('div');
+        controlsContainer.id = 'controls';
 
-        /* Generates a dynamic link based on visible table rows */
-        function generateDynamicLink() {
-            const table = document.querySelector("table");
-            const rows = table.getElementsByTagName("tr");
-            const uniqueIds = new Set();
+        /* Create and append the search input container */
+        const searchContainer = document.createElement('div');
+        searchContainer.id = 'searchContainer';
 
-            // Loop through table rows to collect IDs
-            for (let i = 1; i < rows.length; i++) {
-                if (rows[i].style.display !== "none") { // Only consider visible rows
-                    const cells = rows[i].getElementsByTagName("td");
-                    const idCell = cells[cells.length - 3]; // The ID cell (3rd last cell)
-                    if (idCell) {
-                        const idValue = idCell.textContent.trim();
-                        if (idValue) {
-                            uniqueIds.add(idValue);
-                        }
-                    }
-                }
-            }
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.id = 'searchInput';
+        searchInput.placeholder = 'Search table ...';
+        searchInput.onkeyup = filterTable;
+        searchContainer.appendChild(searchInput);
 
-            // Check if IDs were found
-            if (uniqueIds.size > 0) {
-                const idsString = Array.from(uniqueIds).join(",");
-                const baseUrl = "https://maps.fmdx.org/#qth=51.292626,12.446437&id=";
-                const dynamicLink = baseUrl + idsString + "&findId=*";
+        /* Create and append the distance filter container */
+        const filterContainer = document.createElement('div');
+        filterContainer.id = 'filterContainer';
 
-                // Create or update link element
-                let dynamicLinkElement = document.getElementById("dynamicLink");
-                if (!dynamicLinkElement) {
-                    dynamicLinkElement = document.createElement("a");
-                    dynamicLinkElement.id = "dynamicLink";
-                    dynamicLinkElement.target = "_blank";
-                    document.body.appendChild(document.createElement("pre")).appendChild(dynamicLinkElement);
-                }
-                dynamicLinkElement.href = dynamicLink;
-                dynamicLinkElement.textContent = "MAP ALL";
-            }
-        }
+        filterContainer.innerHTML = `
+            <label><input type="checkbox" id="filter150" onchange="filterTable()"> ≥ 150 km</label>
+            <label><input type="checkbox" id="filter300" onchange="filterTable()"> ≥ 300 km</label>
+            <label><input type="checkbox" id="filter700" onchange="filterTable()"> ≥ 700 km</label>
+            <label><input type="checkbox" id="filter1300" onchange="filterTable()"> ≥ 1300 km</label>
 
-        /* Initializes controls and auto-refresh on DOMContentLoaded */
-        document.addEventListener('DOMContentLoaded', () => {
-            applyDarkMode(); // Apply Dark Mode preference
+            <label>
+                <input type="checkbox" id="filterFreeDistance" onchange="filterTable()"> Custom:
+            </label>
+            <input type="number" id="freeDistanceInput" placeholder="" min="0" oninput="filterTable()">
+            <span class="distance-label">km</span>
+        `;
 
-            const controlsContainer = document.createElement('div');
-            controlsContainer.id = 'controls';
+        searchContainer.appendChild(filterContainer);
+        controlsContainer.appendChild(searchContainer);
 
-            /* Create and append the search input container */
-            const searchContainer = document.createElement('div');
-            searchContainer.id = 'searchContainer';
+        /* Create and append the button container */
+        const buttonContainer = document.createElement('div');
+        buttonContainer.id = 'buttonContainer';
 
-            const searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.id = 'searchInput';
-            searchInput.placeholder = 'Search table ...';
-            searchInput.onkeyup = filterTable;
-            searchContainer.appendChild(searchInput);
+        /* Create and append the dark mode button */
+        const darkModeButton = document.createElement('button');
+        darkModeButton.id = 'darkModeButton';
+        darkModeButton.className = 'button';
+        darkModeButton.innerText = 'Toggle Dark Mode';
+        darkModeButton.addEventListener('click', toggleDarkMode);
+        buttonContainer.appendChild(darkModeButton);
 
-            /* Create and append the distance filter container */
-            const filterContainer = document.createElement('div');
-            filterContainer.id = 'filterContainer';
-
-            filterContainer.innerHTML = `
-				<label><input type="checkbox" id="filter150" onchange="filterTable()"> ≥ 150 km</label>
-				<label><input type="checkbox" id="filter300" onchange="filterTable()"> ≥ 300 km</label>
-				<label><input type="checkbox" id="filter700" onchange="filterTable()"> ≥ 700 km</label>
-				<label><input type="checkbox" id="filter1300" onchange="filterTable()"> ≥ 1300 km</label>
-
-				<label>
-					<input type="checkbox" id="filterFreeDistance" onchange="filterTable()"> Custom:
-				</label>
-				<input type="number" id="freeDistanceInput" placeholder="" min="0" oninput="filterTable()">
-				<span class="distance-label">km</span>
-            `;
-
-            searchContainer.appendChild(filterContainer);
-            controlsContainer.appendChild(searchContainer);
-
-            /* Create and append the button container */
-            const buttonContainer = document.createElement('div');
-            buttonContainer.id = 'buttonContainer';
-
-            /* Create and append the dark mode button */
-            const darkModeButton = document.createElement('button');
-            darkModeButton.id = 'darkModeButton';
-            darkModeButton.className = 'button';
-            darkModeButton.innerText = 'Toggle Dark Mode';
-            darkModeButton.addEventListener('click', toggleDarkMode);
-            buttonContainer.appendChild(darkModeButton);
-
-            /* Create and append the refresh button */
-            const refreshButton = document.createElement('button');
-            refreshButton.id = 'refreshButton';
-            refreshButton.className = 'button';
-            refreshButton.innerText = 'Auto Refresh: ON';
-            refreshButton.addEventListener('click', () => {
-                toggleRefresh();
-                refreshButton.innerText = `Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
-            });
-            buttonContainer.appendChild(refreshButton);
-
-            /* Append the button container to the controls container */
-            controlsContainer.appendChild(buttonContainer);
-
-            /* Insert controls above the table */
-            document.body.insertBefore(controlsContainer, document.querySelector("pre"));
-            
-            /* Start auto-refresh if enabled */
-            if (autoRefresh) {
-                startAutoRefresh();
-            }
-
-            /* Add click event listeners to table headers for sorting */
-            const headers = document.querySelectorAll("th");
-            headers[1].addEventListener("click", () => sortTable(1)); // TIME(UTC)
-            headers[2].addEventListener("click", () => sortTable(2, true)); // FREQ
-            headers[3].addEventListener("click", () => sortTable(3)); // PI
-            headers[4].addEventListener("click", () => sortTable(4)); // PS
-            headers[5].addEventListener("click", () => sortTable(5)); // NAME
-            headers[6].addEventListener("click", () => sortTable(6)); // CITY
-            headers[7].addEventListener("click", () => sortTable(7)); // ITU
-            headers[8].addEventListener("click", () => sortTable(8)); // P
-            headers[9].addEventListener("click", () => sortTable(9, true)); // ERP
-            headers[10].addEventListener("click", () => sortTable(10, true)); // DIST
-            headers[11].addEventListener("click", () => sortTable(11, true)); // AZ
-            headers[12].addEventListener("click", () => sortTable(12)); // ID
-
-            // Event listeners to ensure only one checkbox is selected
-            document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((checkbox) => {
-                checkbox.addEventListener('change', function () {
-                    if (this.checked) {
-                        document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((cb) => {
-                            if (cb !== this) cb.checked = false;
-                        });
-                    }
-                    filterTable(); // Update the table after changing a checkbox
-                });
-            });
-
-            generateDynamicLink();
+        /* Create and append the refresh button */
+        const refreshButton = document.createElement('button');
+        refreshButton.id = 'refreshButton';
+        refreshButton.className = 'button';
+        refreshButton.innerText = 'Auto Refresh: ON';
+        refreshButton.addEventListener('click', () => {
+            toggleRefresh();
+            refreshButton.innerText = `Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
         });
-    </script>
+        buttonContainer.appendChild(refreshButton);
+
+        /* Append the button container to the controls container */
+        controlsContainer.appendChild(buttonContainer);
+
+        /* Insert controls above the table */
+        document.body.insertBefore(controlsContainer, document.querySelector("pre"));
+
+        /* Start auto-refresh if enabled */
+        if (autoRefresh) {
+            startAutoRefresh();
+        }
+
+        /* Add click event listeners to table headers for sorting */
+        const headers = document.querySelectorAll("th");
+        headers[1].addEventListener("click", () => sortTable(1)); // TIME(UTC)
+        headers[2].addEventListener("click", () => sortTable(2, true)); // FREQ
+        headers[3].addEventListener("click", () => sortTable(3)); // PI
+        headers[4].addEventListener("click", () => sortTable(4)); // PS
+        headers[5].addEventListener("click", () => sortTable(5)); // NAME
+        headers[6].addEventListener("click", () => sortTable(6)); // CITY
+        headers[7].addEventListener("click", () => sortTable(7)); // ITU
+        headers[8].addEventListener("click", () => sortTable(8)); // P
+        headers[9].addEventListener("click", () => sortTable(9, true)); // ERP
+        headers[10].addEventListener("click", () => sortTable(10, true)); // DIST
+        headers[11].addEventListener("click", () => sortTable(11, true)); // AZ
+        headers[12].addEventListener("click", () => sortTable(12)); // ID
+
+        // Event listeners to ensure only one checkbox is selected
+        document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', function () {
+                if (this.checked) {
+                    document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((cb) => {
+                        if (cb !== this) cb.checked = false;
+                    });
+                }
+                filterTable(); // Update the table after changing a checkbox
+            });
+        });
+
+        generateDynamicLink();
+    });
+</script>
 </head>
 <body>
 <pre>
