@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCANNER LOG [FILTER MODE]</title>
     <style>
-        /* Einheitlicher Schriftstil für das gesamte Dokument */
+        /* Unified font style for the entire document */
         body, label {
             font-family: Arial, sans-serif;
-			font-size: 14px;
+            font-size: 14px;
         }
 
         /* Container for the search and refresh controls */
@@ -33,8 +33,20 @@
             padding: 5px;
             width: 100%;
             max-width: 300px;
+            min-width: 100px; /* Ensures a minimum width */
             box-sizing: border-box;
             margin-right: 10px;
+        }
+
+        /* Styling for the custom distance input */
+        #freeDistanceInput {
+            height: 14px; 
+            width: 50px; 
+        }
+        
+        .distance-label {
+            position: relative;
+            top: 3px; /* Moves the 'km' label 5 pixels down */
         }
 
         /* Container for the distance filter checkboxes */
@@ -232,63 +244,62 @@
             }
         }
 
-        /* Filters table rows based on input value and distance filters */
         function filterTable() {
             const input = document.getElementById("searchInput");
             const filter = input.value.toLowerCase();
             const table = document.querySelector("table");
             const tr = table.getElementsByTagName("tr");
 
-            // Checkbox-Filter
-            const filter200 = document.getElementById("filter200").checked;
-            const filter450 = document.getElementById("filter450").checked;
-            const filter750 = document.getElementById("filter750").checked;
-            const filter1200 = document.getElementById("filter1200").checked;
+            // Checkbox filter
+            const filter150 = document.getElementById("filter150").checked;
+            const filter300 = document.getElementById("filter300").checked;
+            const filter700 = document.getElementById("filter700").checked;
+            const filter1300 = document.getElementById("filter1300").checked;
+            const filterFreeDistance = document.getElementById("filterFreeDistance").checked;
+            const freeDistanceInput = parseFloat(document.getElementById("freeDistanceInput").value);
 
-            let distanceFilter = 0;
+            let distanceFilter = null; // Start with no distance filter
 
-            if (filter200) {
-                distanceFilter = 200;
-            } else if (filter450) {
-                distanceFilter = 450;
-            } else if (filter750) {
-                distanceFilter = 750;
-            } else if (filter1200) {
-                distanceFilter = 1200;
+            if (filter150) {
+                distanceFilter = 150;
+            } else if (filter300) {
+                distanceFilter = 300;
+            } else if (filter700) {
+                distanceFilter = 700;
+            } else if (filter1300) {
+                distanceFilter = 1300;
+            } else if (filterFreeDistance && !isNaN(freeDistanceInput)) {
+                distanceFilter = freeDistanceInput; // Use custom distance if checkbox is checked and value is valid
             }
 
             // Loop through all table rows
             for (let i = 1; i < tr.length; i++) {
                 let td = tr[i].getElementsByTagName("td");
-                let display = false;
+                let display = true; // Start assuming the row should be displayed
 
                 // Filter based on search input
                 if (filter) {
+                    let rowMatches = false; // Assume no match initially
                     for (let j = 0; j < td.length; j++) {
                         if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
-                            display = true;
+                            rowMatches = true; // Set match to true if any cell matches
                             break;
                         }
                     }
-                } else {
-                    display = true;
-                }
-
-                // Filter based on distance
-                if (display && distanceFilter > 0) {
-                    let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
-                    if (distanceFilter === 200 && distValue <= 200) {
-                        display = false;
-                    } else if (distanceFilter === 450 && distValue <= 450) {
-                        display = false;
-                    } else if (distanceFilter === 750 && distValue <= 750) {
-                        display = false;
-                    } else if (distanceFilter === 1200 && distValue <= 1200) {
-                        display = false;
+                    if (!rowMatches) {
+                        display = false; // If no cells matched the filter, hide the row
                     }
                 }
 
-                // Show or hide the row based on the filter
+                // Filter based on distance
+                if (display && distanceFilter !== null) {
+                    let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
+                    if (distValue <= distanceFilter) {
+                        display = false; // Hide row if distance is less than or equal to the filter value
+                    }
+                }
+
+                // Show or hide the row based on the filters
                 tr[i].style.display = display ? "" : "none";
             }
 
@@ -345,7 +356,7 @@
                     document.body.appendChild(document.createElement("pre")).appendChild(dynamicLinkElement);
                 }
                 dynamicLinkElement.href = dynamicLink;
-                dynamicLinkElement.textContent = "FMDX ALL";
+                dynamicLinkElement.textContent = "MAP ALL";
             }
         }
 
@@ -372,10 +383,16 @@
             filterContainer.id = 'filterContainer';
 
             filterContainer.innerHTML = `
-                <label><input type="checkbox" id="filter200" onclick="filterTable()"> >200 km</label>
-                <label><input type="checkbox" id="filter450" onclick="filterTable()"> >450 km</label>
-                <label><input type="checkbox" id="filter750" onclick="filterTable()"> >750 km</label>
-                <label><input type="checkbox" id="filter1200" onclick="filterTable()"> >1200 km</label>
+				<label><input type="checkbox" id="filter150" onchange="filterTable()"> ≥ 150 km</label>
+				<label><input type="checkbox" id="filter300" onchange="filterTable()"> ≥ 300 km</label>
+				<label><input type="checkbox" id="filter700" onchange="filterTable()"> ≥ 700 km</label>
+				<label><input type="checkbox" id="filter1300" onchange="filterTable()"> ≥ 1300 km</label>
+
+				<label>
+					<input type="checkbox" id="filterFreeDistance" onchange="filterTable()"> Custom:
+				</label>
+				<input type="number" id="freeDistanceInput" placeholder="" min="0" oninput="filterTable()">
+				<span class="distance-label">km</span>
             `;
 
             searchContainer.appendChild(filterContainer);
@@ -409,8 +426,8 @@
 
             /* Insert controls above the table */
             document.body.insertBefore(controlsContainer, document.querySelector("pre"));
-			
-			/* Start auto-refresh if enabled */
+            
+            /* Start auto-refresh if enabled */
             if (autoRefresh) {
                 startAutoRefresh();
             }
