@@ -11,21 +11,21 @@
 
 ///  This plugin only works from web server version 1.2.6!!!
 
-const Autoscan_PE5PVB_Mode = false; 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
+const Autoscan_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; 			// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
 const AntennaSwitch = 'off';  			// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
-let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60
+let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
 let defaultScanHoldTime = 7; 			// Value in s: 1,3,5,7,10,15,20,30 
-let defaultScannerMode = 'normal'; 		// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
+let defaultScannerMode = 'normal'; 	// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
 
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
 const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FMLIST_OM_ID = ''; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -903,18 +903,14 @@ function checkWhitelist() {
 								}
 							}			
 								
-							if (FilteredLog && Scan !== 'on' && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
-								writeCSVLogEntry(true); // filtered log
-								writeHTMLLogEntry(true); // filtered log
-								Savefreq = freq;
-							}
+
 		
 							if (Scan === 'on') {
 								
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();							
 
-							if ((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && stationid && checkStrengthCounter > ScanHoldTime * 5)) {
+								if (((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && stationid && checkStrengthCounter > ScanHoldTime * 5)) && freq !== Savefreq) {
 									
 										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
 											writeCSVLogEntry(true); // filtered log
@@ -924,10 +920,18 @@ function checkWhitelist() {
 										startScan('up'); // Restart scanning after the delay
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
-										station = '';								
-                                }						
-                 			}	
-                  
+										station = '';	
+										Savefreq = freq;										
+                                }
+								
+                 			} else {
+								
+								if (FilteredLog && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
+									writeCSVLogEntry(true); // filtered log
+									writeHTMLLogEntry(true); // filtered log
+									Savefreq = freq;
+								}
+							}
                 } else {
 					if (Scan === 'on') {
 						if (checkStrengthCounter > 10) {
@@ -953,8 +957,8 @@ function checkWhitelist() {
       function PE5PVBlog(freq, picode, station) {
                                   
             if (picode.length > 1) {
-			           			
-							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
+
+							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {						
 								if (RAWLog) {
 									writeCSVLogEntry(false); // activate non filtered log
 									writeHTMLLogEntry(false); // activate non filtered log
@@ -964,11 +968,7 @@ function checkWhitelist() {
 								}
 							}			
 								
-							if (FilteredLog && Scan !== 'on' && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
-								writeCSVLogEntry(true); // filtered log
-								writeHTMLLogEntry(true); // filtered log
-								Savefreq = freq;
-							}
+
 		
 							if (Scan === 'on') {
 								
@@ -977,15 +977,22 @@ function checkWhitelist() {
 
 								if (ps.length > 1 && stationid) {
 									
-										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
+										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
 										}
 
-										station = '';								
+										station = '';	
+										Savefreq = freq;			
                                 }						
-                 			}	
-                  
+                 			} else {
+								
+								if (FilteredLog && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
+									writeCSVLogEntry(true); // filtered log
+									writeHTMLLogEntry(true); // filtered log
+									Savefreq = freq;
+								}
+							}								              
                 }
         }
 		
@@ -1100,7 +1107,6 @@ function writeCSVLogEntry(isFiltered) {
 
 
 function getLogFilePathHTML(date, time, isFiltered) {
-    
     if (UTCtime) {
         const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
         time = utcTime;
