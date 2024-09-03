@@ -196,11 +196,24 @@
     }
 
     /* Extracts the base URL from the first entry */
-    function extractBaseUrl() {
-        const firstLink = document.querySelector("table tr:nth-child(2) td a").href;
-        const splitLink = firstLink.split('&id=')[0]; // Extract the base part up to '&id='
-        baseUrl = splitLink + "&id="; // Add the '&id=' back to form the correct base URL
-    }
+	function extractBaseUrl() {
+		// Get all anchor elements within the table
+		const links = document.querySelectorAll("table tr td a");
+    
+		// Loop through each link
+		for (let i = 0; i < links.length; i++) {
+			const href = links[i].href;
+
+			// Check if the href contains "https://maps.fmdx.org"
+			if (href.includes("https://maps.fmdx.org")) {
+				// Extract the base part up to '&id='
+				const splitLink = href.split('&id=')[0];
+				// Add the '&id=' back to form the correct base URL
+				baseUrl = splitLink + "&id=";
+				break; // Exit the loop once we find the first matching link
+			}
+		}
+	}
 
     /* Sorts the table based on column index (n) */
     function sortTable(n, isNumeric = false) {
