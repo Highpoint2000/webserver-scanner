@@ -137,9 +137,16 @@ async function TextWebSocket(messageData) {
                 if (ScanPE5PVB) {
                     sendCommandToClient(`I${defaultSensitivityValue}`);
                     sendCommandToClient(`K${defaultScanHoldTime}`);
-                    logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" scanholdtime "${defaultScanHoldTime}" (PE5PVB mode)`);
+	                logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" scanholdtime "${defaultScanHoldTime}" (PE5PVB mode)`);
+					if (Scan === 'on' && Autoscan_PE5PVB_Mode) {
+						sendCommandToClient('J1');
+						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
+					}
                 } else {
                     logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" mode "${defaultScannerMode}" scanholdtime "${defaultScanHoldTime}"`);
+					if (Scan === 'on') {
+						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+					}
                 }
 
                 textSocket.onmessage = (event) => {
@@ -201,7 +208,7 @@ async function ExtraWebSocket() {
                 logInfo("Scanner WebSocket closed.");
                 setTimeout(ExtraWebSocket, 1000); // Increased delay for reconnection
             };
-
+			
             extraSocket.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
@@ -986,7 +993,7 @@ function checkWhitelist() {
 									Savefreq = freq;
 								}
 							}								              
-                }
+            }
         }
 		
 function getLogFilePathCSV(date, time, isFiltered) {
