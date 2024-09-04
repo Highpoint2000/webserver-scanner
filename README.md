@@ -11,7 +11,6 @@ This plugin provides scanning functions for the FM-DX web server.
 - 0.01 MHz Fixed error when exceeding OIRT upper limit
 - Fixed bug when crossing the date line at UTC
 - The station IDs of Polish radio stations are now identified via a separate database file
-- The FMDX ALL link is now updated via log file (remains preserved after server restart!)
 - Renamed maps.fmdx.pl to maps.fmdx.org
 - The FMDX ALL link is now created dynamically and adapts to the log filter, and there are now distance restrictions in the log file
 - The refresh interval of the log file has been increased to 10 seconds
