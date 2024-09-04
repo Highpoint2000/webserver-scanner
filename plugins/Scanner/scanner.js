@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.3)       /// 
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.3)       ///
 ///                                                         ///
-///  by Highpoint               last update: 03.09.24       ///
-///  powered by PE5PVB                                      ///     
+///  by Highpoint               last update: 04.09.24       ///
+///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
@@ -31,6 +31,7 @@
     let isTuneAuthenticated = false; // Initially set to false
     let scannerButtonsExecuted = false; // Tracks if ScannerButtons have been executed
     let Scan = 'off';
+	let ScanPE5PVBstatus = '';
 
     // Create a status message object
     function createMessage(status, Scan = '', Search = '', Sensitivity = '', ScannerMode = '', ScanHoldTime = '') {
@@ -153,10 +154,14 @@
 			
             if (eventData.type === 'Scanner' ) {
                 const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime } = eventData.value;
+				
+				if (typeof ScanPE5PVB !== 'undefined') {
+					ScanPE5PVBstatus = ScanPE5PVB;
+				}	
 
                 if (status === 'response' && eventData.target === clientIp) {
                     if (!scannerButtonsExecuted) {
-                        ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+                        ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime);
                         SearchButtons();
                         scannerButtonsExecuted = true; // Mark as executed
 
@@ -284,7 +289,7 @@
         if (Sensitivity) {
             const sensitivityInput = document.querySelector('input[title="Scanner Sensitivity"]');
             if (sensitivityInput) {
-				if (ScanPE5PVB) {
+				if (ScanPE5PVBstatus) {
 					sensitivityInput.value = `${Sensitivity}`;
 				} else {
 					sensitivityInput.value = `${Sensitivity} dBf`;
@@ -436,7 +441,7 @@
     }
 
     // Create scanner control buttons
-    function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
+    function ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime) {
         const ScannerButton = document.createElement('button');
         // ScannerButton.classList.add('hide-phone');
         ScannerButton.id = 'Scan-on-off';
@@ -511,7 +516,7 @@ function toggleScan(isLongPressAction) {
                 volumeSliderParent.style.display = 'block';
                 setCookie('scannerControlsStatus', 'off', 7); // Remember the status
             } else {
-                createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+                createScannerControls(Sensitivity, ScannerMode, ScanHoldTime);
                 setCookie('scannerControlsStatus', 'on', 7); // Remember the status
             }
 
@@ -567,7 +572,7 @@ function toggleScan(isLongPressAction) {
         // Initialize scannerControls
         const scannerControlsStatus = getCookie('scannerControlsStatus');
         if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
-            createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB);
+            createScannerControls(Sensitivity, ScannerMode, ScanHoldTime);
         } else {
             const scannerControls = document.getElementById('scanner-controls');
             if (scannerControls) {
@@ -590,7 +595,7 @@ function toggleScan(isLongPressAction) {
     setInterval(checkSignalUnits, 1000);
 
     // Create the scanner controls interface
-    function createScannerControls(Sensitivity, ScannerMode, ScanHoldTime, ScanPE5PVB) {
+    function createScannerControls(Sensitivity, ScannerMode, ScanHoldTime) {
         const scannerControls = document.createElement('div');
         scannerControls.className = "no-bg h-100";
         scannerControls.id = "scanner-controls";
@@ -648,7 +653,7 @@ function toggleScan(isLongPressAction) {
         } else {
             delayContainer.style.marginRight = "5px";
         }
- if (ScanPE5PVB) {
+ if (ScanPE5PVBstatus) {
         sensitivityContainer.innerHTML = `
             <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -734,7 +739,7 @@ function toggleScan(isLongPressAction) {
         scannerControls.appendChild(sensitivityContainer);
         initializeDropdown(sensitivityContainer, 'Selected Sensitivity:', 'I', Sensitivity, '', '');
 
-        if (!ScanPE5PVB) {
+        if (!ScanPE5PVBstatus) {
             modeContainer.style.display = 'block';
             scannerControls.appendChild(modeContainer);
             initializeDropdown(modeContainer, 'Selected Mode:', 'M', '', ScannerMode, '');
