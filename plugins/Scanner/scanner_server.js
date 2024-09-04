@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.2a BETA) /// 
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.3)       /// 
 ///                                                         ///
 ///  by Highpoint               last update: 04.09.24       ///
 ///  powered by PE5PVB                                      ///     
@@ -11,21 +11,21 @@
 
 ///  This plugin only works from web server version 1.2.6!!!
 
-const Autoscan_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
+const Autoscan_PE5PVB_Mode = false; 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
 const Search_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
 const StartAutoScan = 'auto'; 			// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
 const AntennaSwitch = 'off';  			// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
 
 let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
 let defaultScanHoldTime = 7; 			// Value in s: 1,3,5,7,10,15,20,30 
-let defaultScannerMode = 'normal'; 	// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
+let defaultScannerMode = 'normal'; 		// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
 
 /// LOGGER OPTIONS ////
 const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
 const RAWLog = false;			// Set to "true" or "false" for RAW data logging
 const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
 const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; 	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+const FMLIST_OM_ID = ''; 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
 
 //////////////////////////////////////////////////////////////////////////////////////
 
