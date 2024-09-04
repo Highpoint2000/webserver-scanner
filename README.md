@@ -15,7 +15,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - Renamed maps.fmdx.pl to maps.fmdx.org
 - The FMDX ALL link is now created dynamically and adapts to the log filter, and there are now distance restrictions in the log file
 - The refresh interval of the log file has been increased to 10 seconds
-- Fixed logging for PE5PVB scan/search mode
+- Fixed logging and autostart for PE5PVB mode
 
 ## Installation notes:
 
