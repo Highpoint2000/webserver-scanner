@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.2a BETA) /// 
 ///                                                         ///
-///  by Highpoint               last update: 03.09.24       ///
+///  by Highpoint               last update: 04.09.24       ///
 ///  powered by PE5PVB                                      ///     
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -720,14 +720,12 @@ function startScan(direction) {
         currentFrequency = tuningLowerLimit;
     }
 	
-
-
     function updateFrequency() {
         if (!isScanning) {
-            // logInfo('Scanning has been stopped.');
+            logInfo('Scanning has been stopped.');
             return; // Exit the function if scanning has been stopped
         }
-
+		
         currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
         if (direction === 'up') {
 			if (currentFrequency < '74.00') {
@@ -778,9 +776,9 @@ function startScan(direction) {
                     }
                     currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
                 }
+						
+				
             } else if (ScannerMode === 'whitelist' && Scan === 'on') {			
-				if (isInWhitelist(currentFrequency, whitelist)) {
-                }
                 while (!isInWhitelist(currentFrequency, whitelist)) {				
                     if (direction === 'up') {
 						if (currentFrequency < '74.00') {
@@ -890,39 +888,36 @@ function checkWhitelist() {
                     }	
 					           
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
-					isScanning = false; // Updates a flag indicating scanning status	
-					
+					isScanning = false; // Updates a flag indicating scanning status					
 
-							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
-								if (RAWLog) {
+							if (RAWLog && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
 									writeCSVLogEntry(false); // activate non filtered log
 									writeHTMLLogEntry(false); // activate non filtered log
 									Savepicode = picode;
 									Saveps = ps;
 									Savestationid = stationid;
-								}
 							}			
-								
-
 		
 							if (Scan === 'on') {
 								
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();							
 
-								if (((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && stationid && checkStrengthCounter > ScanHoldTime * 5)) && freq !== Savefreq) {
+								if (((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && stationid && checkStrengthCounter > ScanHoldTime * 5)) ) {
 									
-										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
+										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
 										}
-
-										startScan('up'); // Restart scanning after the delay
+										
+										isScanning = false; 									
 										checkStrengthCounter = 0; // Reset the counter
 										stereo_detect = false;
 										station = '';	
-										Savefreq = freq;										
-                                }
+										Savefreq = freq;	
+										startScan('up'); // Restart scanning after the delay
+									
+                                } 
 								
                  			} else {
 								
