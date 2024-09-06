@@ -15,7 +15,7 @@
 
 (() => {
 
-    const pluginVersion = 'V2.3'; 
+    const pluginVersion = 'V2.3a BETA'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
