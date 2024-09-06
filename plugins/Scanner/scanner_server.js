@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.3)       /// 
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.3a BETA) ///
 ///                                                         ///
-///  by Highpoint               last update: 04.09.24       ///
-///  powered by PE5PVB                                      ///     
+///  by Highpoint               last update: 06.09.24       ///
+///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
@@ -1022,11 +1022,19 @@ function getLogFilePathCSV(date, time, isFiltered) {
         
         let header = `"${ServerName}"\n"${formattedServerDescription}"\n`;
         
-        if (UTCtime) {
-            header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}(UTC)\n\n` : `SCANNER LOG ${date} ${time}(UTC)\n\n`;
-        } else {
-            header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}\n\n` : `SCANNER LOG ${date} ${time}\n\n`;
-        }
+		if (OnlyFirstLog) {
+			if (UTCtime) {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time} (UTC)\n` : `SCANNER LOG (FIRST LOG) ${date} ${time} (UTC)\n`; 
+			} else {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time}\n` : `SCANNER LOG (FIRST LOG) ${date} ${time}\n`; 
+			}
+		} else {
+			if (UTCtime) {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time} (UTC)\n` : `SCANNER LOG ${date} ${time} (UTC)\n`; 
+			} else {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}\n` : `SCANNER LOG ${date} ${time}\n`; 
+			}
+		}
                     
         header += UTCtime ? `date;time(utc);freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n` : `date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n`;
 
@@ -1144,11 +1152,19 @@ function getLogFilePathHTML(date, time, isFiltered) {
 
         header += `${ServerName}<br>${ServerDescription}<br>`;
         
-        if (UTCtime) {
-            header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}(UTC)<br><br>` : `SCANNER LOG ${date} ${time}(UTC)<br><br>`; 
-        } else {
-            header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}<br><br>` : `SCANNER LOG ${date} ${time}<br><br>`; 
-        }
+		if (OnlyFirstLog) {
+			if (UTCtime) {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time} (UTC)<br><br>` : `SCANNER LOG (FIRST LOG) ${date} ${time} (UTC)<br><br>`; 
+			} else {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time}<br><br>` : `SCANNER LOG (FIRST LOG) ${date} ${time}<br><br>`; 
+			}
+		} else {
+			if (UTCtime) {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time} (UTC)<br><br>` : `SCANNER LOG ${date} ${time} (UTC)<br><br>`; 
+			} else {
+				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}<br><br>` : `SCANNER LOG ${date} ${time}<br><br>`; 
+			}
+		}
 
         header += UTCtime 
             ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>MAP</th><th>FMLIST</th></tr>\n` 
