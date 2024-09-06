@@ -6,16 +6,8 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/604bc281-9393-41c1-b344-f9bc050b5f85)
 
 
-
-
-## v2.3 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- 0.01 MHz Fixed error when exceeding OIRT upper limit
-- Fixed bug when crossing the date line at UTC
-- The station IDs of Polish radio stations are now identified via a separate database file
-- Renamed maps.fmdx.pl to maps.fmdx.org and FMDX links to MAP links
-- The MAP ALL link is now created dynamically and adapts to the log filter, and there are now distance restrictions in the log file
-- The refresh interval of the log file has been increased to 10 seconds
-- Fixed logging and autostart for PE5PVB mode
+## v2.3a BETA (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- FIRST LOG MODE now displayed in the log file
 
 ## Installation notes:
 
@@ -43,6 +35,15 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.3 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- 0.01 MHz Fixed error when exceeding OIRT upper limit
+- Fixed bug when crossing the date line at UTC
+- The station IDs of Polish radio stations are now identified via a separate database file
+- Renamed maps.fmdx.pl to maps.fmdx.org and FMDX links to MAP links
+- The MAP ALL link is now created dynamically and adapts to the log filter, and there are now distance restrictions in the log file
+- The refresh interval of the log file has been increased to 10 seconds
+- Fixed logging and autostart for PE5PVB mode
 
 ### v2.2 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - New layout for HTML logfile with search/sort Options, Toggle Button for auto refresh and dark mode
