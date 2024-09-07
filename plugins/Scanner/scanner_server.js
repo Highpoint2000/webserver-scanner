@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.3a BETA) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.4)       ///
 ///                                                         ///
-///  by Highpoint               last update: 06.09.24       ///
+///  by Highpoint               last update: 07.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -11,30 +11,91 @@
 
 ///  This plugin only works from web server version 1.2.6!!!
 
-const Autoscan_PE5PVB_Mode = false; 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-const Search_PE5PVB_Mode = false; 		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-const StartAutoScan = 'auto'; 			// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-const AntennaSwitch = 'off';  			// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+const path = require('path');
+const fs = require('fs');
+const { logInfo, logError } = require('./../../server/console');
 
-let defaultSensitivityValue = 25; 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-let defaultScanHoldTime = 7; 			// Value in s: 1,3,5,7,10,15,20,30 
-let defaultScannerMode = 'normal'; 		// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
+// Define the path to the configuration file
+const configFilePath = path.join(__dirname, 'configPlugin.json');
 
-/// LOGGER OPTIONS ////
-const FilteredLog = true; 		// Set to "true" or "false" for filtered data logging
-const RAWLog = false;			// Set to "true" or "false" for RAW data logging
-const OnlyFirstLog = true;      // For only first seen logging, set each station found to “true” or “false”. 
-const UTCtime = true; 			// Set to "true" for logging with UTC Time
-const FMLIST_OM_ID = ''; 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+// Default values for the configuration file 
+// Do not enter this values !!! Save your configuration in configPlugin.json. This is created automatically when you first start.
 
-//////////////////////////////////////////////////////////////////////////////////////
+const defaultConfig = {
+    Autoscan_PE5PVB_Mode: false,		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
+    Search_PE5PVB_Mode: false, 			// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
+    StartAutoScan: 'off', 				// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
+    AntennaSwitch: 'off', 				// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+	
+    defaultSensitivityValue: 30, 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    defaultScanHoldTime: 7, 			// Value in s: 1,3,5,7,10,15,20,30 
+    defaultScannerMode: 'normal', 		// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
+	
+	/// LOGGER OPTIONS ////
+	
+    FilteredLog: true, 		// Set to "true" or "false" for filtered data logging
+    RAWLog: false, 			// Set to "true" or "false" for RAW data logging
+    OnlyFirstLog: false, 	// For only first seen logging, set each station found to “true” or “false”. 
+    UTCtime: true, 			// Set to "true" for logging with UTC Time
+    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+};
 
-const pluginVersion = 'V2.2 BETA'; 
+// Function to merge default config with existing config and remove undefined values
+function mergeConfig(defaultConfig, existingConfig) {
+    // Only keep the keys that are defined in the defaultConfig
+    const updatedConfig = {};
+
+    // Add the existing values that match defaultConfig keys
+    for (const key in defaultConfig) {
+        updatedConfig[key] = key in existingConfig ? existingConfig[key] : defaultConfig[key];
+    }
+
+    return updatedConfig;
+}
+
+// Function to load or create the configuration file
+function loadConfig(filePath) {
+    let existingConfig = {};
+
+    // Check if the configuration file exists
+    if (fs.existsSync(filePath)) {
+        // Read the existing configuration file
+        existingConfig = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    } else {
+        logInfo('DX-Alert configuration not found. Creating configPlugin.json.');
+    }
+
+    // Merge the default config with the existing one, adding missing fields and removing undefined
+    const finalConfig = mergeConfig(defaultConfig, existingConfig);
+
+    // Write the updated configuration back to the file (if changes were made)
+    fs.writeFileSync(filePath, JSON.stringify(finalConfig, null, 2), 'utf-8');
+
+    return finalConfig;
+}
+
+// Load or create the configuration file
+const configPlugin = loadConfig(configFilePath);
+
+// Zugriff auf die Variablen
+const Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
+const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
+const StartAutoScan = configPlugin.StartAutoScan;
+const AntennaSwitch = configPlugin.AntennaSwitch;
+
+const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
+const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
+const defaultScannerMode = configPlugin.defaultScannerMode;
+
+const FilteredLog = configPlugin.FilteredLog;
+const RAWLog = configPlugin.RAWLog;
+const OnlyFirstLog = configPlugin.OnlyFirstLog;
+const UTCtime = configPlugin.UTCtime;
+const FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
+
+////////////////////////////////////////////////////////////////
 
 const WebSocket = require('ws');
-const fs = require('fs');
-const path = require('path');
-const { logInfo, logError, logWarn } = require('./../../server/console');
 const config = require('./../../config.json');
 
 const ServerName = config.identification.tunerName; 
