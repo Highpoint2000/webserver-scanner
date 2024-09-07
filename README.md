@@ -6,7 +6,8 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/604bc281-9393-41c1-b344-f9bc050b5f85)
 
 
-## v2.3a BETA (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+## v2.4 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Fixed configuration is now stored in configPlugin.json
 - FIRST LOG MODE now displayed in the log file
 
 ## Installation notes:
@@ -14,8 +15,12 @@ This plugin provides scanning functions for the FM-DX web server.
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
 2. Unpack all files from the plugins folder to ..fm-dx-webserver-main\plugins\ 
 3. copy, rename and overwrite the index.js version that matches the web server: \server\index_x.x.x.js to ..fm-dx-webserver-main\server\index.js
-4. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
-5. Activate the scanner plugin in the settings
+4. Activate the scanner plugin in the settings
+5. Stop or close the fm-dx-webserver
+6. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
+7. Configure personal email or Telegram settings in the automatically created configPlugin.json (in the specific plugin folder!)
+8. Stop or close the fm-dx-webserver
+9. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
 
 ## Important notes: 
 
