@@ -272,6 +272,12 @@
         const table = document.querySelector("table");
         const tr = table.getElementsByTagName("tr");
 
+        // Get the PI codes from the new input field
+        const piCodesInput = document.getElementById("piCodesInput").value;
+        const piCodesArray = piCodesInput.split(',')
+            .map(code => code.trim().replace(/\?$/, '')) // Remove trailing question marks
+            .filter(code => code); // Trim and filter empty codes
+
         // Checkbox filter
         const filter150 = document.getElementById("filter150").checked;
         const filter300 = document.getElementById("filter300").checked;
@@ -318,6 +324,14 @@
                 let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
                 if (distValue <= distanceFilter) {
                     display = false; // Hide row if distance is less than or equal to the filter value
+                }
+            }
+
+            // Filter based on PI codes
+            if (display && piCodesArray.length > 0) {
+                const piCodeValue = td[3].textContent.trim().replace(/\?$/, ''); // Remove trailing question mark
+                if (piCodesArray.includes(piCodeValue)) {
+                    display = false; // Hide row if PI code is in the exclusion list
                 }
             }
 
@@ -415,6 +429,10 @@
             </label>
             <input type="number" id="freeDistanceInput" placeholder="" min="0" oninput="filterTable()">
             <span class="distance-label">km</span>
+
+	    <!-- New Input Field for PI Codes -->
+	    <label for="piCodesInput" style="margin-top: 3px; display: block;">Exclude PI Codes (comma separated):</label>
+	    <input type="text" id="piCodesInput" placeholder="e.g. 6201,6202,6203" oninput="filterTable()">
         `;
 
         searchContainer.appendChild(filterContainer);
