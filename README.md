@@ -14,7 +14,7 @@ This plugin provides scanning functions for the FM-DX web server.
 6. Activate the scanner plugin in the settings
 7. Stop or close the fm-dx-webserver
 8. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
-9. Configure personal email or Telegram settings in the automatically created configPlugin.json (in the specific plugin folder!)
+9. Configure your personal settings in the automatically created configPlugin.json (in the specific plugin folder!)
 10. Stop or close the fm-dx-webserver
 11. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
 
