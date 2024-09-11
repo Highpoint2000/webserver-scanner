@@ -1,7 +1,7 @@
 // Plugin configuration, this is used in the administration when plugins are loaded
 var pluginConfig = {
     name: 'Scanner Plugin',
-    version: '2.3a BETA',
+    version: '2.5',
     author: 'Highpoint',
     frontEndPath: 'Scanner/scanner.js'
 }
