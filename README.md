@@ -6,9 +6,8 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/604bc281-9393-41c1-b344-f9bc050b5f85)
 
 
-## v2.4 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- Fixed configuration is now stored in configPlugin.json
-- FIRST LOG MODE now displayed in the log file
+## v2.5 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Live stream link to the radio station available in the log file (fmscan.org account required!)
 
 ## Installation notes:
 
@@ -55,6 +54,7 @@ The following variables can be changed in the configPlugin.json:
 - In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
 - Auto scanner and logging preferences can be configured in the scanner_server.js header
 - In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
+- In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it.
 
 After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
@@ -63,6 +63,10 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.4 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- Fixed configuration is now stored in configPlugin.json
+- FIRST LOG MODE now displayed in the log file
 
 ### v2.3 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - 0.01 MHz Fixed error when exceeding OIRT upper limit
