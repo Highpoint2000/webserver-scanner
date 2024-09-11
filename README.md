@@ -3,13 +3,8 @@
 This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)
-![image](https://github.com/user-attachments/assets/604bc281-9393-41c1-b344-f9bc050b5f85)
+![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-
-## v2.5 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
-- Live stream link to the radio station available in the log file (fmscan.org account required!)
-
-## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
 2. Unpack all files from the plugins folder to ..fm-dx-webserver-main\plugins\ 
