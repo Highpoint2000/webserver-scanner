@@ -367,7 +367,7 @@
         for (let i = 1; i < rows.length; i++) {
             if (rows[i].style.display !== "none") { // Only consider visible rows
                 const cells = rows[i].getElementsByTagName("td");
-                const idCell = cells[cells.length - 3]; // The ID cell (3rd last cell)
+                const idCell = cells[cells.length - 4]; // The ID cell (4rd last cell)
                 if (idCell) {
                     const idValue = idCell.textContent.trim();
                     if (idValue) {
