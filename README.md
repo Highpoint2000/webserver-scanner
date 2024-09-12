@@ -2,9 +2,14 @@
 
 This plugin provides scanning functions for the FM-DX web server.
 
-![image](https://github.com/user-attachments/assets/7309a4de-5722-43d5-8650-8cffbb3f1037)
+![image](https://github.com/user-attachments/assets/45332c7e-1137-40f7-98b5-8ff1d8463d21)
+
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
+## v2.6 (only works from web server version 1.2.8 !!!)
+- New notification design (Toast Notification)
+
+## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
 2. Unpack all files from the plugins folder to ..fm-dx-webserver-main\plugins\ 
@@ -59,9 +64,11 @@ After activating/deactivating the plugin or making changes to the scanner server
 
 ## History: 
 
+### v2.5 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
+- FIRST LOG MODE now displayed in the log file
+
 ### v2.4 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - Fixed configuration is now stored in configPlugin.json
-- FIRST LOG MODE now displayed in the log file
 
 ### v2.3 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - 0.01 MHz Fixed error when exceeding OIRT upper limit
