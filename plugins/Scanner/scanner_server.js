@@ -1,15 +1,15 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.5)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6)       ///
 ///                                                         ///
-///  by Highpoint               last update: 11.09.24       ///
+///  by Highpoint               last update: 12.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works from web server version 1.2.6!!!
+///  This plugin only works from web server version 1.2.8!!!
 
 const path = require('path');
 const fs = require('fs');
