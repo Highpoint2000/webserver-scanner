@@ -1,21 +1,21 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.4)       ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.6)       ///
 ///                                                         ///
-///  by Highpoint               last update: 07.09.24       ///
+///  by Highpoint               last update: 12.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works with web server version 1.2.6!!!
+///  This plugin only works with web server version 1.2.8!!!
 
 ///////////////////////////////////////////////////////////////
 
 (() => {
 
-    const pluginVersion = 'V2.4'; 
+    const pluginVersion = 'V2.6'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -62,7 +62,7 @@
                 console.log("Scanner sent initial message sent:", initialMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send initial message.");
-                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send initial message');
+				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send initial message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -78,7 +78,7 @@
                 console.log("Search message sent:", searchMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send search message.");
-                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send search message');
+				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -94,7 +94,7 @@
                 console.log("Scanner sent message:", scanMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send scan message.");
-                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send scan message');
+				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -110,7 +110,7 @@
                 console.log("Value message sent:", valueMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send value message.");
-                showCustomAlert('Scanner Error! WebSocket is not open. Cannot send value message');
+				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -129,16 +129,16 @@
                 wsSendSocket.onmessage = handleWebSocketMessage;
                 wsSendSocket.onerror = (error) => {
                     console.error("Scanner Websocket Error:", error);
-                    showCustomAlert('Scanner Websocket Error!');
+					sendToast('error', 'Scanner', 'Websocket Error', false, false);
                 };
                 wsSendSocket.onclose = (event) => {
                     console.log("Scanner Error! Websocket closed or not open:", event);
-                    // showCustomAlert('Scanner Error! Websocket closed or not open');
+					// sendToast('error', 'Scanner', 'Websocket closed or not open', false, false);
                     setTimeout(setupSendSocket, 5000); // Reconnect after 5 seconds
                 };
             } catch (error) {
                 console.error("Failed to setup Send WebSocket:", error);
-                showCustomAlert('Scanner Error! Failed to setup Send WebSocket');
+				sendToast('error', 'Scanner', 'Failed to setup Send WebSocket', false, false);
                 setTimeout(setupSendSocket, 5000);
             }
         }
@@ -166,7 +166,7 @@
                         scannerButtonsExecuted = true; // Mark as executed
 
                         if (isTuneAuthenticated) {
-                            showCustomAlert(`Scanner settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`);
+							sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
                         }
                     }
 
@@ -528,7 +528,7 @@ function toggleScan(isLongPressAction) {
             }
 
         } else {
-            showCustomAlert("Admin must be logged in to use the autoscan mode!");
+            sendToast('warning', 'Scanner', 'Admin must be logged in to use the autoscan mode!', false, false);
         }
 
     } else {  // Normal press action
@@ -541,7 +541,7 @@ function toggleScan(isLongPressAction) {
                 setCookie('scannerControlsStatus', 'on', 7); // Remember the status
             }
         } else {
-            showCustomAlert("Admin must be logged in to use the autoscan mode!");
+			sendToast('warning', 'Scanner', 'Admin must be logged in to use the autoscan mode!', false, false);
         }
     }
 }
