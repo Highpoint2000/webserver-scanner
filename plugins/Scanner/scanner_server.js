@@ -1,15 +1,15 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 12.09.24       ///
+///  by Highpoint               last update: 13.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works from web server version 1.2.8!!!
+///  This plugin only works from web server version 1.2.8.1!!!
 
 const path = require('path');
 const fs = require('fs');
@@ -255,10 +255,10 @@ function startSearch(direction) {
 async function ExtraWebSocket() {
     if (!extraSocket || extraSocket.readyState === WebSocket.CLOSED) {
         try {
-            extraSocket = new WebSocket(externalWsUrl + '/extra');
+            extraSocket = new WebSocket(externalWsUrl + '/data_plugins');
 
             extraSocket.onopen = () => {
-                logInfo(`Scanner connected to ${externalWsUrl + '/extra'}`);
+                logInfo(`Scanner connected to ${externalWsUrl + '/data_plugins'}`);
             };
 
             extraSocket.onerror = (error) => {
@@ -440,7 +440,7 @@ async function ExtraWebSocket() {
 }
 
 function InitialMessage() {
-    const ws = new WebSocket(externalWsUrl + '/extra');
+    const ws = new WebSocket(externalWsUrl + '/data_plugins');
     ws.on('open', () => {
         // logInfo(`Scanner connected to ${ws.url}`);	
         ws.send(JSON.stringify(createMessage('broadcast', '255.255.255.255', 'off', 'off', defaultSensitivityValue, defaultScannerMode, defaultScanHoldTime))); // Send initial status
