@@ -1,27 +1,27 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.6)       ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.6a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 12.09.24       ///
+///  by Highpoint               last update: 13.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works with web server version 1.2.8!!!
+///  This plugin only works with web server version 1.2.8.1!!!
 
 ///////////////////////////////////////////////////////////////
 
 (() => {
 
-    const pluginVersion = 'V2.6'; 
+    const pluginVersion = 'V2.6a'; 
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
     const WebserverPORT = currentURL.port || (currentURL.protocol === 'https:' ? '443' : '80');
     const protocol = currentURL.protocol === 'https:' ? 'wss:' : 'ws:';
-    const WEBSOCKET_URL = `${protocol}//${WebserverURL}:${WebserverPORT}${WebserverPath}extra`;
+    const WEBSOCKET_URL = `${protocol}//${WebserverURL}:${WebserverPORT}${WebserverPath}data_plugins`;
     const ipApiUrl = 'https://api.ipify.org?format=json';
     const target = '127.0.0.1';
 
@@ -62,7 +62,7 @@
                 console.log("Scanner sent initial message sent:", initialMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send initial message.");
-				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send initial message.', false, false);
+				sendToast('error important', 'Scanner', 'WebSocket is not open. Cannot send initial message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -78,7 +78,7 @@
                 console.log("Search message sent:", searchMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send search message.");
-				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
+				sendToast('error important', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -94,7 +94,7 @@
                 console.log("Scanner sent message:", scanMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send scan message.");
-				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
+				sendToast('error important', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -110,7 +110,7 @@
                 console.log("Value message sent:", valueMessage);
             } else {
                 console.error("Scanner Error! WebSocket is not open. Cannot send value message.");
-				sendToast('error', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
+				sendToast('error important', 'Scanner', 'WebSocket is not open. Cannot send value message.', false, false);
             }
         } catch (error) {
             console.error(error);
@@ -129,16 +129,16 @@
                 wsSendSocket.onmessage = handleWebSocketMessage;
                 wsSendSocket.onerror = (error) => {
                     console.error("Scanner Websocket Error:", error);
-					sendToast('error', 'Scanner', 'Websocket Error', false, false);
+					sendToast('error important', 'Scanner', 'Websocket Error', false, false);
                 };
                 wsSendSocket.onclose = (event) => {
                     console.log("Scanner Error! Websocket closed or not open:", event);
-					// sendToast('error', 'Scanner', 'Websocket closed or not open', false, false);
+					// sendToast('error important', 'Scanner', 'Websocket closed or not open', false, false);
                     setTimeout(setupSendSocket, 5000); // Reconnect after 5 seconds
                 };
             } catch (error) {
                 console.error("Failed to setup Send WebSocket:", error);
-				sendToast('error', 'Scanner', 'Failed to setup Send WebSocket', false, false);
+				sendToast('error important', 'Scanner', 'Failed to setup Send WebSocket', false, false);
                 setTimeout(setupSendSocket, 5000);
             }
         }
@@ -800,40 +800,6 @@ function toggleScan(isLongPressAction) {
         });
     }
     
-    function showCustomAlert(message) {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.position = 'fixed';
-        notification.style.top = '20px';
-        notification.style.left = '50%';
-        notification.style.transform = 'translateX(-50%)';
-        notification.style.padding = '15px 30px';
-        notification.style.borderRadius = '8px';
-        notification.style.zIndex = '1000';
-        notification.style.opacity = '1';
-        notification.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
-        notification.style.fontSize = '16px';
-        notification.style.fontWeight = 'bold';
-        notification.style.textAlign = 'center';
-        notification.style.color = '#fff';
-
-        if (message.toLowerCase().includes('error')) {
-            notification.style.backgroundColor = '#FF0000';
-        } else if (message.toLowerCase().includes('!!!')) {
-            notification.style.backgroundColor = '#008000';
-        } else {
-            notification.style.backgroundColor = '#333';
-        }
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateX(-50%) translateY(-20px)';
-            setTimeout(() => document.body.removeChild(notification), 500);
-        }, 4000);
-    }
-
     // Check for admin mode authentication
     function checkAdminMode() {
         const bodyText = document.body.textContent || document.body.innerText;
