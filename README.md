@@ -6,22 +6,21 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.6 (only works from web server version 1.2.8 !!!)
-- New notification design (Toast Notification)
+## v2.6a (only works from web server version 1.2.8.1 !!!)
+- Adaptation of the web socket /extra to /data_plugins, index.js update is no longer needed from now on!
 
 ## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
 2. Unpack all files from the plugins folder to ..fm-dx-webserver-main\plugins\ 
-3. copy, rename and overwrite the index.js version that matches the web server: \server\index_x.x.x.js to ..fm-dx-webserver-main\server\index.js
-4. Stop or close the fm-dx-webserver
-5. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
-6. Activate the scanner plugin in the settings
-7. Stop or close the fm-dx-webserver
-8. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
-9. Configure your personal settings in the automatically created configPlugin.json (in the specific plugin folder!)
-10. Stop or close the fm-dx-webserver
-11. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
+3. Stop or close the fm-dx-webserver
+4. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
+5. Activate the scanner plugin in the settings
+6. Stop or close the fm-dx-webserver
+7. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
+8. Configure your personal settings in the automatically created configPlugin.json (in the specific plugin folder!)
+9. Stop or close the fm-dx-webserver
+10. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
 
 ## Configuration options:
 
@@ -63,6 +62,9 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.6 (only works from web server version 1.2.8 !!!)
+- New notification design (Toast Notification)
 
 ### v2.5 (only works from web server version 1.2.6 - older versions must take the plugin version 1.3c oder 1.3d !!!)
 - FIRST LOG MODE now displayed in the log file
