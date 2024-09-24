@@ -6,8 +6,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.6a (only works from web server version 1.2.8.1 !!!)
-- Adaptation of the web socket /extra to /data_plugins, index.js update is no longer needed from now on!
+## v2.6b (only works from web server version 1.2.8.1 !!!)
+- bugfixing
+- configPlugin.json is moved to ../fm-dx-webserver-main/plugins_configs/scanner.json
+- Switches for blacklist and whitelist built into the config file
 
 ## Installation notes:
 
@@ -18,7 +20,7 @@ This plugin provides scanning functions for the FM-DX web server.
 5. Activate the scanner plugin in the settings
 6. Stop or close the fm-dx-webserver
 7. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
-8. Configure your personal settings in the automatically created configPlugin.json (in the specific plugin folder!)
+8. Configure your personal settings in the automatically created scanner.json (in the folder: ../fm-dx-webserver-main/plugins_configs)
 9. Stop or close the fm-dx-webserver
 10. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
 
@@ -62,6 +64,9 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.6a (only works from web server version 1.2.8.1 !!!)
+- Adaptation of the web socket /extra to /data_plugins, index.js update is no longer needed from now on!
 
 ### v2.6 (only works from web server version 1.2.8 !!!)
 - New notification design (Toast Notification)
