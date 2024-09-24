@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6b) 	    ///
 ///                                                         ///
-///  by Highpoint               last update: 13.09.24       ///
+///  by Highpoint               last update: 24.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,34 +15,30 @@ const path = require('path');
 const fs = require('fs');
 const { logInfo, logError } = require('./../../server/console');
 
-// Define the path to the configuration file
-const configFilePath = path.join(__dirname, 'configPlugin.json');
+// Define the paths to the old and new configuration files
+const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
+const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
 
-// Default values for the configuration file 
-// Do not enter this values !!! Save your configuration in configPlugin.json. This is created automatically when you first start.
-
+// Default values for the configuration file
 const defaultConfig = {
-    Autoscan_PE5PVB_Mode: false,		// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
-    Search_PE5PVB_Mode: false, 			// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-    StartAutoScan: 'off', 				// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-    AntennaSwitch: 'off', 				// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
-	
-    defaultSensitivityValue: 30, 		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    defaultScanHoldTime: 7, 			// Value in s: 1,3,5,7,10,15,20,30 
-    defaultScannerMode: 'normal', 		// Only valid for Autoscan_PE5PVB_Mode = false  /  Set the startmode: "normal", "blacklist", or "whitelist"
-	
-	/// LOGGER OPTIONS ////
-	
-    FilteredLog: true, 		// Set to "true" or "false" for filtered data logging
-    RAWLog: false, 			// Set to "true" or "false" for RAW data logging
-    OnlyFirstLog: false, 	// For only first seen logging, set each station found to “true” or “false”. 
-    UTCtime: true, 			// Set to "true" for logging with UTC Time
-    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+    Autoscan_PE5PVB_Mode: false,  // Default values as before
+    Search_PE5PVB_Mode: false,
+    StartAutoScan: 'off',
+    AntennaSwitch: 'off',
+    defaultSensitivityValue: 30,
+    defaultScanHoldTime: 7,
+    defaultScannerMode: 'normal',
+    FilteredLog: true,
+    RAWLog: false,
+    OnlyFirstLog: false,
+    UTCtime: true,
+    FMLIST_OM_ID: '',
+	EnableBlacklist: false,
+	EnableWhitelist: false,
 };
 
 // Function to merge default config with existing config and remove undefined values
 function mergeConfig(defaultConfig, existingConfig) {
-    // Only keep the keys that are defined in the defaultConfig
     const updatedConfig = {};
 
     // Add the existing values that match defaultConfig keys
@@ -53,16 +49,42 @@ function mergeConfig(defaultConfig, existingConfig) {
     return updatedConfig;
 }
 
+// Function to load the old config, move it to the new location, and delete the old one
+function migrateOldConfig(oldFilePath, newFilePath) {
+    if (fs.existsSync(oldFilePath)) {
+        // Load the old config
+        const oldConfig = JSON.parse(fs.readFileSync(oldFilePath, 'utf-8'));
+        
+        // Save the old config to the new location
+        fs.writeFileSync(newFilePath, JSON.stringify(oldConfig, null, 2), 'utf-8');
+        logInfo(`Old config migrated to ${newFilePath}`);
+
+        // Delete the old config file
+        fs.unlinkSync(oldFilePath);
+        logInfo(`Old config ${oldFilePath} deleted`);
+        
+        return oldConfig;
+    }
+
+    return null;  // No old config found
+}
+
 // Function to load or create the configuration file
 function loadConfig(filePath) {
     let existingConfig = {};
 
-    // Check if the configuration file exists
-    if (fs.existsSync(filePath)) {
-        // Read the existing configuration file
-        existingConfig = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    // Try to migrate the old config if it exists
+    const migratedConfig = migrateOldConfig(oldConfigFilePath, filePath);
+    if (migratedConfig) {
+        existingConfig = migratedConfig;
     } else {
-        logInfo('DX-Alert configuration not found. Creating configPlugin.json.');
+        // Check if the new configuration file exists
+        if (fs.existsSync(filePath)) {
+            // Read the existing configuration file
+            existingConfig = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } else {
+            logInfo('Scanner configuration not found. Creating scanner.json.');
+        }
     }
 
     // Merge the default config with the existing one, adding missing fields and removing undefined
@@ -75,9 +97,9 @@ function loadConfig(filePath) {
 }
 
 // Load or create the configuration file
-const configPlugin = loadConfig(configFilePath);
+const configPlugin = loadConfig(newConfigFilePath);
 
-// Zugriff auf die Variablen
+// Zugriff auf die Variablen wie bisher
 const Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
 const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
 const StartAutoScan = configPlugin.StartAutoScan;
@@ -92,6 +114,8 @@ const RAWLog = configPlugin.RAWLog;
 const OnlyFirstLog = configPlugin.OnlyFirstLog;
 const UTCtime = configPlugin.UTCtime;
 const FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
+const EnableBlacklist = configPlugin.EnableBlacklist;
+const EnableWhitelist = configPlugin.EnableWhitelist;
 
 ////////////////////////////////////////////////////////////////
 
@@ -297,7 +321,7 @@ async function ExtraWebSocket() {
                                 break;
 
                             case 'send':
-                                if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
+	                            if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
                                     Sensitivity = message.value.Sensitivity;
 									if (ScanPE5PVB) {        
 										sendCommandToClient(`I${Sensitivity}`);
@@ -310,7 +334,7 @@ async function ExtraWebSocket() {
                                     ScannerMode = message.value.ScannerMode;
 									logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
                                 }
-								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'blacklist') {
+								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'blacklist' && EnableBlacklist) {
 									if (blacklist.length > 0) {
 										ScannerMode = message.value.ScannerMode;
 										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
@@ -331,7 +355,7 @@ async function ExtraWebSocket() {
 										extraSocket.send(JSON.stringify(responseMessage));
 									}
 								}
-								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'whitelist') {
+								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
 									if (whitelist.length > 0) {
 										ScannerMode = message.value.ScannerMode;
 										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
@@ -376,7 +400,7 @@ async function ExtraWebSocket() {
 										// logInfo(`Scanner (PE5PVB mode) search up [IP: ${message.source}] `);
 									} else {
 										startSearch('up');
-										// logInfo(`Scanner search up [IP: ${message.source}]`);
+										logInfo(`Scanner search up [IP: ${message.source}]`);
 									}
                                 }
 								
@@ -391,7 +415,7 @@ async function ExtraWebSocket() {
                                 );
 								
                                 if (message.value.Scan === 'on' && Scan === 'off') {
-									
+					
 									Scan = message.value.Scan;
 									extraSocket.send(JSON.stringify(responseMessage));
 									
@@ -407,7 +431,7 @@ async function ExtraWebSocket() {
 																	
                                 }
                                 if (message.value.Scan === 'off' && Scan === 'on') {
-									
+
 									Scan = message.value.Scan;
 									extraSocket.send(JSON.stringify(responseMessage));
 									
@@ -787,7 +811,7 @@ function startScan(direction) {
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
         currentFrequency = tuningLowerLimit;
     }
-	
+
     function updateFrequency() {
         if (!isScanning) {
             logInfo('Scanning has been stopped.');
@@ -802,7 +826,7 @@ function startScan(direction) {
 				currentFrequency += 0.1;
 			}
             if (currentFrequency > tuningUpperLimit) {
-				if (Scan = 'on') {
+				if (Scan === 'on') {
 				   sendNextAntennaCommand();
 				}
                 currentFrequency = tuningLowerLimit;
@@ -818,10 +842,10 @@ function startScan(direction) {
             }
         }
 
-        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
+        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place	
 			
         if (!ScanPE5PVB) {
-            if (ScannerMode === 'blacklist' && Scan === 'on') {
+            if (ScannerMode === 'blacklist' && Scan === 'on' && EnableBlacklist) {
                 while (isInBlacklist(currentFrequency, blacklist)) {
                     if (direction === 'up') {
 						if (currentFrequency < '74.00') {
@@ -846,7 +870,7 @@ function startScan(direction) {
                 }
 						
 				
-            } else if (ScannerMode === 'whitelist' && Scan === 'on') {			
+            } else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {			
                 while (!isInWhitelist(currentFrequency, whitelist)) {				
                     if (direction === 'up') {
 						if (currentFrequency < '74.00') {
@@ -875,7 +899,7 @@ function startScan(direction) {
         sendDataToClient(currentFrequency);
 		
 	}
- 
+
     isScanning = true;
     updateFrequency();
 	scanInterval = setInterval(updateFrequency, 500);
@@ -890,6 +914,11 @@ function isInWhitelist(frequency, whitelist) {
 }
 
 function checkBlacklist() {
+	
+    if (!EnableBlacklist) {
+        logInfo('Blacklist is not enabled. Skipping check.');
+        return;
+    }
     // Determine the path to the file relative to the current directory
     const filePath = path.join(__dirname, '../Scanner/blacklist.txt');
 
@@ -917,6 +946,12 @@ function checkBlacklist() {
 }
 
 function checkWhitelist() {
+    // Check if the whitelist feature is enabled
+    if (!EnableWhitelist) {
+        logInfo('Whitelist is not enabled. Skipping check.');
+        return;
+    }
+	
     // Determine the path to the file relative to the current directory
     const filePath = path.join(__dirname, '../Scanner/whitelist.txt');
 
@@ -1112,11 +1147,11 @@ function getLogFilePathCSV(date, time, isFiltered) {
 
 function writeCSVLogEntry(isFiltered) {
     
-    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB) {
+    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB && EnableBlacklist) {
         return;
     }
     
-    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB) {
+    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB && EnableWhitelist) {
         return;
     }
 
@@ -1243,11 +1278,11 @@ function getLogFilePathHTML(date, time, isFiltered) {
 }
 
 function writeHTMLLogEntry(isFiltered) {
-    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB) {
+    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB && EnableBlacklist) {
         return;
     }
 
-    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB) {
+    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB && EnableWhitelist) {
         return;
     }
 
