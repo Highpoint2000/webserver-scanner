@@ -10,6 +10,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - bugfixing
 - configPlugin.json is moved to ../fm-dx-webserver-main/plugins_configs/scanner.json
 - Switches for blacklist and whitelist built into the config file
+- HTML Language Tag set to English
 
 ## Installation notes:
 
