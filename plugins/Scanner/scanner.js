@@ -467,7 +467,7 @@
                 ScannerButton.style.right = '1px';
                 ScannerButton.style.left = '0px';
                 ScannerButton.style.borderRadius = '0px';
-                ScannerButton.style.width = '97.0%';
+                ScannerButton.style.width = '98.0%';
             }
         }
 
