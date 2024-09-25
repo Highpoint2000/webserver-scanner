@@ -6,11 +6,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.6b (only works from web server version 1.2.8.1 !!!)
-- bugfixing
-- configPlugin.json is moved to ../fm-dx-webserver-main/plugins_configs/scanner.json
-- Switches for blacklist and whitelist built into the config file
-- HTML Language Tag set to English
+## v2.6c BETA (only works from web server version 1.2.8.1 !!!)
+
+- Blacklist and Whitelist can switch off in config file
 
 ## Installation notes:
 
@@ -65,6 +63,12 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.6b (only works from web server version 1.2.8.1 !!!)
+- bugfixing
+- configPlugin.json is moved to ../fm-dx-webserver-main/plugins_configs/scanner.json
+- Switches for blacklist and whitelist built into the config file
+- HTML Language Tag set to English
 
 ### v2.6a (only works from web server version 1.2.8.1 !!!)
 - Adaptation of the web socket /extra to /data_plugins, index.js update is no longer needed from now on!
