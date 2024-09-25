@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.6b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.6c BETA) ///
 ///                                                         ///
 ///  by Highpoint               last update: 25.09.24       ///
 ///  powered by PE5PVB                                      ///
@@ -15,7 +15,9 @@
 
 (() => {
 
-    const pluginVersion = 'V2.6b'; 
+    const pluginVersion = 'V2.6c BETA';
+	const EnableBlacklist = false; // This value is automatically updated via the config file
+	const EnableWhitelist = false; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -627,14 +629,20 @@ function toggleScan(isLongPressAction) {
         modeContainer.style.height = "99%";
         modeContainer.style.position = 'relative'; // Ensure it's on top     
 		modeContainer.style.borderRadius = '0px';	
-        modeContainer.innerHTML = `
-            <input type="text" placeholder="${ScannerMode}" title="Scanner Mode" readonly>
-            <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
-                <li data-value="normal" class="option">normal</li>
-                <li data-value="blacklist" class="option">blacklist</li>
-                <li data-value="whitelist" class="option">whitelist</li>
-            </ul>
-        `;
+		
+		let optionsHTML = `
+			<input type="text" placeholder="${ScannerMode}" title="Scanner Mode" readonly>
+			<ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+			<li data-value="normal" class="option">normal</li>
+		`;
+		if (EnableBlacklist) {
+			optionsHTML += `<li data-value="blacklist" class="option">blacklist</li>`;
+		}
+		if (EnableWhitelist) {
+			optionsHTML += `<li data-value="whitelist" class="option">whitelist</li>`;
+		}
+		optionsHTML += `</ul>`;
+		modeContainer.innerHTML = optionsHTML;
 
         const delayContainer = document.createElement('div');
         delayContainer.className = "dropdown";
