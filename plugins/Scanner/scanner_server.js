@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6b) 	    ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6c BETA) ///
 ///                                                         ///
-///  by Highpoint               last update: 24.09.24       ///
+///  by Highpoint               last update: 25.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -116,6 +116,53 @@ const UTCtime = configPlugin.UTCtime;
 const FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
 const EnableBlacklist = configPlugin.EnableBlacklist;
 const EnableWhitelist = configPlugin.EnableWhitelist;
+
+// Path to the target JavaScript file
+const ScannerClientFile = path.join(__dirname, 'scanner.js');
+
+// Function to start the process
+function updateSettings() {
+  // Read the target file
+  fs.readFile(ScannerClientFile, 'utf8', (err, targetData) => {
+    if (err) {
+      logError('Error reading the scanner.js file:', err);
+      return;
+    }
+
+    // Check if the variables EnableBlacklist and EnableWhitelist already exist
+    let hasEnableBlacklist = /const EnableBlacklist = .+;/.test(targetData);
+    let hasEnableWhitelist = /const EnableWhitelist = .+;/.test(targetData);
+
+    // Replace or add the definitions
+    let updatedData = targetData;
+
+    if (hasEnableBlacklist) {
+      updatedData = updatedData.replace(/const EnableBlacklist = .*;/, `const EnableBlacklist = ${EnableBlacklist};`);
+    } else {
+      // If EnableBlacklist does not exist, add it at the beginning
+      updatedData = `const EnableBlacklist = ${EnableBlacklist};\n` + updatedData;
+    }
+
+    if (hasEnableWhitelist) {
+      updatedData = updatedData.replace(/const EnableWhitelist = .*;/, `const EnableWhitelist = ${EnableWhitelist};`);
+    } else {
+      // If EnableWhitelist does not exist, add it at the beginning
+      updatedData = `const EnableWhitelist = ${EnableWhitelist};\n` + updatedData;
+    }
+
+    // Update/write the target file
+    fs.writeFile(ScannerClientFile, updatedData, 'utf8', (err) => {
+      if (err) {
+        logError('Error writing to the scanner.js file:', err);
+        return;
+      }
+      logInfo('Scanner.js file successfully updated');
+    });
+  });
+}
+
+// Start the process
+updateSettings();
 
 ////////////////////////////////////////////////////////////////
 
