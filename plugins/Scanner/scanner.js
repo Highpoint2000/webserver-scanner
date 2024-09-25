@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.6b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 24.09.24       ///
+///  by Highpoint               last update: 25.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -602,13 +602,10 @@ function toggleScan(isLongPressAction) {
         scannerControls.style.width = '100%';
         scannerControls.style.display = 'flex';
         scannerControls.style.justifyContent = 'space-between';
-        scannerControls.style.marginTop = "0px";
-        scannerControls.style.marginRight = "10px";
+        scannerControls.style.marginTop = "0px";     
+		scannerControls.style.marginRight = "0px";
         scannerControls.style.position = 'relative'; // Ensure it's on top
-        
-        if (window.innerWidth < 769) {
-          scannerControls.style.marginBottom = "0px";
-        }
+
 
         const sensitivityContainer = document.createElement('div');
         sensitivityContainer.className = "dropdown";
@@ -617,8 +614,10 @@ function toggleScan(isLongPressAction) {
         sensitivityContainer.style.width = "100%";
         sensitivityContainer.style.height = "99%";
         sensitivityContainer.style.position = 'relative'; // Ensure it's on top
-        sensitivityContainer.style.borderTopLeftRadius = '15px';
+		sensitivityContainer.style.borderTopLeftRadius = '15px';
+		sensitivityContainer.style.borderTopRightRadius = '0px';
         sensitivityContainer.style.borderBottomLeftRadius = '15px';
+		sensitivityContainer.style.borderBottomRightRadius = '0px';
 
         const modeContainer = document.createElement('div');
         modeContainer.className = "dropdown";
@@ -626,7 +625,8 @@ function toggleScan(isLongPressAction) {
         modeContainer.style.marginLeft = "0px";
         modeContainer.style.width = "100%";
         modeContainer.style.height = "99%";
-        modeContainer.style.position = 'relative'; // Ensure it's on top        
+        modeContainer.style.position = 'relative'; // Ensure it's on top     
+		modeContainer.style.borderRadius = '0px';	
         modeContainer.innerHTML = `
             <input type="text" placeholder="${ScannerMode}" title="Scanner Mode" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -642,8 +642,10 @@ function toggleScan(isLongPressAction) {
         delayContainer.style.width = "100%";
         delayContainer.style.height = "99%";
         delayContainer.style.position = 'relative'; // Ensure it's on top
-        delayContainer.style.borderTopRightRadius = '15px';
-        delayContainer.style.borderBottomRightRadius = '15px';
+		delayContainer.style.borderTopLeftRadius = '0px';
+		delayContainer.style.borderTopRightRadius = '15px';
+        delayContainer.style.borderBottomLeftRadius = '0px';
+		delayContainer.style.borderBottomRightRadius = '15px';
 
         const VolumeSlider = document.getElementById('volumeSlider');
         const VolumeSliderWidth = VolumeSlider.clientWidth; // Get the width of the volume slider
@@ -815,7 +817,7 @@ function toggleScan(isLongPressAction) {
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {	
         BlinkAutoScan();
         checkAdminMode();
         setupSendSocket();
