@@ -6,9 +6,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.6c BETA (only works from web server version 1.2.8.1 !!!)
+## v2.6c (only works from web server version 1.2.8.1 !!!)
 
 - Blacklist and Whitelist can switch off in config file
+- Fixed problem creating plugins_configs path
 
 ## Installation notes:
 
