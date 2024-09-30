@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6c BETA) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6)       ///
 ///                                                         ///
-///  by Highpoint               last update: 25.09.24       ///
+///  by Highpoint               last update: 30.09.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -73,6 +73,13 @@ function migrateOldConfig(oldFilePath, newFilePath) {
 function loadConfig(filePath) {
     let existingConfig = {};
 
+    // Ensure the directory exists
+    const dirPath = path.dirname(filePath);
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+        logInfo(`Directory created: ${dirPath}`);
+    }
+
     // Try to migrate the old config if it exists
     const migratedConfig = migrateOldConfig(oldConfigFilePath, filePath);
     if (migratedConfig) {
@@ -95,6 +102,7 @@ function loadConfig(filePath) {
 
     return finalConfig;
 }
+
 
 // Load or create the configuration file
 const configPlugin = loadConfig(newConfigFilePath);
