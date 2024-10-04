@@ -229,6 +229,7 @@ let HTML_LogfilePath_filtered;
 let tuningLowerLimit = config.webserver.tuningLowerLimit;
 let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
+let textSocketLost;
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -294,6 +295,25 @@ async function TextWebSocket(messageData) {
                         // Parse the incoming message data
                         const messageData = JSON.parse(event.data);
 						// console.log(messageData);
+
+                        if (!isSerialportAlive || isSerialportRetrying) {
+                          if (textSocketLost) {
+                            clearTimeout(textSocketLost);
+                          }
+
+                          textSocketLost = setTimeout(() => {
+                            // WebSocket reconnection required after serialport connection loss
+                            logInfo("Scanner connection lost, creating new WebSocket.");
+                            if (textSocket) {
+                              try {
+                                textSocket.close(1000, 'Normal closure');
+                              } catch (error) {
+                                logInfo("Error closing WebSocket:", error);
+                              }
+                            }
+                            textSocketLost = null;
+                          }, 10000);
+                        }
 
                         // Execute this block only once
                         const users = messageData.users;  
