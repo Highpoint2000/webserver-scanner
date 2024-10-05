@@ -10,7 +10,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 - Added options to set scanIntervalTime and scanBandwith in the configuration file
 - Automatic reconnection if lost (thanks to AmateurRadioDude)
-- Added signal strength to logifile
+- Added signal strength to logfile
 
 ## Installation notes:
 
