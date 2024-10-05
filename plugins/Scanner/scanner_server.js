@@ -194,6 +194,8 @@ const Search = '';
 const source = '127.0.0.1';
 const logDir = path.resolve(__dirname, '../../web/logs'); // Absoluter Pfad zum Log-Verzeichnis
 
+const pluginScannerStartTime = Date.now();
+
 if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir);
 }
@@ -296,7 +298,7 @@ async function TextWebSocket(messageData) {
                         const messageData = JSON.parse(event.data);
 						// console.log(messageData);
 
-                        if (!isSerialportAlive || isSerialportRetrying) {
+                        if ((!isSerialportAlive || isSerialportRetrying) && pluginScannerStartTime > 90000) {
                           if (textSocketLost) {
                             clearTimeout(textSocketLost);
                           }
