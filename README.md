@@ -6,10 +6,11 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.6c (only works from web server version 1.2.8.1 !!!)
+## v2.7 (only works from web server version 1.2.8.1 !!!)
 
-- Blacklist and Whitelist can switch off in config file
-- Fixed problem creating plugins_configs path
+- Added options to set scanIntervalTime and scanBandwith in the configuration file
+- Automatic reconnection if lost (thanks to AmateurRadioDude)
+- Added signal strength to logifile
 
 ## Installation notes:
 
@@ -47,6 +48,7 @@ The following variables can be changed in the configPlugin.json:
     EnableBlacklist,		// Enable Blacklist 
     EnableWhitelist,		// Enable Whitelist
     scanIntervalTime,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
+	scanBandwith            // Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
 ## Important notes: 
 
@@ -67,6 +69,11 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.6c (only works from web server version 1.2.8.1 !!!)
+
+- Blacklist and Whitelist can switch off in config file
+- Fixed problem creating plugins_configs path
 
 ### v2.6b (only works from web server version 1.2.8.1 !!!)
 - bugfixing
