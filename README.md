@@ -48,7 +48,7 @@ The following variables can be changed in the configPlugin.json:
     EnableBlacklist,		// Enable Blacklist 
     EnableWhitelist,		// Enable Whitelist
     scanIntervalTime,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-	scanBandwith            // Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+	scanBandwith          		// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
 ## Important notes: 
 
