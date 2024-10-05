@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.6)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.7)       ///
 ///                                                         ///
-///  by Highpoint               last update: 30.09.24       ///
+///  by Highpoint               last update: 05.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -35,6 +35,8 @@ const defaultConfig = {
     FMLIST_OM_ID: '',
 	EnableBlacklist: false,
 	EnableWhitelist: false,
+	scanIntervalTime: 500,
+	scanBandwith: 0
 };
 
 // Function to merge default config with existing config and remove undefined values
@@ -124,6 +126,8 @@ const UTCtime = configPlugin.UTCtime;
 const FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
 const EnableBlacklist = configPlugin.EnableBlacklist;
 const EnableWhitelist = configPlugin.EnableWhitelist;
+const scanIntervalTime = configPlugin.scanIntervalTime;
+const scanBandwith = configPlugin.scanBandwith;
 
 // Path to the target JavaScript file
 const ScannerClientFile = path.join(__dirname, 'scanner.js');
@@ -221,7 +225,7 @@ let ScanHoldTime = defaultScanHoldTime;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
@@ -230,6 +234,7 @@ let tuningLowerLimit = config.webserver.tuningLowerLimit;
 let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
 let textSocketLost;
+let scanBandwithSave;
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -739,13 +744,14 @@ async function fetchstationid(freq, picode, city) {
 
 async function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
-
+	
     // Now you don't need to use setTimeout, unless you need an explicit delay
     picode = messageData.pi;
     ps = messageData.ps;
     freq = messageData.freq;
     strength = messageData.sig;
     stereo = messageData.st;
+	bandwith = messageData.bw;
     users = messageData.users;
     stereo_forced = messageData.stForced;
     ant = messageData.ant;
@@ -756,7 +762,7 @@ async function handleSocketMessage(messageData) {
     itu = messageData.txInfo.itu;
     distance = messageData.txInfo.dist;
     azimuth = messageData.txInfo.azi;
-    
+	   
     // Determine station ID for Polish stations
     if (itu === "POL") {
         stationid = await fetchstationid(freq, picode, city); 
@@ -868,12 +874,21 @@ function sendNextAntennaCommand() {
 
 function AutoScan() {
     if (!isScanning) {
+		logInfo('Scanner set bandwith to:', scanBandwith,  'kHz');
+		scanBandwithSave = bandwith;
+		textSocket.send(`W${scanBandwith}\n`);
         startScan('up');		// Start scanning once
 	}
 }
 
 function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
+	if (scanBandwithSave === '0') {
+		logInfo('Scanner set bandwith back to: auto');
+	} else {
+		logInfo('Scanner set bandwith back to:', scanBandwithSave, 'kHz');	
+	}
+	textSocket.send(`W${scanBandwithSave}\n`);
     isScanning = false;
 }
 
@@ -977,7 +992,7 @@ function startScan(direction) {
 
     isScanning = true;
     updateFrequency();
-	scanInterval = setInterval(updateFrequency, 500);
+	scanInterval = setInterval(updateFrequency, scanIntervalTime);
 }
 
 function isInBlacklist(frequency, blacklist) {
@@ -1207,7 +1222,7 @@ function getLogFilePathCSV(date, time, isFiltered) {
 			}
 		}
                     
-        header += UTCtime ? `date;time(utc);freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n` : `date;time;freq;picode;ps;station;city;itu;pol;erp;distance;azimuth;stationid\n`;
+        header += UTCtime ? `date;time(utc);freq;picode;ps;station;city;itu;pol;erp;strength;distance;azimuth;stationid\n` : `date;time;freq;picode;ps;station;city;itu;pol;erp;strength;distance;azimuth;stationid\n`;
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -1247,7 +1262,7 @@ function writeCSVLogEntry(isFiltered) {
     let psWithUnderscores = ps.replace(/ /g, '_');
 
     // Create the log entry line with the relevant data
-    let line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${distance};${azimuth};${stationid}\n`;
+    let line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${strength};${distance};${azimuth};${stationid}\n`;
 
     // Check if OnlyFirstLog is true and if the combination of freq, picode, and station already exists
     if (OnlyFirstLog) {
@@ -1338,8 +1353,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 
         header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>DIST</th><th>AZ</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>STRENGTH</th><th>DIST</th><th>AZ</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>STRENGTH</th><th>DIST</th><th>AZ</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -1380,7 +1395,7 @@ function writeHTMLLogEntry(isFiltered) {
 
     let psWithUnderscores = ps.replace(/ /g, '_');
 
-    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${strength}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
 
     let logContent = '';
     if (fs.existsSync(logFilePath)) {
