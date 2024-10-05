@@ -44,6 +44,9 @@ The following variables can be changed in the configPlugin.json:
     OnlyFirstLog: false, 		// For only first seen logging, set each station found to “true” or “false”. 
     UTCtime: true, 			// Set to "true" for logging with UTC Time
     FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID = '1234'
+    EnableBlacklist,		// Enable Blacklist 
+    EnableWhitelist,		// Enable Whitelist
+    scanIntervalTime,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
 
 ## Important notes: 
 
