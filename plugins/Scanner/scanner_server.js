@@ -198,6 +198,8 @@ const Search = '';
 const source = '127.0.0.1';
 const logDir = path.resolve(__dirname, '../../web/logs'); // Absoluter Pfad zum Log-Verzeichnis
 
+const ScannerStartTime = process.hrtime();
+
 if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir);
 }
@@ -234,6 +236,7 @@ let tuningLowerLimit = config.webserver.tuningLowerLimit;
 let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
 let textSocketLost;
+let checkSerialport = false;
 let scanBandwithSave;
 
 if (tuningUpperLimit === '' || !tuningLimit) {
@@ -301,7 +304,7 @@ async function TextWebSocket(messageData) {
                         const messageData = JSON.parse(event.data);
 						// console.log(messageData);
 
-                        if (!isSerialportAlive || isSerialportRetrying) {
+                        if (checkSerialport && (!isSerialportAlive || isSerialportRetrying)) {
                           if (textSocketLost) {
                             clearTimeout(textSocketLost);
                           }
@@ -345,6 +348,14 @@ async function TextWebSocket(messageData) {
             logError("Scanner Failed to set up WebSocket:", error);
             setTimeout(() => TextWebSocket(messageData), 1000); // Pass messageData when reconnecting
         }
+    }
+    // Runs only for the first 90 seconds
+    while (!checkSerialport) {
+        const ScannerElapsedSeconds = process.hrtime(ScannerStartTime)[0];
+        if (ScannerElapsedSeconds > 90) {
+            checkSerialport = true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
 }
 
