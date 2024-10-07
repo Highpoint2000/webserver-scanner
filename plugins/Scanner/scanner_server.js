@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.7)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.7a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 05.10.24       ///
+///  by Highpoint               last update: 07.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -874,7 +874,13 @@ function sendNextAntennaCommand() {
 
 function AutoScan() {
     if (!isScanning) {
-		logInfo('Scanner set bandwith to:', scanBandwith,  'kHz');
+		if (scanBandwith === '0' || scanBandwith === 0) {
+			if (bandwith !== '0' || bandwith === 0) {
+				logInfo('Scanner set bandwith to: auto mode');
+			}
+		} else {
+			logInfo('Scanner set bandwith to:', scanBandwith,  'kHz');
+		}
 		scanBandwithSave = bandwith;
 		textSocket.send(`W${scanBandwith}\n`);
         startScan('up');		// Start scanning once
@@ -883,8 +889,10 @@ function AutoScan() {
 
 function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
-	if (scanBandwithSave === '0') {
-		logInfo('Scanner set bandwith back to: auto');
+	if (scanBandwithSave === '0' || scanBandwithSave === 0) {
+		if (bandwith !== '0' || bandwith === 0) {
+			logInfo('Scanner set bandwith back to: auto mode');
+		}
 	} else {
 		logInfo('Scanner set bandwith back to:', scanBandwithSave, 'kHz');	
 	}
