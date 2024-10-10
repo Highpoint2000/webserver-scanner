@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.7a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.7b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 07.10.24       ///
+///  by Highpoint               last update: 10.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -762,6 +762,14 @@ async function handleSocketMessage(messageData) {
     itu = messageData.txInfo.itu;
     distance = messageData.txInfo.dist;
     azimuth = messageData.txInfo.azi;
+	
+	if (bandwith === "-1") {
+		bandwith = "0";
+	}
+	
+	if (bandwith === -1) {
+		bandwith = 0;
+	}
 	   
     // Determine station ID for Polish stations
     if (itu === "POL") {
@@ -875,11 +883,15 @@ function sendNextAntennaCommand() {
 function AutoScan() {
     if (!isScanning) {
 		if (scanBandwith === '0' || scanBandwith === 0) {
-			if (bandwith !== '0' || bandwith === 0) {
-				logInfo('Scanner set bandwith to: auto mode');
+			if (bandwith !== '0' && bandwith !== 0) {
+				logInfo('Scanner set bandwith from:', bandwith, 'kHz to: auto mode');
 			}
 		} else {
-			logInfo('Scanner set bandwith to:', scanBandwith,  'kHz');
+			if (bandwith === '0' || bandwith === 0) {
+				logInfo('Scanner set bandwith from: auto mode to:', scanBandwith,  'kHz');
+			} else {
+				logInfo('Scanner set bandwith from:', bandwith, 'kHz to:', scanBandwith,  'kHz');
+			}
 		}
 		scanBandwithSave = bandwith;
 		textSocket.send(`W${scanBandwith}\n`);
@@ -890,11 +902,13 @@ function AutoScan() {
 function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
 	if (scanBandwithSave === '0' || scanBandwithSave === 0) {
-		if (bandwith !== '0' || bandwith === 0) {
-			logInfo('Scanner set bandwith back to: auto mode');
-		}
+		if (scanBandwith !== '0' && scanBandwith !== 0) {
+			logInfo('Scanner set bandwith from:', scanBandwith, 'kHz back to: auto mode');
+		}			
 	} else {
-		logInfo('Scanner set bandwith back to:', scanBandwithSave, 'kHz');	
+		if (scanBandwith === '0' || scanBandwith === 0) {
+			logInfo('Scanner set bandwith from: auto mode back to:', scanBandwithSave, 'kHz');
+		}		
 	}
 	textSocket.send(`W${scanBandwithSave}\n`);
     isScanning = false;
