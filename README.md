@@ -6,7 +6,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.7a (only works from web server version 1.2.8.1 !!!)
+## v2.7b (only works from web server version 1.2.8.1 !!!)
 
 - Bugfixing
 
@@ -67,6 +67,10 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.7a (only works from web server version 1.2.8.1 !!!)
+
+- Bugfixing
 
 ### v2.7a (only works from web server version 1.2.8.1 !!!)
 
