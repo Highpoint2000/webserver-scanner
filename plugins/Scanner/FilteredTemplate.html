@@ -265,82 +265,82 @@
         }
     }
 
-    /* Filter table based on user input and distance */
-    function filterTable() {
-        const input = document.getElementById("searchInput");
-        const filter = input.value.toLowerCase();
-        const table = document.querySelector("table");
-        const tr = table.getElementsByTagName("tr");
+/* Filter table based on user input and distance */
+function filterTable() {
+    const input = document.getElementById("searchInput");
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector("table");
+    const tr = table.getElementsByTagName("tr");
 
-        // Get the PI codes from the new input field
-        const piCodesInput = document.getElementById("piCodesInput").value;
-        const piCodesArray = piCodesInput.split(',')
-            .map(code => code.trim().replace(/\?$/, '')) // Remove trailing question marks
-            .filter(code => code); // Trim and filter empty codes
+    // Get the PI codes from the new input field
+    const piCodesInput = document.getElementById("piCodesInput").value;
+    const piCodesArray = piCodesInput.split(',')
+        .map(code => code.trim().replace(/\?$/, '')) // Remove trailing question marks
+        .filter(code => code); // Trim and filter empty codes
 
-        // Checkbox filter
-        const filter150 = document.getElementById("filter150").checked;
-        const filter300 = document.getElementById("filter300").checked;
-        const filter700 = document.getElementById("filter700").checked;
-        const filter1300 = document.getElementById("filter1300").checked;
-        const filterFreeDistance = document.getElementById("filterFreeDistance").checked;
-        const freeDistanceInput = parseFloat(document.getElementById("freeDistanceInput").value);
+    // Checkbox filter
+    const filter150 = document.getElementById("filter150").checked;
+    const filter300 = document.getElementById("filter300").checked;
+    const filter700 = document.getElementById("filter700").checked;
+    const filter1300 = document.getElementById("filter1300").checked;
+    const filterFreeDistance = document.getElementById("filterFreeDistance").checked;
+    const freeDistanceInput = parseFloat(document.getElementById("freeDistanceInput").value);
 
-        let distanceFilter = null; // Start with no distance filter
+    let distanceFilter = null; // Start with no distance filter
 
-        if (filter150) {
-            distanceFilter = 150;
-        } else if (filter300) {
-            distanceFilter = 300;
-        } else if (filter700) {
-            distanceFilter = 700;
-        } else if (filter1300) {
-            distanceFilter = 1300;
-        } else if (filterFreeDistance && !isNaN(freeDistanceInput)) {
-            distanceFilter = freeDistanceInput; // Use custom distance if checkbox is checked and value is valid
-        }
-
-        // Loop through all table rows
-        for (let i = 1; i < tr.length; i++) {
-            let td = tr[i].getElementsByTagName("td");
-            let display = true; // Start assuming the row should be displayed
-
-            // Filter based on search input
-            if (filter) {
-                let rowMatches = false; // Assume no match initially
-                for (let j = 0; j < td.length; j++) {
-                    if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
-                        rowMatches = true; // Set match to true if any cell matches
-                        break;
-                    }
-                }
-                if (!rowMatches) {
-                    display = false; // If no cells matched the filter, hide the row
-                }
-            }
-
-            // Filter based on distance
-            if (display && distanceFilter !== null) {
-                let distValue = parseFloat(td[10].textContent) || 0; // Assume 'DIST' is in the 11th column (index 10)
-                if (distValue <= distanceFilter) {
-                    display = false; // Hide row if distance is less than or equal to the filter value
-                }
-            }
-
-            // Filter based on PI codes
-            if (display && piCodesArray.length > 0) {
-                const piCodeValue = td[3].textContent.trim().replace(/\?$/, ''); // Remove trailing question mark
-                if (piCodesArray.includes(piCodeValue)) {
-                    display = false; // Hide row if PI code is in the exclusion list
-                }
-            }
-
-            // Show or hide the row based on the filters
-            tr[i].style.display = display ? "" : "none";
-        }
-
-        generateDynamicLink(); // Update the link after filtering
+    if (filter150) {
+        distanceFilter = 150;
+    } else if (filter300) {
+        distanceFilter = 300;
+    } else if (filter700) {
+        distanceFilter = 700;
+    } else if (filter1300) {
+        distanceFilter = 1300;
+    } else if (filterFreeDistance && !isNaN(freeDistanceInput)) {
+        distanceFilter = freeDistanceInput; // Use custom distance if checkbox is checked and value is valid
     }
+
+    // Loop through all table rows
+    for (let i = 1; i < tr.length; i++) {
+        let td = tr[i].getElementsByTagName("td");
+        let display = true; // Start assuming the row should be displayed
+
+        // Filter based on search input
+        if (filter) {
+            let rowMatches = false; // Assume no match initially
+            for (let j = 0; j < td.length; j++) {
+                if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                    rowMatches = true; // Set match to true if any cell matches
+                    break;
+                }
+            }
+            if (!rowMatches) {
+                display = false; // If no cells matched the filter, hide the row
+            }
+        }
+
+        // Filter based on distance
+        if (display && distanceFilter !== null) {
+            let distValue = parseFloat(td[11].textContent) || 0; // Assume 'DIST' is in the 12th column (index 11)
+            if (distValue < distanceFilter) {
+                display = false; // Hide row if distance is less than the filter value
+            }
+        }
+
+        // Filter based on PI codes
+        if (display && piCodesArray.length > 0) {
+            const piCodeValue = td[3].textContent.trim().replace(/\?$/, ''); // Remove trailing question mark
+            if (piCodesArray.includes(piCodeValue)) {
+                display = false; // Hide row if PI code is in the exclusion list
+            }
+        }
+
+        // Show or hide the row based on the filters
+        tr[i].style.display = display ? "" : "none";
+    }
+
+    generateDynamicLink(); // Update the link after filtering
+}
 
     /* Toggle Dark Mode */
     function toggleDarkMode() {
