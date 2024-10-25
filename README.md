@@ -50,7 +50,7 @@ The following variables can be changed in the configPlugin.json:
 	  /// FMLIST LOGGING OPTIONS ////
  
     FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: "1234" - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-    FMLIST_Autolog: 'off',	// Setting the FMLIST autolog function. Set it to “off” to deactivate the function, “on” to log everything and “auto” if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_Autolog: 'off',		// Setting the FMLIST autolog function. Set it to “off” to deactivate the function, “on” to log everything and “auto” if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
