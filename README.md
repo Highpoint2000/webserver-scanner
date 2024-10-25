@@ -8,7 +8,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## v2.8 (only works from web server version 1.3.1 !!!)
 
-- FMLIST integration for automatic logging (For details see configuration options!)
+- FMLIST integration for automatic logging (For details see configuration options and important notes!)
 
 ## Installation notes:
 
@@ -49,11 +49,11 @@ The following variables can be changed in the configPlugin.json:
 
 	  /// FMLIST LOGGING OPTIONS ////
  
-    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: "1234"
+    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: "1234" - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
     FMLIST_Autolog: 'off',	// Setting the FMLIST autolog function. Set it to “off” to deactivate the function, “on” to log everything and “auto” if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
-    "FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
+    FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
 
 ## Important notes: 
 
@@ -65,7 +65,8 @@ The following variables can be changed in the configPlugin.json:
 - In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
 - Auto scanner and logging preferences can be configured in the scanner_server.js header
 - In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
-- In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it.
+- In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it
+- Since all FMLIST log entries are created automatically, with FMLIST Autolog  mode "on" the manual log button is hidden on the web interface, in the Autolog mode “auto”, the manual log button is only hidden on the web interface during the autoscan process
 
 After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
