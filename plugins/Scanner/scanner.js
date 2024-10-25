@@ -1,22 +1,22 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.7b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.8)       ///
 ///                                                         ///
-///  by Highpoint               last update: 10.10.24       ///
+///  by Highpoint               last update: 25.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works with web server version 1.2.8.1!!!
+///  This plugin only works with web server version 1.3.1!!!
 
 ///////////////////////////////////////////////////////////////
 
 (() => {
 
-    const pluginVersion = 'V2.7b';
-	const EnableBlacklist = false; // This value is automatically updated via the config file
+    const pluginVersion = 'V2.8';
+	const EnableBlacklist = true; // This value is automatically updated via the config file
 	const EnableWhitelist = false; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
@@ -155,11 +155,20 @@
 			}
 			
             if (eventData.type === 'Scanner' ) {
-                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime } = eventData.value;
+                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST, InfoFMLIST } = eventData.value;
 				
 				if (typeof ScanPE5PVB !== 'undefined') {
 					ScanPE5PVBstatus = ScanPE5PVB;
 				}	
+				
+				const element = document.getElementById('log-fmlist');
+				if (element) {
+					if (StatusFMLIST === 'on') {
+						element.style.display = 'none';
+					} else if (StatusFMLIST === 'off') {
+						element.style.display = 'block';
+					}
+				}
 
                 if (status === 'response' && eventData.target === clientIp) {
                     if (!scannerButtonsExecuted) {
@@ -173,8 +182,12 @@
                     }
 
                     updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-                    
-                } else if (status === 'broadcast' || status === 'send') {
+              
+                } else if (status === 'broadcast' && InfoFMLIST !== '' && InfoFMLIST !== undefined && InfoFMLIST.includes("successful")) {		
+					sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);	
+				} else if (status === 'broadcast' && InfoFMLIST !== '' && InfoFMLIST !== undefined && InfoFMLIST.includes("failed")) {		
+					sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);						
+				} else if (status === 'broadcast' || status === 'send') {
                     updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
                 }
 
@@ -187,6 +200,12 @@
     
                 if (ScanButton) {
                     if (Scan === 'off') {
+						
+						const element = document.getElementById('log-fmlist');
+						if (element) {
+							element.style.display = 'block';
+						}
+						
                         ScanButton.setAttribute('data-scan-status', 'off');
                         ScanButton.classList.add('bg-color-3');
                         ScanButton.classList.remove('bg-color-4');
@@ -233,6 +252,12 @@
                         }
                         
                     } else if (Scan === 'on') { 
+					
+						const element = document.getElementById('log-fmlist');
+						if (element) {
+							element.style.display = 'none';
+						}
+					
                         ScanButton.setAttribute('data-scan-status', 'on');
                         ScanButton.classList.add('bg-color-4');
                         ScanButton.classList.remove('bg-color-3');
