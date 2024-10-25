@@ -6,9 +6,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.7b (only works from web server version 1.2.8.1 !!!)
+## v2.8 (only works from web server version 1.3.1 !!!)
 
-- Bugfixing
+- FMLIST integration for automatic logging (For details see configuration options!)
 
 ## Installation notes:
 
@@ -40,13 +40,20 @@ The following variables can be changed in the configPlugin.json:
 	
     FilteredLog: true, 		// Set to "true" or "false" for filtered data logging
     RAWLog: false, 			// Set to "true" or "false" for RAW data logging
-    OnlyFirstLog: false, 		// For only first seen logging, set each station found to “true” or "false". 
+    OnlyFirstLog: false, 		// For only first seen logging, set each station found to “true” or "false"
     UTCtime: true, 			// Set to "true" for logging with UTC Time
-    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: "1234"
     EnableBlacklist: false,		// Enable Blacklist, set it "true" or "false" 
     EnableWhitelist: false,		// Enable Whitelist, set it "true" or "false" 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
 	scanBandwith: 0          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+
+	  /// FMLIST LOGGING OPTIONS ////
+ 
+    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: "1234"
+    FMLIST_Autolog: 'off',	// Setting the FMLIST autolog function. Set it to “off” to deactivate the function, “on” to log everything and “auto” if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
+    FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
+    "FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
 
 ## Important notes: 
 
@@ -67,6 +74,10 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.7b (only works from web server version 1.2.8.1 !!!)
+
+- Bugfixing
 
 ### v2.7a (only works from web server version 1.2.8.1 !!!)
 
