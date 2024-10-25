@@ -1,19 +1,20 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.7b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8)       ///
 ///                                                         ///
-///  by Highpoint               last update: 10.10.24       ///
+///  by Highpoint               last update: 25.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-///  This plugin only works from web server version 1.2.8.1!!!
+///  This plugin only works from web server version 1.3.1!!!
 
+const https = require('https');
 const path = require('path');
 const fs = require('fs');
-const { logInfo, logError } = require('./../../server/console');
+const { logInfo, logError, logWarn } = require('./../../server/console');
 
 // Define the paths to the old and new configuration files
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
@@ -32,11 +33,15 @@ const defaultConfig = {
     RAWLog: false,
     OnlyFirstLog: false,
     UTCtime: true,
-    FMLIST_OM_ID: '',
 	EnableBlacklist: false,
 	EnableWhitelist: false,
 	scanIntervalTime: 500,
-	scanBandwith: 0
+	scanBandwith: 0,
+	FMLIST_OM_ID: '',
+	FMLIST_Autolog: 'off',
+	FMLIST_MinDistance: 200,
+	FMLIST_MaxDistance: 2000,
+	FMLIST_LogInterval: 60
 };
 
 // Function to merge default config with existing config and remove undefined values
@@ -123,11 +128,15 @@ const FilteredLog = configPlugin.FilteredLog;
 const RAWLog = configPlugin.RAWLog;
 const OnlyFirstLog = configPlugin.OnlyFirstLog;
 const UTCtime = configPlugin.UTCtime;
-const FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
+  let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
 const EnableBlacklist = configPlugin.EnableBlacklist;
 const EnableWhitelist = configPlugin.EnableWhitelist;
 const scanIntervalTime = configPlugin.scanIntervalTime;
 const scanBandwith = configPlugin.scanBandwith;
+const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
+  let FMLIST_MinDistance = configPlugin.FMLIST_MinDistance;
+  let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
+  let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 
 // Path to the target JavaScript file
 const ScannerClientFile = path.join(__dirname, 'scanner.js');
@@ -203,7 +212,7 @@ if (!fs.existsSync(logDir)) {
 }
 
 let textSocket;
-let extraSocket;
+let DataPluginsSocket;
 let autoScanSocket;
 let blacklist = [];
 let whitelist = [];
@@ -222,10 +231,11 @@ let autoScanScheduled = false;
 let Sensitivity = defaultSensitivityValue;
 let ScannerMode = defaultScannerMode;
 let ScanHoldTime = defaultScanHoldTime;
+let StatusFMLIST = FMLIST_Autolog;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, af;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
@@ -250,8 +260,13 @@ if (StartAutoScan !== 'auto') {
    Scan = 'off';
 }
 
+if (!FMLIST_OM_ID) {
+	FMLIST_OM_ID = config.extras.fmlistOmid;
+}
+
+
 // Create a status message object
-function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, ScanHoldTime) {
+function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST, InfoFMLIST) {
     return {
         type: 'Scanner',
         value: {
@@ -262,7 +277,9 @@ function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, S
             Search: Search,	 
             Sensitivity: Sensitivity,
             ScannerMode: ScannerMode,
-            ScanHoldTime: ScanHoldTime
+			ScanHoldTime: ScanHoldTime,
+            StatusFMLIST: StatusFMLIST,
+			InfoFMLIST: InfoFMLIST
         },
         source: source,
         target: target
@@ -356,25 +373,25 @@ function startSearch(direction) {
     setTimeout(() => startScan(direction), 150);
     }
 
-async function ExtraWebSocket() {
-    if (!extraSocket || extraSocket.readyState === WebSocket.CLOSED) {
+async function DataPluginsWebSocket() {
+    if (!DataPluginsSocket || DataPluginsSocket.readyState === WebSocket.CLOSED) {
         try {
-            extraSocket = new WebSocket(externalWsUrl + '/data_plugins');
+            DataPluginsSocket = new WebSocket(externalWsUrl + '/data_plugins');
 
-            extraSocket.onopen = () => {
+            DataPluginsSocket.onopen = () => {
                 logInfo(`Scanner connected to ${externalWsUrl + '/data_plugins'}`);
             };
 
-            extraSocket.onerror = (error) => {
+            DataPluginsSocket.onerror = (error) => {
                 logError("WebSocket error:", error);
             };
 
-            extraSocket.onclose = () => {
+            DataPluginsSocket.onclose = () => {
                 logInfo("Scanner WebSocket closed.");
-                setTimeout(ExtraWebSocket, 1000); // Increased delay for reconnection
+                setTimeout(DataPluginsWebSocket, 1000); // Increased delay for reconnection
             };
 			
-            extraSocket.onmessage = (event) => {
+            DataPluginsSocket.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
                     // console.log("Received message:", message);
@@ -392,11 +409,12 @@ async function ExtraWebSocket() {
                                     '',
                                     Sensitivity,
                                     ScannerMode,
-                                    ScanHoldTime
+                                    ScanHoldTime,
+									FMLIST_Autolog
                                 );
 
                                 // Send the response message
-                                extraSocket.send(JSON.stringify(responseMessage));
+                                DataPluginsSocket.send(JSON.stringify(responseMessage));
                                 // logInfo(`Sent response message: ${JSON.stringify(responseMessage)}`);
                                 break;
 
@@ -429,10 +447,11 @@ async function ExtraWebSocket() {
 											'',
 											Sensitivity,
 											ScannerMode,
-											ScanHoldTime
+											ScanHoldTime,
+											FMLIST_Autolog
 										);
 								
-										extraSocket.send(JSON.stringify(responseMessage));
+										DataPluginsSocket.send(JSON.stringify(responseMessage));
 									}
 								}
 								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
@@ -450,10 +469,11 @@ async function ExtraWebSocket() {
 											'',
 											Sensitivity,
 											ScannerMode,
-											ScanHoldTime
+											ScanHoldTime,
+											FMLIST_Autolog
 										);
 								
-										extraSocket.send(JSON.stringify(responseMessage));
+										DataPluginsSocket.send(JSON.stringify(responseMessage));
 									}
 								}
                                 if (message.value.ScanHoldTime !== undefined && message.value.ScanHoldTime !== '') {
@@ -492,12 +512,13 @@ async function ExtraWebSocket() {
                                     Sensitivity,
                                     ScannerMode,
                                     ScanHoldTime,
+									FMLIST_Autolog
                                 );
 								
                                 if (message.value.Scan === 'on' && Scan === 'off') {
 					
 									Scan = message.value.Scan;
-									extraSocket.send(JSON.stringify(responseMessage));
+									DataPluginsSocket.send(JSON.stringify(responseMessage));
 									
 									if (ScanPE5PVB) {
 										logInfo(`Scanner (PE5PVB mode) starts auto-scan [IP: ${message.source}]`);
@@ -513,7 +534,7 @@ async function ExtraWebSocket() {
                                 if (message.value.Scan === 'off' && Scan === 'on') {
 
 									Scan = message.value.Scan;
-									extraSocket.send(JSON.stringify(responseMessage));
+									DataPluginsSocket.send(JSON.stringify(responseMessage));
 									
 									if (ScanPE5PVB) {
 										logInfo(`Scanner (PE5PVB mode) stops auto-scan [${message.source}]`);
@@ -538,7 +559,7 @@ async function ExtraWebSocket() {
 
         } catch (error) {
             logError("Failed to set up WebSocket:", error);
-            setTimeout(ExtraWebSocket, 1000); // Increased delay for reconnection
+            setTimeout(DataPluginsWebSocket, 1000); // Increased delay for reconnection
         }
     }
 }
@@ -547,7 +568,7 @@ function InitialMessage() {
     const ws = new WebSocket(externalWsUrl + '/data_plugins');
     ws.on('open', () => {
         // logInfo(`Scanner connected to ${ws.url}`);	
-        ws.send(JSON.stringify(createMessage('broadcast', '255.255.255.255', 'off', 'off', defaultSensitivityValue, defaultScannerMode, defaultScanHoldTime))); // Send initial status
+        ws.send(JSON.stringify(createMessage('broadcast', '255.255.255.255', 'off', 'off', defaultSensitivityValue, defaultScannerMode, defaultScanHoldTime, FMLIST_Autolog))); // Send initial status
     });
 }
 
@@ -584,6 +605,13 @@ function sendCommand(socket, command) {
     socket.send(command);
 }
 
+function StatusInfoFMLIST() {
+	if (FMLIST_Autolog === 'on') {
+		logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
+	} else if (FMLIST_Autolog === 'auto') {
+		logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
+	}
+}
 
 let counter = 0; // Declare the counter variable
 
@@ -609,11 +637,12 @@ function checkUserCount(users) {
                             '',
                             Sensitivity,
                             ScannerMode,
-                            ScanHoldTime
+                            ScanHoldTime,
+							FMLIST_Autolog
                         );
 
                         if (users === 0) {
-                            extraSocket.send(JSON.stringify(Message));
+                            DataPluginsSocket.send(JSON.stringify(Message));
 
                             // Log and handle the scan based on the mode
                             if (ScanPE5PVB) {
@@ -653,9 +682,10 @@ function checkUserCount(users) {
                 '',
                 Sensitivity,
                 ScannerMode,
-                ScanHoldTime
+                ScanHoldTime,
+				FMLIST_Autolog
             );
-            extraSocket.send(JSON.stringify(Message));
+            DataPluginsSocket.send(JSON.stringify(Message));
 
             // Log and handle the scan stop based on the mode
             if (ScanPE5PVB) {
@@ -744,7 +774,7 @@ async function fetchstationid(freq, picode, city) {
 
 async function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
-	
+
     // Now you don't need to use setTimeout, unless you need an explicit delay
     picode = messageData.pi;
     ps = messageData.ps;
@@ -755,6 +785,9 @@ async function handleSocketMessage(messageData) {
     users = messageData.users;
     stereo_forced = messageData.stForced;
     ant = messageData.ant;
+	ta = messageData.ta;
+	tp = messageData.tp;
+	af = messageData.af;
     station = messageData.txInfo.tx;
     pol = messageData.txInfo.pol;
     erp = messageData.txInfo.erp;
@@ -1123,6 +1156,11 @@ function checkWhitelist() {
 										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
+											
+											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
+												writeLogFMLIST(); 
+											}
+												
 										}
 										
 										isScanning = false; 									
@@ -1139,6 +1177,9 @@ function checkWhitelist() {
 								if (FilteredLog && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
 									writeHTMLLogEntry(true); // filtered log
+									if (FMLIST_Autolog === 'on') {
+										writeLogFMLIST(); 
+									}
 									Savefreq = freq;
 								}
 							}
@@ -1188,6 +1229,11 @@ function checkWhitelist() {
 								if (FilteredLog && ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
 											writeHTMLLogEntry(true); // filtered log
+											
+											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
+												writeLogFMLIST(); 
+											}
+											
 											Savefreq = freq;	
 								}
 
@@ -1198,6 +1244,11 @@ function checkWhitelist() {
 								if (FilteredLog && ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
 									writeHTMLLogEntry(true); // filtered log
+									
+									if (FMLIST_Autolog === 'on') {
+												writeLogFMLIST(); 
+										}
+									
 									Savefreq = freq;
 								}
 							}								              
@@ -1475,12 +1526,158 @@ function getCurrentUTC() {
     return { utcDate, utcTime };
 }
 
+const logHistory = {};
+
+// Funktion, um zu überprüfen, ob die ID in den letzten 60 Minuten protokolliert wurde
+function canLog(stationid) {
+    const now = Date.now();
+	if (FMLIST_LogInterval < 60 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
+		FMLIST_LogInterval = 60
+	}
+    const sixtyMinutes = 60 * FMLIST_LogInterval * 1000; // 60 Minuten in Millisekunden
+    if (logHistory[stationid] && (now - logHistory[stationid]) < sixtyMinutes) {
+        return false; // Protokollierung verweigern, wenn weniger als 60 Minuten vergangen sind
+    }
+    logHistory[stationid] = now; // Aktualisiere mit dem aktuellen Zeitstempel
+    return true;
+}
+
+function writeLogFMLIST() {
+	
+	if (FMLIST_MinDistance < 150 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
+		FMLIST_MinDistance = 150
+	}
+	
+	if (FMLIST_MaxDistance < 150 || FMLIST_MaxDistance === '' || FMLIST_MaxDistance === undefined) {
+		FMLIST_MaxDistance = 2000
+	}
+	
+	// Check if distance is within the specified minimum and maximum limits
+	if (distance < FMLIST_MinDistance || distance > FMLIST_MaxDistance) {
+		return; // Exit the function if the distance is out of range
+	}
+	
+	// Ensure that a station ID is provided
+	if (!stationid) {
+        return; // Exit if station ID is missing
+    }
+    
+	const FMLISTlog = `Scanner FMLIST Log ${station}[${itu}] from ${city}[${distance} km] on ${freq} MHz`
+	
+	// Check if logging can proceed for the given station ID
+    if (!canLog(stationid)) {
+		logInfo(`${FMLISTlog} was already logged recently`);
+		// Create and send a broadcast message
+		const Message = createMessage(
+			'broadcast', // Message type
+			'255.255.255.255', // Broadcast IP address
+			'', // Placeholder for additional fields
+			'',
+			'',
+			'',
+			'',
+			FMLIST_Autolog, // Auto-log flag
+			`FMLIST Log failed! ID${stationid} was already logged recently.` // Message content
+			);
+		DataPluginsSocket.send(JSON.stringify(Message)); // Send the broadcast message
+		return; // Exit if the station was logged recently
+	}
+			
+	// Safely handle the signal strength value
+    let signalValue = strength; // Retrieve the signal strength
+
+    // Check if signalValue is not a number, and attempt to convert it
+    if (typeof signalValue !== 'number') {
+        signalValue = parseFloat(signalValue); // Convert to float if it's not a number
+    }
+
+    // If signalValue is still not a number, handle the error
+    if (isNaN(signalValue)) {
+        console.log('Signal value is not a valid number:', dataHandler.sig); // Log an error message
+        return; // Exit the function if the value is invalid
+    }
+	
+	// Prepare the data to be sent in the POST request
+    const postData = JSON.stringify({
+        station: {
+            freq: freq, // Frequency of the station
+            pi: picode, // PI code of the station
+            id: stationid, // ID of the station
+            rds_ps: ps.replace(/'/g, "\\'"), // Escape single quotes in the station name
+            signal: signalValue, // Use the validated signal value
+            tp: tp, // Transport type
+            ta: ta, // Traffic announcement
+            af_list: af, // Alternate frequency list
+        },
+			
+        server: {
+            uuid: config.identification.token, // Unique identifier for the server
+            latitude: config.identification.lat, // Latitude of the server
+            longitude: config.identification.lon, // Longitude of the server
+            address: config.identification.proxyIp.length > 1 ? config.identification.proxyIp : ('Matches request IP with port ' + config.webserver.port), // Proxy IP or request IP with port
+            webserver_name: config.identification.tunerName.replace(/'/g, "\\'"), // Escape single quotes in the web server name
+            omid: FMLIST_OM_ID, // OM ID for FMLIST
+        },
+        log_msg: `Logged PS: ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf`, // Log message including station name, PI, and signal strength
+    });
+
+    // Define the options for the HTTPS request
+    const options = {
+        hostname: 'api.fmlist.org', // API hostname
+        path: '/fmdx.org/slog.php', // API path
+        method: 'POST', // HTTP method
+        headers: {
+            'Content-Type': 'application/json', // Content type of the request
+            'Content-Length': Buffer.byteLength(postData) // Use Buffer.byteLength for accurate content length
+        }
+    };
+
+    // Create the HTTPS request
+    const request = https.request(options, (response) => {
+        let data = '';
+
+        // Collect response data chunks
+        response.on('data', (chunk) => {
+            data += chunk; // Append each chunk to the data variable
+        });
+
+        // Handle the end of the response
+        response.on('end', () => {
+			if (data.includes('OK!')) { // Check if the response contains 'OK!'
+				logInfo(`${FMLISTlog} successful`);
+				// Create and send a broadcast message
+				const Message = createMessage(
+					'broadcast', // Message type
+					'255.255.255.255', // Broadcast IP address
+					'', // Placeholder for additional fields
+					'',
+					'',
+					'',
+					'',
+					FMLIST_Autolog, // Auto-log flag
+					`FMLIST Log successful.` // Message content
+				);
+				DataPluginsSocket.send(JSON.stringify(Message)); // Send the broadcast message
+			}
+        });
+    });
+
+    // Handle errors in the request
+    request.on('error', (error) => {
+        logError('Scanner Log to FMLIST:', error); // Log the error
+    });
+
+    // Write the postData to the request and end it properly
+    request.write(postData);
+    request.end();
+}
+
 InitialMessage();
-ExtraWebSocket();
+DataPluginsWebSocket();
 TextWebSocket();
 checkBlacklist();
 checkWhitelist();
-
+StatusInfoFMLIST();
 setTimeout(() => {
     initializeAntennas(Antennas);
     sendNextAntennaCommand();
