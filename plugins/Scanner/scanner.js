@@ -161,14 +161,16 @@
 					ScanPE5PVBstatus = ScanPE5PVB;
 				}	
 				
-				const element = document.getElementById('log-fmlist');
-				if (element) {
-					if (StatusFMLIST === 'on') {
-						element.style.display = 'none';
-					} else if (StatusFMLIST === 'off') {
-						element.style.display = 'block';
+				setTimeout(() => {
+					const element = document.getElementById('log-fmlist');
+					if (element) {
+						if (StatusFMLIST === 'on') {
+							element.style.display = 'none';
+						} else if (StatusFMLIST === 'off') {
+							element.style.display = 'block';
+						}
 					}
-				}
+				}, 50);
 
                 if (status === 'response' && eventData.target === clientIp) {
                     if (!scannerButtonsExecuted) {
