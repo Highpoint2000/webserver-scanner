@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8)       ///
 ///                                                         ///
-///  by Highpoint               last update: 25.10.24       ///
+///  by Highpoint               last update: 28.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1618,7 +1618,7 @@ function writeLogFMLIST() {
             webserver_name: config.identification.tunerName.replace(/'/g, "\\'"), // Escape single quotes in the web server name
             omid: FMLIST_OM_ID, // OM ID for FMLIST
         },
-        log_msg: `Logged PS: ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf`, // Log message including station name, PI, and signal strength
+        log_msg: `Autologged PS: ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf`, // Log message including station name, PI, and signal strength
     });
 
     // Define the options for the HTTPS request
