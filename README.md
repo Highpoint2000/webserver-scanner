@@ -68,7 +68,7 @@ The following variables can be changed in the configPlugin.json:
 - In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
 - In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it
 - Since all FMLIST log entries are created automatically, with FMLIST Autolog  mode "on" the manual log button is hidden on the web interface, in the Autolog mode “auto”, the manual log button is only hidden on the web interface during the autoscan process
-- If there are several web servers, it makes sense to use a central server to register the logs that have already been sent. The [CanLogServer](https://github.com/Highpoint2000/canlog-server) can provide this functionality.
+- If there are several web servers, it makes sense to use a central server to register the logs that have already been sent. The [CanLogServer](https://github.com/Highpoint2000/canlog-server) can provide this functionality. When the server is used, the log interval set in the scanner.json is inactive because the log interval set for the server takes precedence!
 
 After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
