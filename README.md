@@ -8,7 +8,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## v2.8a (only works from web server version 1.3.1 !!!)
 
-- FMLIST integration for automatic logging (For details see configuration options and important notes!)
+- Option to use the CanLogServer (see important notes!)
 
 ## Installation notes:
 
