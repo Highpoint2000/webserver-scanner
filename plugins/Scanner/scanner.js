@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.8)       ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.8a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 28.10.24       ///
+///  by Highpoint               last update: 30.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -169,7 +169,7 @@
 						} else if (StatusFMLIST === 'off') {
 							element.style.display = 'block';
 						}
-					}
+				}
 				}, 50);
 
                 if (status === 'response' && eventData.target === clientIp) {
