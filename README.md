@@ -54,7 +54,7 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
-    FMLIST_CanLogServer: ''	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
+    FMLIST_CanLogServer: ''		// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 
 ## Important notes: 
 
