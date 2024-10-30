@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 28.10.24       ///
+///  by Highpoint               last update: 30.10.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -41,7 +41,8 @@ const defaultConfig = {
 	FMLIST_Autolog: 'off',
 	FMLIST_MinDistance: 200,
 	FMLIST_MaxDistance: 2000,
-	FMLIST_LogInterval: 60
+	FMLIST_LogInterval: 60,
+	FMLIST_CanLogServer: ''
 };
 
 // Function to merge default config with existing config and remove undefined values
@@ -137,6 +138,7 @@ const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_MinDistance = configPlugin.FMLIST_MinDistance;
   let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
+const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
 
 // Path to the target JavaScript file
 const ScannerClientFile = path.join(__dirname, 'scanner.js');
@@ -607,9 +609,17 @@ function sendCommand(socket, command) {
 
 function StatusInfoFMLIST() {
 	if (FMLIST_Autolog === 'on') {
-		logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
+		if (FMLIST_CanLogServer) {
+			logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km by CanLogServer ${FMLIST_CanLogServer}`);
+		} else {
+			logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
+		}
 	} else if (FMLIST_Autolog === 'auto') {
-		logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
+		if (FMLIST_CanLogServer) {
+			logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km by CanLogServer ${FMLIST_CanLogServer}`);
+		} else {
+			logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
+		}
 	}
 }
 
@@ -1526,64 +1536,131 @@ function getCurrentUTC() {
     return { utcDate, utcTime };
 }
 
+// Server function to check if the ID has been logged recently
+async function CanLogServer(stationid) {
+    try {
+        // Send a POST request to the Express server
+        const response = await fetch(`http://${FMLIST_CanLogServer}/log/${stationid}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        // Check the HTTP status code
+        if (response.ok) {
+            return true; // Exit if the station was logged recently
+        } else {
+            // If the response is not OK, log the error message
+			const FMLISTlog = `FMLIST Log ${station}[${itu}] from ${city}[${distance} km] on ${freq} MHz`;
+            logInfo(`${FMLISTlog} was already recently logged on CanLogServer`);
+
+            // Create and send a broadcast message
+            const message = createMessage(
+                'broadcast', // Message type
+                '255.255.255.255', // Broadcast IP address
+                '', // Placeholder for additional fields
+                '',
+                '',
+                '',
+                '',
+                FMLIST_Autolog, // Auto-log flag
+                `FMLIST Log failed! ID ${stationid} was already recently logged on CanLogServer.` // Message content
+            );
+
+            DataPluginsSocket.send(JSON.stringify(message)); // Send the broadcast message
+            return false; // Exit if the station was logged recently
+        }
+    } catch (error) {
+        // If the server is unreachable, this block will be executed
+        logError(`Scanner error: CanLogServer ${FMLIST_CanLogServer} is unreachable`);
+
+        // Create and send a broadcast message
+        const message = createMessage(
+            'broadcast', // Message type
+            '255.255.255.255', // Broadcast IP address
+            '', // Placeholder for additional fields
+            '',
+            '',
+            '',
+            '',
+            FMLIST_Autolog, // Auto-log flag
+            `FMLIST Log failed! CanLogServer ${FMLIST_CanLogServer} is unreachable` // Message content
+        );
+
+        DataPluginsSocket.send(JSON.stringify(message)); // Send the broadcast message
+        return false; // Station was not logged
+    }
+}
+
+// Function to check if the ID has been logged within the specified minutes
 const logHistory = {};
 
-// Funktion, um zu überprüfen, ob die ID in den letzten 60 Minuten protokolliert wurde
 function canLog(stationid) {
     const now = Date.now();
-	if (FMLIST_LogInterval < 60 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
-		FMLIST_LogInterval = 60
-	}
-    const sixtyMinutes = 60 * FMLIST_LogInterval * 1000; // 60 Minuten in Millisekunden
-    if (logHistory[stationid] && (now - logHistory[stationid]) < sixtyMinutes) {
-        return false; // Protokollierung verweigern, wenn weniger als 60 Minuten vergangen sind
+    if (FMLIST_LogInterval < 60 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
+        FMLIST_LogInterval = 60;
     }
-    logHistory[stationid] = now; // Aktualisiere mit dem aktuellen Zeitstempel
+    const logMinutes = 60 * FMLIST_LogInterval * 1000; // 60 minutes in milliseconds
+    if (logHistory[stationid] && (now - logHistory[stationid]) < logMinutes) {
+		
+        const FMLISTlog = `FMLIST Log ${station}[${itu}] from ${city}[${distance} km] on ${freq} MHz`;
+        logInfo(`${FMLISTlog} was already logged recently`);
+        // Create and send a broadcast message
+        const message = createMessage(
+            'broadcast', // Message type
+            '255.255.255.255', // Broadcast IP address
+            '', // Placeholder for additional fields
+            '',
+            '',
+            '',
+            '',
+            FMLIST_Autolog, // Auto-log flag
+            `FMLIST Log failed! ID ${stationid} was already logged recently.` // Message content
+        );
+        DataPluginsSocket.send(JSON.stringify(message)); // Send the broadcast message
+        
+        return false; // Logging denied if less than 60 minutes have passed
+    }
+    logHistory[stationid] = now; // Update with the current timestamp
     return true;
 }
 
-function writeLogFMLIST() {
-	
-	if (FMLIST_MinDistance < 150 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
-		FMLIST_MinDistance = 150
-	}
-	
-	if (FMLIST_MaxDistance < 150 || FMLIST_MaxDistance === '' || FMLIST_MaxDistance === undefined) {
-		FMLIST_MaxDistance = 2000
-	}
-	
-	// Check if distance is within the specified minimum and maximum limits
-	if (distance < FMLIST_MinDistance || distance > FMLIST_MaxDistance) {
-		return; // Exit the function if the distance is out of range
-	}
-	
-	// Ensure that a station ID is provided
-	if (!stationid) {
-        return; // Exit if station ID is missing
+// Function to log to FMLIST
+async function writeLogFMLIST() {
+    
+    if (FMLIST_MinDistance < 150 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
+        FMLIST_MinDistance = 150;
     }
     
-	const FMLISTlog = `Scanner FMLIST Log ${station}[${itu}] from ${city}[${distance} km] on ${freq} MHz`
-	
-	// Check if logging can proceed for the given station ID
-    if (!canLog(stationid)) {
-		logInfo(`${FMLISTlog} was already logged recently`);
-		// Create and send a broadcast message
-		const Message = createMessage(
-			'broadcast', // Message type
-			'255.255.255.255', // Broadcast IP address
-			'', // Placeholder for additional fields
-			'',
-			'',
-			'',
-			'',
-			FMLIST_Autolog, // Auto-log flag
-			`FMLIST Log failed! ID${stationid} was already logged recently.` // Message content
-			);
-		DataPluginsSocket.send(JSON.stringify(Message)); // Send the broadcast message
-		return; // Exit if the station was logged recently
-	}
-			
-	// Safely handle the signal strength value
+    if (FMLIST_MaxDistance < 150 || FMLIST_MaxDistance === '' || FMLIST_MaxDistance === undefined) {
+        FMLIST_MaxDistance = 2000;
+    }
+    
+    // Check if the distance is within the specified minimum and maximum limits
+    if (distance < FMLIST_MinDistance || distance > FMLIST_MaxDistance) {
+        return; // Exit the function if the distance is out of range
+    }
+    
+    // Ensure that a station ID is provided
+    if (!stationid) {
+        return; // Exit if station ID is missing
+    }
+       
+    // Check if logging for the specified station ID can continue from CanLog Server
+    if (FMLIST_CanLogServer) {
+        const canLogResult = await CanLogServer(stationid); // Wait for the result from CanLogServer
+        if (!canLogResult) {
+            return; // Exit function if the station was logged recently
+        }
+    } else {
+        // Check if logging for the specified station ID can continue
+        if (!canLog(stationid)) {
+            return; // Exit function if the station was logged recently
+        }
+    }
+            
+    // Safely handle the signal strength value
     let signalValue = strength; // Retrieve the signal strength
 
     // Check if signalValue is not a number, and attempt to convert it
@@ -1596,8 +1673,8 @@ function writeLogFMLIST() {
         console.log('Signal value is not a valid number:', dataHandler.sig); // Log an error message
         return; // Exit the function if the value is invalid
     }
-	
-	// Prepare the data to be sent in the POST request
+    
+    // Prepare the data to be sent in the POST request
     const postData = JSON.stringify({
         station: {
             freq: freq, // Frequency of the station
@@ -1609,7 +1686,7 @@ function writeLogFMLIST() {
             ta: ta, // Traffic announcement
             af_list: af, // Alternate frequency list
         },
-			
+            
         server: {
             uuid: config.identification.token, // Unique identifier for the server
             latitude: config.identification.lat, // Latitude of the server
@@ -1643,22 +1720,24 @@ function writeLogFMLIST() {
 
         // Handle the end of the response
         response.on('end', () => {
-			if (data.includes('OK!')) { // Check if the response contains 'OK!'
-				logInfo(`${FMLISTlog} successful`);
-				// Create and send a broadcast message
-				const Message = createMessage(
-					'broadcast', // Message type
-					'255.255.255.255', // Broadcast IP address
-					'', // Placeholder for additional fields
-					'',
-					'',
-					'',
-					'',
-					FMLIST_Autolog, // Auto-log flag
-					`FMLIST Log successful.` // Message content
-				);
-				DataPluginsSocket.send(JSON.stringify(Message)); // Send the broadcast message
-			}
+            if (data.includes('OK!')) { // Check if the response contains 'OK!'
+			
+				const FMLISTlog = `FMLIST Log ${station}[${itu}] from ${city}[${distance} km] on ${freq} MHz`;
+                logInfo(`${FMLISTlog} successful`);
+                // Create and send a broadcast message
+                const message = createMessage(
+                    'broadcast', // Message type
+                    '255.255.255.255', // Broadcast IP address
+                    '', // Placeholder for additional fields
+                    '',
+                    '',
+                    '',
+                    '',
+                    FMLIST_Autolog, // Auto-log flag
+                    `FMLIST Log successful.` // Message content
+                );
+                DataPluginsSocket.send(JSON.stringify(message)); // Send the broadcast message
+            }
         });
     });
 
@@ -1671,6 +1750,7 @@ function writeLogFMLIST() {
     request.write(postData);
     request.end();
 }
+
 
 InitialMessage();
 DataPluginsWebSocket();
