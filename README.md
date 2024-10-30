@@ -27,34 +27,34 @@ This plugin provides scanning functions for the FM-DX web server.
 
 The following variables can be changed in the configPlugin.json:
 
-    Autoscan_PE5PVB_Mode: false,	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
+    Autoscan_PE5PVB_Mode: false,	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
     Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
-    StartAutoScan: 'off', 		// Set to "off/on/auto" (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
-    AntennaSwitch: 'off', 		// Set to "off/on" for automatic switching with more than 1 antenna at the upper band limit
+    StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
+    AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit
 	
     defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / Only valid for Autoscan_PE5PVB_Mode = false  
-    defaultScannerMode: 'normal', 	//Set the startmode: "normal", "blacklist", or "whitelist" / Only valid for PE5PVB_Mode = false  
+    defaultScannerMode: 'normal', 	//Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false  
 	
 	  /// LOGGER OPTIONS ////
 	
-    FilteredLog: true, 		// Set to "true" or "false" for filtered data logging
-    RAWLog: false, 			// Set to "true" or "false" for RAW data logging
-    OnlyFirstLog: false, 		// For only first seen logging, set each station found to “true” or "false"
-    UTCtime: true, 			// Set to "true" for logging with UTC Time
-    EnableBlacklist: false,		// Enable Blacklist, set it "true" or "false" 
-    EnableWhitelist: false,		// Enable Whitelist, set it "true" or "false" 
+    FilteredLog: true, 		// Set to 'true' or 'false' for filtered data logging
+    RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging
+    OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false'
+    UTCtime: true, 			// Set to 'true' for logging with UTC Time
+    EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
+    EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
 	scanBandwith: 0          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
 	  /// FMLIST LOGGING OPTIONS ////
  
-    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: "1234" - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-    FMLIST_Autolog: 'off',		// Setting the FMLIST autolog function. Set it to “off” to deactivate the function, “on” to log everything and “auto” if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
+    FMLIST_Autolog: 'off',		// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
-    FMLIST_CanLogServer: ''	// Activates a central server to manage log repetitions (e.g. "127.0.0.1:2000", default is "")
+    FMLIST_CanLogServer: ''	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 
 ## Important notes: 
 
@@ -68,6 +68,7 @@ The following variables can be changed in the configPlugin.json:
 - In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
 - In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it
 - Since all FMLIST log entries are created automatically, with FMLIST Autolog  mode "on" the manual log button is hidden on the web interface, in the Autolog mode “auto”, the manual log button is only hidden on the web interface during the autoscan process
+- If there are several web servers, it makes sense to use a central server to register the logs that have already been sent.
 
 After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
