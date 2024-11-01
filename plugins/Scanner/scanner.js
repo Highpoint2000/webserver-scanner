@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.8a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V2.8b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 30.10.24       ///
+///  by Highpoint               last update: 01.11.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 (() => {
 
-    const pluginVersion = 'V2.8';
+    const pluginVersion = 'V2.8b';
 	const EnableBlacklist = true; // This value is automatically updated via the config file
 	const EnableWhitelist = false; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
