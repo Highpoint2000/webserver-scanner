@@ -58,7 +58,8 @@ The following variables can be changed in the configPlugin.json:
 
 ## Important notes: 
 
-- Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!! 
+- Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!!
+- By briefly pressing the Auto Scan button you start/stop the automatic scanning process. Pressing the button longer opens or closes the scanner's setting options
 - The automatic antenna switching only works if more than 1 antenna is configured in the web server !!!
 - Add a white- or blacklist function: file ../plugins/Scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan and search function. However, the prerequisite is the installation of the latest PE5PVB firmware version. 
