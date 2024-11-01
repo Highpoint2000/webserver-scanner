@@ -6,9 +6,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.8a (only works from web server version 1.3.1 !!!)
+## v2.8b (only works from web server version 1.3.1 !!!)
 
-- Option to use the CanLogServer (see important notes!)
+- Automatic jump back of the background scanner to the initial frequency if no frequency is configured when loading the web server
 
 ## Installation notes:
 
@@ -78,6 +78,10 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.8a (only works from web server version 1.3.1 !!!)
+
+- Option to use the CanLogServer (see important notes!)
 
 ### v2.8 (only works from web server version 1.3.1 !!!)
 
