@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 30.10.24       ///
+///  by Highpoint               last update: 01.11.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -237,7 +237,7 @@ let StatusFMLIST = FMLIST_Autolog;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, af;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, af, saveAutoscanFrequency;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
@@ -653,7 +653,7 @@ function checkUserCount(users) {
 
                         if (users === 0) {
                             DataPluginsSocket.send(JSON.stringify(Message));
-
+							saveAutoscanFrequency = currentFrequency;
                             // Log and handle the scan based on the mode
                             if (ScanPE5PVB) {
                                 logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
@@ -705,10 +705,12 @@ function checkUserCount(users) {
                 logInfo(`Scanner stopped automatically auto-scan [User: ${users}]`);
                 stopAutoScan();
             }
-            
+			           
             if (DefaultFreq !== '' && enableDefaultFreq) {
                 sendDataToClient(DefaultFreq);
-            }
+            } else {
+				sendDataToClient(saveAutoscanFrequency);
+			}
         }
     }
 }
@@ -944,6 +946,7 @@ function AutoScan() {
 
 function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
+	
 	if (scanBandwithSave === '0' || scanBandwithSave === 0) {
 		if (scanBandwith !== '0' && scanBandwith !== 0) {
 			logInfo('Scanner set bandwith from:', scanBandwith, 'kHz back to: auto mode');
@@ -959,6 +962,7 @@ function stopAutoScan() {
 
 function startScan(direction) {
 	clearInterval(scanInterval); // Stops the scan interval
+	
     if (isScanning) {
         return; // Do not start a new scan if one is already running
     }
