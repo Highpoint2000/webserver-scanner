@@ -9,7 +9,7 @@ This plugin provides scanning functions for the FM-DX web server.
 ## v2.8c (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
 
 - bugfixing
-- Adjustments for CanLogServer (Version 2.0)
+- Adjustments for [CanLogServer](https://github.com/Highpoint2000/canlog-server) (Version 2.0)
 
 ## Installation notes:
 
