@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 01.11.24       ///
+///  by Highpoint               last update: 02.11.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -608,16 +608,13 @@ function sendCommand(socket, command) {
 }
 
 function StatusInfoFMLIST() {
-	if (FMLIST_Autolog === 'on') {
-		if (FMLIST_CanLogServer) {
-			logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km by CanLogServer ${FMLIST_CanLogServer}`);
-		} else {
+	if (FMLIST_CanLogServer) {
+		getLogInterval()
+	} else {
+		if (FMLIST_Autolog === 'on') {
 			logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
 		}
-	} else if (FMLIST_Autolog === 'auto') {
-		if (FMLIST_CanLogServer) {
-			logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km by CanLogServer ${FMLIST_CanLogServer}`);
-		} else {
+		if (FMLIST_Autolog === 'auto') {
 			logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km and ${FMLIST_LogInterval} Min. Interval`);
 		}
 	}
@@ -1172,7 +1169,7 @@ function checkWhitelist() {
 											writeHTMLLogEntry(true); // filtered log
 											
 											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
-												writeLogFMLIST(); 
+												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
 											}
 												
 										}
@@ -1192,7 +1189,7 @@ function checkWhitelist() {
 									writeCSVLogEntry(true); // filtered log
 									writeHTMLLogEntry(true); // filtered log
 									if (FMLIST_Autolog === 'on') {
-										writeLogFMLIST(); 
+										writeLogFMLIST(stationid, station, itu, city, distance, freq); 
 									}
 									Savefreq = freq;
 								}
@@ -1245,7 +1242,7 @@ function checkWhitelist() {
 											writeHTMLLogEntry(true); // filtered log
 											
 											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
-												writeLogFMLIST(); 
+												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
 											}
 											
 											Savefreq = freq;	
@@ -1260,7 +1257,7 @@ function checkWhitelist() {
 									writeHTMLLogEntry(true); // filtered log
 									
 									if (FMLIST_Autolog === 'on') {
-												writeLogFMLIST(); 
+												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
 										}
 									
 									Savefreq = freq;
@@ -1540,11 +1537,46 @@ function getCurrentUTC() {
     return { utcDate, utcTime };
 }
 
+// Function to fetch and evaluate the LogInterval for FMLIST
+async function getLogInterval() {
+    try {
+        // Send a GET request to the server endpoint
+        const response = await fetch(`http://${FMLIST_CanLogServer}/loginterval/fmlist`);
+
+        // Check if the request was successful
+        if (!response.ok) {
+            throw new Error(`HTTP-Error! Status: ${response.status}`);
+        }
+
+        // Parse the JSON object from the server response
+        const data = await response.json();
+
+        // Access and use the LogInterval_FMLIST value
+        const logIntervalFMLIST = data.LogInterval_FMLIST;
+        // LogInfo(`The LogInterval for FMLIST is: ${logIntervalFMLIST} minutes`);
+		FMLIST_LogInterval = logIntervalFMLIST;
+		
+		if (FMLIST_Autolog === 'on') {
+			logInfo(`Scanner activated FMLIST Logging "all mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km`); 
+			logInfo(`Scanner activated CanLogServer ${FMLIST_CanLogServer} with ${FMLIST_LogInterval} Min. Logging interval`);
+		}
+		
+		if (FMLIST_Autolog === 'auto') {
+			logInfo(`Scanner activated FMLIST Logging with "auto mode" with ${FMLIST_MinDistance} km < Distance < ${FMLIST_MaxDistance} km`); 
+			logInfo(`Scanner activated CanLogServer ${FMLIST_CanLogServer} with ${FMLIST_LogInterval} Min. Logging interval`);
+		}
+       
+    } catch (error) {
+        logError('DX-Alert Error fetching the LogInterval:', error);
+    }
+}
+
+
 // Server function to check if the ID has been logged recently
 async function CanLogServer(stationid) {
     try {
         // Send a POST request to the Express server
-        const response = await fetch(`http://${FMLIST_CanLogServer}/log/${stationid}`, {
+        const response = await fetch(`http://${FMLIST_CanLogServer}/fmlist/${stationid}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1600,7 +1632,7 @@ async function CanLogServer(stationid) {
 // Function to check if the ID has been logged within the specified minutes
 const logHistory = {};
 
-function canLog(stationid) {
+function canLog(stationid, station, itu, city, distance, freq) {
     const now = Date.now();
     if (FMLIST_LogInterval < 60 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
         FMLIST_LogInterval = 60;
@@ -1631,7 +1663,7 @@ function canLog(stationid) {
 }
 
 // Function to log to FMLIST
-async function writeLogFMLIST() {
+async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
     
     if (FMLIST_MinDistance < 150 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
         FMLIST_MinDistance = 150;
@@ -1659,11 +1691,11 @@ async function writeLogFMLIST() {
         }
     } else {
         // Check if logging for the specified station ID can continue
-        if (!canLog(stationid)) {
+        if (!canLog(stationid, station, itu, city, distance, freq)) {
             return; // Exit function if the station was logged recently
         }
     }
-            
+          	  
     // Safely handle the signal strength value
     let signalValue = strength; // Retrieve the signal strength
 
