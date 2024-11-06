@@ -6,10 +6,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v2.8c (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
+### v2.8d (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
 
-- bugfixing
-- Adjustments for [CanLogServer](https://github.com/Highpoint2000/canlog-server) (Version 2.0)
+- Starting frequencies above 74 MHz are rounded to 100 kHz during the autoscan
 
 ## Installation notes:
 
@@ -79,6 +78,11 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 ## History: 
+
+### v2.8c (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
+
+- bugfixing
+- Adjustments for [CanLogServer](https://github.com/Highpoint2000/canlog-server) (Version 2.0)
 
 ### v2.8b (only works from web server version 1.3.1 !!!)
 
