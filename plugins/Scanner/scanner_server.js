@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8d)      ///
 ///                                                         ///
-///  by Highpoint               last update: 02.11.24       ///
+///  by Highpoint               last update: 06.11.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -649,8 +649,31 @@ function checkUserCount(users) {
                         );
 
                         if (users === 0) {
+
                             DataPluginsSocket.send(JSON.stringify(Message));
 							saveAutoscanFrequency = currentFrequency;
+							
+							if (currentFrequency > '74.00') {
+
+								// Multiply to isolate the second decimal place
+								const secondDecimalPlace = Math.floor((currentFrequency * 100) % 10);
+
+								// Round based on the second decimal place
+								if (secondDecimalPlace <= 5) {
+									// Round down
+									currentFrequency = Math.floor(currentFrequency * 10) / 10; // Round to one decimal place down
+								} else {
+									// Round up
+									currentFrequency = Math.ceil(currentFrequency * 10) / 10; // Round to one decimal place up
+								}
+
+								// Format to two decimal places
+								currentFrequency = currentFrequency.toFixed(2); 
+
+								sendDataToClient(currentFrequency);
+								
+							}
+							
                             // Log and handle the scan based on the mode
                             if (ScanPE5PVB) {
                                 logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
