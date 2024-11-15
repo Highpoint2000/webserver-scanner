@@ -2,7 +2,8 @@
 
 This plugin provides scanning functions for the FM-DX web server.
 
-![image](https://github.com/user-attachments/assets/45332c7e-1137-40f7-98b5-8ff1d8463d21)
+![image](https://github.com/user-attachments/assets/fc4d92c1-b5eb-4191-921a-c1afc4feb2aa)
+
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
