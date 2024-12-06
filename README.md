@@ -79,7 +79,7 @@ After activating/deactivating the plugin or making changes to the scanner server
 - If the server is locked, the scanner will no longer work
 
 <details>
-  <summary>## History: </summary>
+  <summary>History</summary>
 
 
 
