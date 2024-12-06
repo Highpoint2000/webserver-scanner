@@ -78,7 +78,10 @@ After activating/deactivating the plugin or making changes to the scanner server
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
 - If the server is locked, the scanner will no longer work
 
-## History: 
+<details>
+  <summary>## History: </summary>
+
+
 
 ### v2.8c (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
 
@@ -204,4 +207,6 @@ After activating/deactivating the plugin or making changes to the scanner server
 - Fixed issue with incorrect number of users
 
 ### v1.0
-- Plugin scan function 
+- Plugin scan function
+
+</details>
