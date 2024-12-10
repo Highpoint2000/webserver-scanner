@@ -502,7 +502,7 @@ async function DataPluginsWebSocket() {
 										// logInfo(`Scanner (PE5PVB mode) search up [IP: ${message.source}] `);
 									} else {
 										startSearch('up');
-										logInfo(`Scanner search up [IP: ${message.source}]`);
+										// logInfo(`Scanner search up [IP: ${message.source}]`);
 									}
                                 }
 								
