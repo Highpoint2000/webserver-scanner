@@ -15,7 +15,7 @@
 
 (() => {
 
-    const pluginVersion = '2.8d';
+    const plugin_version = '2.8d';
 	const EnableBlacklist = false; // This value is automatically updated via the config file
 	const EnableWhitelist = false; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
