@@ -12,6 +12,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - XML protocol converted to URDS format for upcoming FMLIST upload
 - Processing of GPS data (connection to COM PORT)
 - Added acoustic signaling during scanning operation
+- Daily update check for admin
 
 ## Installation notes:
 
