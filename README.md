@@ -62,9 +62,9 @@ The following variables can be changed in the configPlugin.json:
 
 	/// FMDX SCANNER OPTIONS ///
 
-    GPS_PORT: '', 	// Connection port for GPS receiver (e.g.: 'COM1')
-    GPS_BAUDRATE: '',	// Baud rate for GPS receiver (e.g.: 4800)
-    BEEP_CONTROL: 	// acoustic control function for scanning operation (true or false)
+    GPS_PORT: '', 			// Connection port for GPS receiver (e.g.: 'COM1')
+    GPS_BAUDRATE: '',		// Baud rate for GPS receiver (e.g.: 4800)
+    BEEP_CONTROL: 			// acoustic control function for scanning operation (true or false)
  
 
 ## Important notes: 
