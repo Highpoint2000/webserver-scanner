@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V2.8d)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA)  ///
 ///                                                         ///
-///  by Highpoint               last update: 10.12.24       ///
+///  by Highpoint               last update: 17.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -42,7 +42,10 @@ const defaultConfig = {
 	FMLIST_MinDistance: 200,
 	FMLIST_MaxDistance: 2000,
 	FMLIST_LogInterval: 60,
-	FMLIST_CanLogServer: ''
+	FMLIST_CanLogServer: '',
+	GPS_PORT: '', 
+	GPS_BAUDRATE: '',
+	BEEP_CONTROL: false
 };
 
 // Function to merge default config with existing config and remove undefined values
@@ -139,6 +142,34 @@ const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
+const GPS_PORT = configPlugin.GPS_PORT;
+const GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
+const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
+
+const { execSync } = require('child_process');
+const NewModules = ['speaker'];
+let Speaker;
+
+function checkAndInstallNewModules() {
+    NewModules.forEach(module => {
+        const modulePath = path.join(__dirname, './../../node_modules', module);
+        if (!fs.existsSync(modulePath)) {
+            console.log(`Module ${module} is missing. Installing...`);
+            try {
+                execSync(`npm install ${module}`, { stdio: 'inherit' });
+                console.log(`Module ${module} installed successfully.`);
+            } catch (error) {
+                logError(`Error installing module ${module}:`, error);
+                process.exit(1);
+            }
+        }
+    });
+}
+
+if (BEEP_CONTROL) {
+  checkAndInstallNewModules();
+  Speaker = require('speaker');
+}
 
 // Path to the target JavaScript file
 const ScannerClientFile = path.join(__dirname, 'scanner.js');
@@ -198,8 +229,8 @@ const DefaultFreq = config.defaultFreq;
 const enableDefaultFreq = config.enableDefaultFreq;
 const Antennas = config.antennas;
 const webserverPort = config.webserver.webserverPort || 8080; // Default to port 8080 if not specified
-const LAT = config.identification.lat; 
-const LON = config.identification.lon; 
+let LAT = config.identification.lat; 
+let LON = config.identification.lon; 
 
 const externalWsUrl = `ws://127.0.0.1:${webserverPort}`;
 const ScanPE5PVB = Autoscan_PE5PVB_Mode;
@@ -237,7 +268,7 @@ let StatusFMLIST = FMLIST_Autolog;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, af, saveAutoscanFrequency;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, af, saveAutoscanFrequency;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
@@ -247,6 +278,10 @@ let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
 let textSocketLost;
 let scanBandwithSave;
+let gpstime;
+let gpsalt;
+let gpsmode = 2; // Default value (no altitude data)
+
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -685,6 +720,10 @@ function checkUserCount(users) {
                                 isScanning = false;
                                 AutoScan();
                             }
+							
+							if (BEEP_CONTROL) {
+								fs.createReadStream('./plugins/Scanner/sounds/beep_long.wav').pipe(new Speaker());
+							}
                                 
                             // Reset the scheduling flag
                             autoScanScheduled = false;
@@ -725,6 +764,10 @@ function checkUserCount(users) {
                 logInfo(`Scanner stopped automatically auto-scan [User: ${users}]`);
                 stopAutoScan();
             }
+			
+			if (BEEP_CONTROL) {
+				fs.createReadStream('./plugins/Scanner/sounds/beep_long_double.wav').pipe(new Speaker());
+			}
 			           
             if (DefaultFreq !== '' && enableDefaultFreq) {
                 sendDataToClient(DefaultFreq);
@@ -812,6 +855,8 @@ async function handleSocketMessage(messageData) {
     ps = messageData.ps;
     freq = messageData.freq;
     strength = messageData.sig;
+	strengthTop = messageData.sigTop;
+	rds = messageData.rds;
     stereo = messageData.st;
 	bandwith = messageData.bw;
     users = messageData.users;
@@ -819,6 +864,7 @@ async function handleSocketMessage(messageData) {
     ant = messageData.ant;
 	ta = messageData.ta;
 	tp = messageData.tp;
+	pty = messageData.pty;
 	af = messageData.af;
     station = messageData.txInfo.tx;
     pol = messageData.txInfo.pol;
@@ -1007,6 +1053,9 @@ function startScan(direction) {
             if (currentFrequency > tuningUpperLimit) {
 				if (Scan === 'on') {
 				   sendNextAntennaCommand();
+				   if (BEEP_CONTROL) {
+					 fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
+				   }
 				}
                 currentFrequency = tuningLowerLimit;
             }
@@ -1033,7 +1082,7 @@ function startScan(direction) {
 							currentFrequency += 0.1;
 						}
                         if (currentFrequency > tuningUpperLimit) {
-                            currentFrequency = tuningLowerLimit;
+                            currentFrequency = tuningLowerLimit;			
                         }
                     } else if (direction === 'down') {
 						if (currentFrequency < '74.00') {
@@ -1287,9 +1336,127 @@ function checkWhitelist() {
 								}
 							}								              
             }
-        }
+        }	
 		
-function getLogFilePathCSV(date, time, isFiltered) {
+/////////////////////////////////////////////  GPS //////////////////////////////////////////////////////////////////
+
+const { SerialPort } = require('serialport');
+const { ReadlineParser } = require('@serialport/parser-readline');
+  
+// Check for GPS Port and Baudrate
+if (GPS_PORT !== "" && GPS_BAUDRATE !== "") {
+  // Set the serial port
+  const port = new SerialPort({ path: GPS_PORT, baudRate: parseInt(GPS_BAUDRATE) });
+  const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+
+  // Function to convert coordinates to decimal degrees
+  function convertToDecimalDegrees(degree, minute) {
+    return degree + (minute / 60);
+  }
+
+  // Function to format time into hh:mm:ss
+  function formatTime(time) {
+    const hours = time.slice(0, 2);
+    const minutes = time.slice(2, 4);
+    const seconds = time.slice(4, 6);
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
+  // Function to format GPS date and time into UTC format
+  function formatDateTime(date, time) {
+    const year = `20${date.slice(4, 6)}`; // Year (e.g., 231205 -> 2023)
+    const month = date.slice(2, 4);
+    const day = date.slice(0, 2);
+    const formattedTime = formatTime(time);
+
+    // Return date and time in UTC format
+    return `${year}-${month}-${day}T${formattedTime}Z`;
+  }
+
+  // Read and process data
+  parser.on('data', (data) => {
+    const parts = data.split(',');
+
+    if (parts[0] === '$GPRMC' && parts.length > 5) {
+      // Handle GPRMC sentence
+      const date = parts[9];
+      const time = parts[1];
+      const status = parts[2];
+      const latitude = parts[3];
+      const latitudeDirection = parts[4];
+      const longitude = parts[5];
+      const longitudeDirection = parts[6];
+
+      if (status === 'A') { // Ensure valid GPS data
+        const latDegrees = parseFloat(latitude.slice(0, 2));
+        const latMinutes = parseFloat(latitude.slice(2));
+        const latDecimal = convertToDecimalDegrees(latDegrees, latMinutes);
+
+        const lonDegrees = parseFloat(longitude.slice(0, 3));
+        const lonMinutes = parseFloat(longitude.slice(3));
+        const lonDecimal = convertToDecimalDegrees(lonDegrees, lonMinutes);
+
+        // Adjust for direction
+        LAT = latitudeDirection === 'S' ? -latDecimal : latDecimal;
+        LON = longitudeDirection === 'W' ? -lonDecimal : lonDecimal;
+
+        // Format GPS time in UTC
+        const gpstime = formatDateTime(date, time);
+
+        // console.log(`Time: ${gpstime}, Latitude: ${LAT.toFixed(9)}, Longitude: ${LON.toFixed(9)}`);
+      }
+    } else if (parts[0] === '$GPGGA' && parts.length > 9) {
+      // Handle GPGGA sentence
+      gpsalt = parts[9];
+	  gpsmode = 2;
+      if (gpsalt) {
+        gpsmode = 3;
+        // console.log(`Altitude: ${parseFloat(gpsalt).toFixed(3)} meters, GPSMODE: ${gpsmode}`);
+      }
+    }
+  });
+
+  // Error handling
+  port.on('error', (err) => {
+    console.error(`GPS Error: ${err.message}`);
+  });
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+// Function to find the appropriate entry based on `pty`
+function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
+    try {
+        // Combine the base directory with the relative path
+        const filePath = path.resolve(baseDir, relativePath);
+
+        // Read the file
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+
+        // Search for the array using a regular expression
+        const arrayMatch = fileContent.match(/const europe_programmes\s*=\s*\[([\s\S]*?)\];/);
+        if (!arrayMatch) {
+            throw new logError("The array 'europe_programmes' could not be found.");
+        }
+
+        // Extract the content of the array
+        const arrayString = `[${arrayMatch[1]}]`;
+
+        // Safely parse the array
+        const europeProgrammes = eval(arrayString); // Use eval cautiously, only with trusted code
+
+        // Check if the PTY value is valid
+        if (pty >= 0 && pty < europeProgrammes.length) {
+            return europeProgrammes[pty];
+        } else {
+            throw new logError(`Invalid PTY value. Must be between 0 and ${europeProgrammes.length - 1}.`);
+        }
+    } catch (error) {
+        throw new logError(`Error processing the file '${relativePath}': ${error.message}`);
+    }
+}
+	
+function getLogFilePathCSV(date, time) {
     
     if (UTCtime) {
         const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
@@ -1298,7 +1465,7 @@ function getLogFilePathCSV(date, time, isFiltered) {
     }
     
     // Determine the filename based on the isFiltered flag
-    const fileName = isFiltered ? `SCANNER_${date}_filtered.csv` : `SCANNER_${date}.csv`;
+    const fileName = `SCANNER_${date}.csv`;
     
     // Create the full path to the file
     const filePath = path.join(logDir, fileName);
@@ -1311,26 +1478,15 @@ function getLogFilePathCSV(date, time, isFiltered) {
     // Check if the file exists, if not, create it
     if (!fs.existsSync(filePath)) {
          // Update the header content as per your requirements
-        let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly  
-        
-        let header = `"${ServerName}"\n"${formattedServerDescription}"\n`;
-        
-		if (OnlyFirstLog) {
-			if (UTCtime) {
-				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time} (UTC)\n` : `SCANNER LOG (FIRST LOG) ${date} ${time} (UTC)\n`; 
-			} else {
-				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time}\n` : `SCANNER LOG (FIRST LOG) ${date} ${time}\n`; 
-			}
-		} else {
-			if (UTCtime) {
-				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time} (UTC)\n` : `SCANNER LOG ${date} ${time} (UTC)\n`; 
-			} else {
-				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}\n` : `SCANNER LOG ${date} ${time}\n`; 
-			}
-		}
-                    
-        header += UTCtime ? `date;time(utc);freq;picode;ps;station;city;itu;pol;erp;strength;distance;azimuth;stationid\n` : `date;time;freq;picode;ps;station;city;itu;pol;erp;strength;distance;azimuth;stationid\n`;
+        let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly 
 
+		// let header = `10,"highpoint2000@gmail.com"\n`;
+		// header += `11,"8032","HIGHP"\n`;
+		// header += `12,""\n`;
+		// header += `13,"public",""\n`;
+		// header += `14,"fixed"\n`;
+		// header += `15, 63, 47, 16\n`; 
+       
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
             logInfo('Scanner created /logs/' + fileName);
@@ -1356,56 +1512,73 @@ function writeCSVLogEntry(isFiltered) {
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
     
-    if (UTCtime) {
-        const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
-        time = utcTime;
-        date = utcDate;
-    }
+    const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+      time = utcTime;
+      date = utcDate;
     
     // Determine the path to the log file based on the current date and the isFiltered flag
     const logFilePath = getLogFilePathCSV(date, time, isFiltered);
-    
-    // Replace spaces with underscores in the PS string
-    let psWithUnderscores = ps.replace(/ /g, '_');
+	
+	// Data preparation for FMLIST
+    const TYPE = `30`;
+
+	const [seconds, nanoseconds] = process.hrtime(); // Returns [seconds, nanoseconds]
+	const nanoString = nanoseconds.toString().padStart(9, '0'); // Pad to 9 digits
+	const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`; // Format string
+	
+	const dateTimeString = `${date}T${time}`;
+	const dateObject = new Date(dateTimeString);
+	const UNIXTIME = Math.floor(dateObject.getTime() / 1000);
+
+	const FREQTEXT = `freq`;
+	const numericFrequency = parseFloat(freq);
+    const frequencyInHz = Math.round(numericFrequency * 1_000_000);
+	const rdson = rds ? 1 : 0;	
+	
+	const numericStrength = parseFloat(strength);
+	const SNRMIN = Math.round(numericStrength * 10);
+	const numericStrengthTop = parseFloat(strengthTop);
+	const SNRAX = Math.round(numericStrengthTop * 10);
+	const GPSLAT = typeof LAT === 'number' 
+		? `${LAT.toFixed(9)}` 
+		: `${parseFloat(config.identification.lat || 0).toFixed(9)}`;
+	const GPSLON = typeof LON === 'number' 
+		? `${LON.toFixed(9)}` 
+		: `${parseFloat(config.identification.lon || 0).toFixed(9)}`;
+
+	const GPSMODE = `${gpsmode}`;
+	const GPSALT = gpsmode === 3 && gpsalt ? `${parseFloat(gpsalt).toFixed(3)}` : '';
+	const GPSTIME = gpstime
+		? new Date(gpstime).toISOString().replace(/\.\d{3}Z$/, '.000Z') // Format gpstime
+		: new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');       // Format current date-time
+	
+	const PI = `0x${picode}`;
+	const PS = `"${ps}"`;
+	const TA = `${ta}`;
+	const TP = `${tp}`;
+	
+	const MUSIC = `0`;
+	const ProgramType = `"${getProgrammeByPTYFromFile(pty, __dirname, './../../web/js/main.js')}"`;
+	const GRP = `"0A"`;
+	const STEREO = stereo ? 1 : 0;	
+	const DYNPTY = `0`;
+	const OTHERPI = ``;
+	const ALLPSTEXT = `"allps:"`;
+	const OTHERPS = `""`;
 
     // Create the log entry line with the relevant data
-    let line = `${date};${time};${freq};${picode};${psWithUnderscores};${station};${city};${itu};${pol};${erp};${strength};${distance};${azimuth};${stationid}\n`;
-
-    // Check if OnlyFirstLog is true and if the combination of freq, picode, and station already exists
-    if (OnlyFirstLog) {
-        try {
-            // Read the existing log file content
-            if (fs.existsSync(logFilePath)) {
-                const logContent = fs.readFileSync(logFilePath, 'utf-8');
-                
-                // Split the log content into lines
-                const logLines = logContent.split('\n');
-
-                // Check if any line contains the combination of freq, picode, and station
-                const entryExists = logLines.some(logLine => {
-                    const columns = logLine.split(';');
-                    return columns[2] === freq && columns[3] === picode && columns[5] === station;
-                });
-
-                // If the entry exists, do not proceed with writing the new entry
-                if (entryExists) {
-                    return;
-                }
-            }
-        } catch (error) {
-            logError("Failed to read log file:", error.message);
-            return;
-        }
-    }
-
+	let line = `${TYPE},${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},${ALLPSTEXT},${OTHERPS}\n`;
+	
     try {
         // Append the log entry to the CSV file
         fs.appendFileSync(logFilePath, line, { flag: 'a' });
+		if (BEEP_CONTROL && Scan === 'on' ) {
+			fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav').pipe(new Speaker());
+		}
     } catch (error) {
         logError("Failed to write log entry:", error.message);
     }
 }
-
 
 function getLogFilePathHTML(date, time, isFiltered) {
     if (UTCtime) {
