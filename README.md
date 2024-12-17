@@ -49,7 +49,7 @@ The following variables can be changed in the configPlugin.json:
     EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
     EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-	scanBandwith: 0          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+	scanBandwith: 0,          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
 	  /// FMLIST LOGGING OPTIONS ////
  
@@ -57,8 +57,8 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_Autolog: 'off',		// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
-    FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
-    FMLIST_CanLogServer: ''		// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
+    FMLIST_LogInterval: 60,    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
+    FMLIST_CanLogServer: '',		// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 
 	/// FMDX SCANNER OPTIONS ///
 
