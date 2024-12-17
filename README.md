@@ -7,9 +7,11 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-### v2.8d (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
+### v3.0 BETA (FMDX Scanner Version)
 
-- Starting frequencies above 74 MHz are rounded to 100 kHz during the autoscan
+- XML protocol converted to URDS format for upcoming FMLIST upload
+- Processing of GPS data (connection to COM PORT)
+- Added acoustic signaling during scanning operation
 
 ## Installation notes:
 
@@ -57,6 +59,13 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_LogInterval: 60    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: ''		// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 
+	/// FMDX SCANNER OPTIONS ///
+
+    GPS_PORT: '', // Connection port for GPS receiver (e.g.: 'COM1')
+	GPS_BAUDRATE: '', // Baud rate for GPS receiver (e.g.: 4800)
+	BEEP_CONTROL: acoustic control function for scanning operation (true or false)
+ 
+
 ## Important notes: 
 
 - Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!!
@@ -71,17 +80,21 @@ The following variables can be changed in the configPlugin.json:
 - In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it
 - Since all FMLIST log entries are created automatically, with FMLIST Autolog  mode "on" the manual log button is hidden on the web interface, in the Autolog mode “auto”, the manual log button is only hidden on the web interface during the autoscan process
 - If there are several web servers, it makes sense to use a central server to register the logs that have already been sent. The [CanLogServer](https://github.com/Highpoint2000/canlog-server) can provide this functionality. When the server is used, the log interval set in the scanner.json is inactive because the log interval set for the server takes precedence!
+- The computer's standard sound output is used for acoustic signaling during the scanning process
 
 After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
 
 ## Known bugs:
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
 - If the server is locked, the scanner will no longer work
+- With newer node.js libraries there may be problems installing the speaker module. If acoustic signaling is desired, the node.js version must be downgraded!
 
 <details>
   <summary>History</summary>
 
+### v2.8d (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
 
+- Starting frequencies above 74 MHz are rounded to 100 kHz during the autoscan
 
 ### v2.8c (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
 
