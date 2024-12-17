@@ -84,7 +84,7 @@ The following variables can be changed in the configPlugin.json:
 - The computer's standard sound output is used for acoustic signaling during the scanning process
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
 
-After activating/deactivating the plugin or making changes to the scanner server.js script, the server must be restarted!!!
+After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
 ## Known bugs:
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
