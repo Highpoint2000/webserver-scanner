@@ -31,6 +31,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 The following variables can be changed in the configPlugin.json:
 
+           /// SCANNER OPTIONS ////
+
+    SCANMODE: 1, 			// 1 - online mode or 2 - offline mode
     Autoscan_PE5PVB_Mode: false,	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware
     Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware
     StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)
@@ -38,7 +41,13 @@ The following variables can be changed in the configPlugin.json:
 	
     defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / Only valid for Autoscan_PE5PVB_Mode = false  
-    defaultScannerMode: 'normal', 	//Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false  
+    defaultScannerMode: 'normal', 	//Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+    scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
+    scanBandwith: 0,          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+
+    EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
+    EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
+
 	
 	  /// LOGGER OPTIONS ////
 	
@@ -46,10 +55,7 @@ The following variables can be changed in the configPlugin.json:
     RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging
     OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false'
     UTCtime: true, 			// Set to 'true' for logging with UTC Time
-    EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
-    EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
-    scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-	scanBandwith: 0,          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+
 
 	  /// FMLIST LOGGING OPTIONS ////
  
