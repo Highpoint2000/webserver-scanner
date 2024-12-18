@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA)  ///
 ///                                                         ///
-///  by Highpoint               last update: 17.12.24       ///
+///  by Highpoint               last update: 18.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -22,30 +22,35 @@ const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.
 
 // Default values for the configuration file
 const defaultConfig = {
-    Autoscan_PE5PVB_Mode: false,  // Default values as before
-    Search_PE5PVB_Mode: false,
-    StartAutoScan: 'off',
-    AntennaSwitch: 'off',
-    defaultSensitivityValue: 30,
-    defaultScanHoldTime: 7,
-    defaultScannerMode: 'normal',
-    FilteredLog: true,
-    RAWLog: false,
-    OnlyFirstLog: false,
-    UTCtime: true,
-	EnableBlacklist: false,
-	EnableWhitelist: false,
-	scanIntervalTime: 500,
-	scanBandwith: 0,
-	FMLIST_OM_ID: '',
-	FMLIST_Autolog: 'off',
-	FMLIST_MinDistance: 200,
-	FMLIST_MaxDistance: 2000,
-	FMLIST_LogInterval: 60,
-	FMLIST_CanLogServer: '',
-	GPS_PORT: '', 
-	GPS_BAUDRATE: '',
-	BEEP_CONTROL: false
+	Scanmode: 1, 						// 0 - offline mode or 1 - online mode
+    Autoscan_PE5PVB_Mode: false,  		// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
+    Search_PE5PVB_Mode: false,			// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
+    StartAutoScan: 'off',				// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
+    AntennaSwitch: 'off',				// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
+
+    defaultSensitivityValue: 30,		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    defaultScanHoldTime: 7,				// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
+    defaultScannerMode: 'normal',		// Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+	scanIntervalTime: 500,				// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
+	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+
+	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
+	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
+
+	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
+	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
+	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
+
+    RAWLog: false,						// Set to 'true' or 'false' for RAW data logging, default is false
+    OnlyFirstLog: false,				// For only first seen logging, set each station found to 'true' or 'false', default is false
+    UTCtime: true,						// Set to 'true' for logging with UTC Time, default is true
+
+	FMLIST_OM_ID: '',					// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
+	FMLIST_Autolog: 'off',				// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
+	FMLIST_MinDistance: 200,			// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
+	FMLIST_MaxDistance: 2000,			// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
+	FMLIST_LogInterval: 60,				// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
+	FMLIST_CanLogServer: ''				// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 };
 
 // Function to merge default config with existing config and remove undefined values
@@ -114,11 +119,11 @@ function loadConfig(filePath) {
     return finalConfig;
 }
 
-
 // Load or create the configuration file
 const configPlugin = loadConfig(newConfigFilePath);
 
 // Zugriff auf die Variablen wie bisher
+const Scanmode = configPlugin.Scanmode;
 const Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
 const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
 const StartAutoScan = configPlugin.StartAutoScan;
@@ -127,24 +132,26 @@ const AntennaSwitch = configPlugin.AntennaSwitch;
 const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
 const defaultScannerMode = configPlugin.defaultScannerMode;
+const scanIntervalTime = configPlugin.scanIntervalTime;
+const scanBandwith = configPlugin.scanBandwith;
 
-const FilteredLog = configPlugin.FilteredLog;
+const EnableBlacklist = configPlugin.EnableBlacklist;
+const EnableWhitelist = configPlugin.EnableWhitelist;
+
+  let GPS_PORT = configPlugin.GPS_PORT;
+  let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
+const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
+
 const RAWLog = configPlugin.RAWLog;
 const OnlyFirstLog = configPlugin.OnlyFirstLog;
 const UTCtime = configPlugin.UTCtime;
+
   let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
-const EnableBlacklist = configPlugin.EnableBlacklist;
-const EnableWhitelist = configPlugin.EnableWhitelist;
-const scanIntervalTime = configPlugin.scanIntervalTime;
-const scanBandwith = configPlugin.scanBandwith;
 const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_MinDistance = configPlugin.FMLIST_MinDistance;
   let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
-const GPS_PORT = configPlugin.GPS_PORT;
-const GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
-const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
 const { execSync } = require('child_process');
 const NewModules = ['speaker'];
@@ -281,6 +288,8 @@ let scanBandwithSave;
 let gpstime;
 let gpsalt;
 let gpsmode = 2; // Default value (no altitude data)
+let GPSdetectionOn = false;
+let GPSdetectionOff = false;
 
 
 if (tuningUpperLimit === '' || !tuningLimit) {
@@ -866,14 +875,29 @@ async function handleSocketMessage(messageData) {
 	tp = messageData.tp;
 	pty = messageData.pty;
 	af = messageData.af;
-    station = messageData.txInfo.tx;
-    pol = messageData.txInfo.pol;
-    erp = messageData.txInfo.erp;
-    city = messageData.txInfo.city;
-    itu = messageData.txInfo.itu;
-    distance = messageData.txInfo.dist;
-    azimuth = messageData.txInfo.azi;
 	
+	if (Scanmode === 1 ) {
+		
+	    station = messageData.txInfo.tx;
+		city = messageData.txInfo.city;
+		itu = messageData.txInfo.itu;
+		distance = messageData.txInfo.dist;
+		azimuth = messageData.txInfo.azi;
+		pol = messageData.txInfo.pol;
+		erp = messageData.txInfo.erp;
+	
+	} else {
+		
+		station = '';
+		city = '';
+		itu = '';
+		distance = '';
+		azimuth = '';
+		pol = '';
+		erp = '';
+		
+	}
+		
 	if (bandwith === "-1") {
 		bandwith = "0";
 	}
@@ -881,13 +905,17 @@ async function handleSocketMessage(messageData) {
 	if (bandwith === -1) {
 		bandwith = 0;
 	}
-	   
+	  
     // Determine station ID for Polish stations
     if (itu === "POL") {
         stationid = await fetchstationid(freq, picode, city); 
 	} else {
         stationid = messageData.txInfo.id;
     }
+	
+	if (Scanmode === 0 ) {
+		stationid = 'offline';
+	}
     
     if ((messageData.ps_errors !== "0,0,0,0,0,0,0,1") && (messageData.ps_errors !== "0,0,0,0,0,0,0,0")) {
         ps += "?";
@@ -1214,15 +1242,14 @@ function checkWhitelist() {
                 if (strength > Sensitivity || picode.length > 1) {					
 					// console.log(strength, Sensitivity);
 
-                    if (picode.length > 1 && station === '') {
+                    if (picode.length > 1) {
                         ScanHoldTimeValue += 50;
-                    }	
-					           
+                    }				
+				           
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
 					isScanning = false; // Updates a flag indicating scanning status					
 
 							if (RAWLog && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
-									writeCSVLogEntry(false); // activate non filtered log
 									writeHTMLLogEntry(false); // activate non filtered log
 									Savepicode = picode;
 									Saveps = ps;
@@ -1232,13 +1259,15 @@ function checkWhitelist() {
 							if (Scan === 'on') {
 								
 								date = new Date().toLocaleDateString();
-								time = new Date().toLocaleTimeString();							
-
-								if (((checkStrengthCounter > ScanHoldTimeValue) || (ps.length > 1 && stationid && checkStrengthCounter > ScanHoldTime * 5)) ) {
+								time = new Date().toLocaleTimeString();				
+								
+								if ((checkStrengthCounter > ScanHoldTimeValue) || ps.length > 1 && !ps.includes('?') && stationid) {
 									
-										if (FilteredLog && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
+										if (picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
-											writeHTMLLogEntry(true); // filtered log
+											if (!RAWLog) {
+												writeHTMLLogEntry(true); // filtered log
+											}
 											
 											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
 												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
@@ -1257,9 +1286,11 @@ function checkWhitelist() {
 								
                  			} else {
 								
-								if (FilteredLog && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
+								if (picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
-									writeHTMLLogEntry(true); // filtered log
+									if (!RAWLog) {
+										writeHTMLLogEntry(true); // filtered log
+									}
 									if (FMLIST_Autolog === 'on') {
 										writeLogFMLIST(stationid, station, itu, city, distance, freq); 
 									}
@@ -1296,7 +1327,6 @@ function checkWhitelist() {
 
 							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {						
 								if (RAWLog) {
-									writeCSVLogEntry(false); // activate non filtered log
 									writeHTMLLogEntry(false); // activate non filtered log
 									Savepicode = picode;
 									Saveps = ps;
@@ -1309,9 +1339,11 @@ function checkWhitelist() {
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();						
 
-								if (FilteredLog && ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
+								if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
-											writeHTMLLogEntry(true); // filtered log
+											if (!RAWLog) {
+												writeHTMLLogEntry(true); // filtered log
+											}
 											
 											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
 												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
@@ -1324,9 +1356,11 @@ function checkWhitelist() {
 																
                  			} else {
 								
-								if (FilteredLog && ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
+								if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
-									writeHTMLLogEntry(true); // filtered log
+									if (!RAWLog) {
+										writeHTMLLogEntry(true); // filtered log
+									}
 									
 									if (FMLIST_Autolog === 'on') {
 												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
@@ -1342,16 +1376,23 @@ function checkWhitelist() {
 
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
-  
-// Check for GPS Port and Baudrate
-if (GPS_PORT !== "" && GPS_BAUDRATE !== "") {
-  // Set the serial port
-  const port = new SerialPort({ path: GPS_PORT, baudRate: parseInt(GPS_BAUDRATE) });
-  const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+
+let port;
+let parser;
+let gpsDetectionInterval;
+
+function startGPSConnection() {
+  const gpsBaudRate = Number(GPS_BAUDRATE) || 4800;
+
+  // Port nur öffnen, wenn er noch nicht geöffnet ist
+  if (!port || port.isOpen === false) {
+    port = new SerialPort({ path: GPS_PORT, baudRate: gpsBaudRate });
+    parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+  }
 
   // Function to convert coordinates to decimal degrees
   function convertToDecimalDegrees(degree, minute) {
-    return degree + (minute / 60);
+    return degree + minute / 60;
   }
 
   // Function to format time into hh:mm:ss
@@ -1378,7 +1419,6 @@ if (GPS_PORT !== "" && GPS_BAUDRATE !== "") {
     const parts = data.split(',');
 
     if (parts[0] === '$GPRMC' && parts.length > 5) {
-      // Handle GPRMC sentence
       const date = parts[9];
       const time = parts[1];
       const status = parts[2];
@@ -1387,7 +1427,7 @@ if (GPS_PORT !== "" && GPS_BAUDRATE !== "") {
       const longitude = parts[5];
       const longitudeDirection = parts[6];
 
-      if (status === 'A') { // Ensure valid GPS data
+      if (status === 'A') {
         const latDegrees = parseFloat(latitude.slice(0, 2));
         const latMinutes = parseFloat(latitude.slice(2));
         const latDecimal = convertToDecimalDegrees(latDegrees, latMinutes);
@@ -1396,31 +1436,98 @@ if (GPS_PORT !== "" && GPS_BAUDRATE !== "") {
         const lonMinutes = parseFloat(longitude.slice(3));
         const lonDecimal = convertToDecimalDegrees(lonDegrees, lonMinutes);
 
-        // Adjust for direction
         LAT = latitudeDirection === 'S' ? -latDecimal : latDecimal;
         LON = longitudeDirection === 'W' ? -lonDecimal : lonDecimal;
 
-        // Format GPS time in UTC
         const gpstime = formatDateTime(date, time);
-
-        // console.log(`Time: ${gpstime}, Latitude: ${LAT.toFixed(9)}, Longitude: ${LON.toFixed(9)}`);
-      }
-    } else if (parts[0] === '$GPGGA' && parts.length > 9) {
-      // Handle GPGGA sentence
-      gpsalt = parts[9];
-	  gpsmode = 2;
-      if (gpsalt) {
-        gpsmode = 3;
-        // console.log(`Altitude: ${parseFloat(gpsalt).toFixed(3)} meters, GPSMODE: ${gpsmode}`);
-      }
+        //logInfo(`Time: ${gpstime}, Latitude: ${LAT.toFixed(9)}, Longitude: ${LON.toFixed(9)}`);
+	  }
+    }  else if (parts[0] === '$GPGGA' && parts.length > 9) {
+		gpsalt = parts[9];
+		gpsmode = gpsalt ? 3 : 2;
+		//logInfo(`Altitude: ${parseFloat(gpsalt || '0').toFixed(3)} meters, GPSMODE: ${gpsmode}`);
+	}
+	
+    if (!GPSdetectionOn) {
+      logInfo(`GPS Receiver detected: ${GPS_PORT} with ${GPS_BAUDRATE} bps`);
+      GPSdetectionOn = true;
+      GPSdetectionOff = false;
+      fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
     }
   });
 
   // Error handling
   port.on('error', (err) => {
-    console.error(`GPS Error: ${err.message}`);
+    if (!GPSdetectionOff) {
+      logError(`GPS Error: ${err.message}`);
+      GPSdetectionOff = true;
+      GPSdetectionOn = false;
+      LAT = '';
+      LON = '';
+      gpsalt = '0';
+      gpsmode = 2;
+
+      if (BEEP_CONTROL) {
+        fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
+      }
+
+      // Retry logic to handle connection loss
+      setTimeout(() => {
+        if (!GPSdetectionOff) {
+          logInfo('Attempting to reconnect to GPS...');
+          GPSdetectionOff = true;
+          GPSdetectionOn = false;
+          LAT = '';
+          LON = '';
+          gpsalt = '0';
+          gpsmode = 2;
+          if (BEEP_CONTROL) {
+            fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
+          }
+        }
+        startGPSConnection(); // Attempt to reconnect
+      }, 5000); // Retry after 5 seconds
+    }
+  });
+
+  // Monitor connection close and restart if necessary
+  port.on('close', () => {
+    if (!GPSdetectionOff) {
+      logWarn('GPS Connection closed. Reconnecting...');
+      GPSdetectionOff = true;
+      GPSdetectionOn = false;
+      LAT = '';
+      LON = '';
+      gpsalt = '0';
+      gpsmode = 2;
+      if (BEEP_CONTROL) {
+        fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
+      }
+    }
+    setTimeout(() => {
+      startGPSConnection(); // Retry after 5 seconds
+    }, 5000);
   });
 }
+
+// Function to check if the GPS is connected and try to reconnect
+function checkGPSConnection() {
+  if (!port || !port.isOpen) {
+    logWarn('GPS connection lost. Attempting to reconnect...');
+    startGPSConnection();
+  }
+}
+
+// Monitor the connection every 60 seconds
+gpsDetectionInterval = setInterval(checkGPSConnection, 60000); // Check every 60 seconds
+
+// Initialize GPS Connection
+if (GPS_PORT && GPS_BAUDRATE) {
+  logInfo('GPS connection starting...');
+  startGPSConnection();
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
@@ -1665,13 +1772,12 @@ function writeHTMLLogEntry(isFiltered) {
         time = utcTime;
         date = utcDate;
     }
-
+	
     const logFilePath = getLogFilePathHTML(date, time, isFiltered);
 
-	let link1 = stationid !== '' ? `<a href="#" onclick="window.open('https://fmscan.org/stream.php?i=${stationid}', 'newWindow', 'width=800,height=160'); return false;" target="_blank">STREAM</a>` : '';
-    let link2 = stationid !== '' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">MAP</a>` : '';
-    let link3 = stationid !== '' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
-
+	let link1 = stationid !== '' && stationid !== 'offline' ? `<a href="#" onclick="window.open('https://fmscan.org/stream.php?i=${stationid}', 'newWindow', 'width=800,height=160'); return false;" target="_blank">STREAM</a>` : '';     
+	let link2 = stationid !== '' && stationid !== 'offline' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">MAP</a>` : '';     
+	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
     let psWithUnderscores = ps.replace(/ /g, '_');
 
