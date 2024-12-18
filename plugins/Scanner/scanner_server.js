@@ -916,11 +916,11 @@ async function handleSocketMessage(messageData) {
 	if (Scanmode === 0 ) {
 		stationid = 'offline';
 	}
-	  
-	if (messageData.ps_errors && typeof messageData.ps_errors === 'string' && messageData.ps_errors.includes("10")) {
+	   
+	if (messageData.ps_errors && typeof messageData.ps_errors === 'string' && /\b(5|6|7|8|9|10)\b/.test(messageData.ps_errors)) {
 		ps += "?";
 	}
-    
+
     if (isScanning) {
         if (stereo_forced && stereo_forced_user !== 'mono') {
             stereo_forced_user = 'mono';
