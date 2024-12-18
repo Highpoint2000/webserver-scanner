@@ -290,8 +290,9 @@ let gpstime;
 let gpsalt;
 let gpsmode = 2; // Default value (no altitude data)
 let GPSdetectionOn = false;
-let GPSdetectionOff = false;
-
+let GPSdetectionOff = true;
+let GPSmodulOn = false;
+let GPSmodulOff = false;
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -922,6 +923,10 @@ async function handleSocketMessage(messageData) {
 	if (messageData.ps_errors && typeof messageData.ps_errors === 'string' && /\b(5|6|7|8|9|10)\b/.test(messageData.ps_errors)) {
 		ps += "?";
 	}
+	
+	if (ps === "") {
+		ps = "?";
+	}
 
     if (isScanning) {
         if (stereo_forced && stereo_forced_user !== 'mono') {
@@ -1386,7 +1391,7 @@ let gpsDetectionInterval;
 function startGPSConnection() {
   const gpsBaudRate = Number(GPS_BAUDRATE) || 4800;
 
-  // Port nur öffnen, wenn er noch nicht geöffnet ist
+  // Open the port only if it's not open
   if (!port || port.isOpen === false) {
     port = new SerialPort({ path: GPS_PORT, baudRate: gpsBaudRate });
     parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
@@ -1411,8 +1416,6 @@ function startGPSConnection() {
     const month = date.slice(2, 4);
     const day = date.slice(0, 2);
     const formattedTime = formatTime(time);
-
-    // Return date and time in UTC format
     return `${year}-${month}-${day}T${formattedTime}Z`;
   }
 
@@ -1442,75 +1445,100 @@ function startGPSConnection() {
         LON = longitudeDirection === 'W' ? -lonDecimal : lonDecimal;
 
         const gpstime = formatDateTime(date, time);
-        //logInfo(`Time: ${gpstime}, Latitude: ${LAT.toFixed(9)}, Longitude: ${LON.toFixed(9)}`);
-	  }
-    }  else if (parts[0] === '$GPGGA' && parts.length > 9) {
-		gpsalt = parts[9];
-		gpsmode = gpsalt ? 3 : 2;
-		//logInfo(`Altitude: ${parseFloat(gpsalt || '0').toFixed(3)} meters, GPSMODE: ${gpsmode}`);
-	}
-	
-    if (!GPSdetectionOn) {
-      logInfo(`GPS Receiver detected: ${GPS_PORT} with ${GPS_BAUDRATE} bps`);
-      GPSdetectionOn = true;
-      GPSdetectionOff = false;
-      fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
-    }
-  });
+		
+		//logInfo(`Time: ${gpstime}, Latitude: ${LAT.toFixed(9)}, Longitude: ${LON.toFixed(9)}`);
+		
+      }
+	  
+    } else if (parts[0] === '$GPGGA' && parts.length > 9) {
 
-  // Error handling
-  port.on('error', (err) => {
-    if (!GPSdetectionOff) {
-      logError(`GPS Error: ${err.message}`);
+      gpsalt = parts[9];
+      gpsmode = gpsalt ? 3 : 2;
+	  
+	  if (!GPSmodulOn) {
+		GPSmodulOn = true;
+		GPSmodulOff = false;
+		logInfo(`GPS Receiver detected: ${GPS_PORT} with ${GPS_BAUDRATE} bps`);
+		if (BEEP_CONTROL) {
+		  fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
+		}
+    }
+  
+	  //logInfo(`Altitude: ${parseFloat(gpsalt || '0').toFixed(3)} meters, GPSMODE: ${gpsmode}`);
+	  
+    } 
+	
+	if (!GPSdetectionOn && gpsmode === 3) {
+        logInfo(`GPS data received`);
+        GPSdetectionOn = true;
+        GPSdetectionOff = false;
+        if (BEEP_CONTROL) {
+          fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
+        }
+    }
+
+	if (!GPSdetectionOff && gpsmode === 2) {
+      logWarn(`No GPS data received`);
       GPSdetectionOff = true;
       GPSdetectionOn = false;
+
+      if (BEEP_CONTROL) {
+        fs.createReadStream('./plugins/Scanner/sounds/beep_middlelong.wav').pipe(new Speaker());
+      }
+
       LAT = '';
       LON = '';
       gpsalt = '0';
       gpsmode = 2;
+    }
+
+  });
+
+  // Error handling for the serial port
+  port.on('error', (err) => {
+    if (!GPSmodulOff) {
+      logError(`GPS Error: ${err.message}`);
+      GPSmodulOff = true;
+      GPSmodulOn = false;
 
       if (BEEP_CONTROL) {
         fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
       }
 
-      // Retry logic to handle connection loss
-      setTimeout(() => {
-        if (!GPSdetectionOff) {
-          logInfo('Attempting to reconnect to GPS...');
-          GPSdetectionOff = true;
-          GPSdetectionOn = false;
-          LAT = '';
-          LON = '';
-          gpsalt = '0';
-          gpsmode = 2;
-          if (BEEP_CONTROL) {
-            fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
-          }
-        }
-        startGPSConnection(); // Attempt to reconnect
-      }, 5000); // Retry after 5 seconds
+      LAT = '';
+      LON = '';
+      gpsalt = '0';
+      gpsmode = 2;
     }
+
+    // Retry logic to handle connection loss
+    setTimeout(() => {
+      startGPSConnection(); // Attempt to reconnect
+    }, 5000); // Retry after 5 seconds
   });
 
   // Monitor connection close and restart if necessary
   port.on('close', () => {
-    if (!GPSdetectionOff) {
-      logWarn('GPS Connection closed. Reconnecting...');
-      GPSdetectionOff = true;
-      GPSdetectionOn = false;
+    if (!GPSmodulOff) {
+      logError(`GPS Error: Connection closed`);
+      GPSmodulOff = true;
+	  GPSmodulOn = false;
+
+      if (BEEP_CONTROL) {
+        fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
+      }
+
       LAT = '';
       LON = '';
       gpsalt = '0';
       gpsmode = 2;
-      if (BEEP_CONTROL) {
-        fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
-      }
     }
     setTimeout(() => {
       startGPSConnection(); // Retry after 5 seconds
     }, 5000);
   });
 }
+
 
 // Function to check if the GPS is connected and try to reconnect
 function checkGPSConnection() {
