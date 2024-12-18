@@ -11,8 +11,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 - XML protocol converted to URDS format for upcoming FMLIST upload
 - Processing of GPS data (connection to COM PORT)
-- Added acoustic signaling during scanning operation
+- Added acoustic signaling during scanning operation and gps status
 - Daily update check for admin
+- Scan algorithm revised
 
 ## Installation notes:
 
@@ -54,9 +55,8 @@ The following variables can be changed in the configPlugin.json:
     GPS_BAUDRATE: '',		// Baud rate for GPS receiver (e.g.: 4800)
     BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
-    /// LOGGER OPTIONS ////
+    /// HTML LOGGING OPTIONS ////
 	
-    FilteredLog: true, 		// Set to 'true' or 'false' for filtered data logging, default is true
     RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging.  default is false
     OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true
@@ -80,8 +80,6 @@ The following variables can be changed in the configPlugin.json:
 - The automatic antenna switching only works if more than 1 antenna is configured in the web server !!!
 - Add a white- or blacklist function: file ../plugins/Scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan and search function. However, the prerequisite is the installation of the latest PE5PVB firmware version. 
-  You can switch the plugin's scan mode using a switch (true/false) in the header of scanner_server.js
-- In the header of scanner_server.js, an automatic background scan can be activated when no user is connected, or an automatic start when the web server starts
 - Auto scanner and logging preferences can be configured in the scanner.json under /plugin_configs
 - In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
 - In order to use the live stream link in the log file, you must register at fmscan.org. When you open a link for the first time, you have to authenticate yourself with it
