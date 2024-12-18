@@ -275,7 +275,8 @@ let StatusFMLIST = FMLIST_Autolog;
 let Scan;
 let enabledAntennas = [];
 let currentIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, bandwith, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, af, saveAutoscanFrequency;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, af, saveAutoscanFrequency;
+let bandwith = 0;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
@@ -355,6 +356,7 @@ async function TextWebSocket(messageData) {
                     logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" mode "${defaultScannerMode}" scanholdtime "${defaultScanHoldTime}"`);
 					if (Scan === 'on') {
 						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+						AutoScan();
 					}
                 }
 
@@ -1512,7 +1514,7 @@ function startGPSConnection() {
 
 // Function to check if the GPS is connected and try to reconnect
 function checkGPSConnection() {
-  if (!port || !port.isOpen) {
+  if (GPS_PORT && GPS_BAUDRATE && (!port || !port.isOpen)) {
     logWarn('GPS connection lost. Attempting to reconnect...');
     startGPSConnection();
   }
@@ -1526,8 +1528,6 @@ if (GPS_PORT && GPS_BAUDRATE) {
   logInfo('GPS connection starting...');
   startGPSConnection();
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
