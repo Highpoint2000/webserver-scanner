@@ -42,7 +42,7 @@ The following variables can be changed in the configPlugin.json:
     AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 	
     defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    SpectrumLimiterValue: 60,			// only valid for Spectrum Scan - default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100 | in dBm: -110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40,-40
+    SpectrumLimiterValue: 60,		// only valid for Spectrum Scan - default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100 | in dBm: -110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40,-40
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
     defaultScannerMode: 'normal', 	// Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
