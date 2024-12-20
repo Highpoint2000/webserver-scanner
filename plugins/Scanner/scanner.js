@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA)  ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA3) ///
 ///                                                         ///
-///  by Highpoint               last update: 18.12.24       ///
+///  by Highpoint               last update: 20.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -23,7 +23,8 @@
 	const PluginUpdateKey = `${plugin_name}_lastUpdateNotification`; // Unique key for localStorage
 	
 	const EnableBlacklist = true; // This value is automatically updated via the config file
-	const EnableWhitelist = false; // This value is automatically updated via the config file
+	const EnableWhitelist = true; // This value is automatically updated via the config file
+	const EnableSpectrum = true; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -40,6 +41,8 @@
     let scannerButtonsExecuted = false; // Tracks if ScannerButtons have been executed
     let Scan = 'off';
 	let ScanPE5PVBstatus = '';
+	let SpectrumLimiterValueStatus;
+	let ScannerModeStatus;
 
     // Create a status message object
     function createMessage(status, Scan = '', Search = '', Sensitivity = '', ScannerMode = '', ScanHoldTime = '') {
@@ -51,7 +54,7 @@
                 Search,     
                 Sensitivity,
                 ScannerMode,
-                ScanHoldTime
+                ScanHoldTime,
             },
             source: clientIp,
             target: target
@@ -239,8 +242,8 @@
 			}
 			
             if (eventData.type === 'Scanner' ) {
-                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST, InfoFMLIST } = eventData.value;
-				
+                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime, SpectrumLimiterValue, StatusFMLIST, InfoFMLIST } = eventData.value;
+						
 				if (typeof ScanPE5PVB !== 'undefined') {
 					ScanPE5PVBstatus = ScanPE5PVB;
 				}	
@@ -263,7 +266,15 @@
                         scannerButtonsExecuted = true; // Mark as executed
 
                         if (isTuneAuthenticated) {
-							sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
+							if (ScannerMode === 'spectrum') {
+								sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Limit: ${SpectrumLimiterValue} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
+								if (SpectrumLimiterValue !== 'undefined' && SpectrumLimiterValue !== '') {
+									SpectrumLimiterValueStatus = SpectrumLimiterValue;
+									ScannerModeStatus = 'spectrum';
+								}
+							} else {
+								sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
+							}
                         }
                     }
 
@@ -752,6 +763,9 @@ function toggleScan(isLongPressAction) {
 		if (EnableWhitelist) {
 			optionsHTML += `<li data-value="whitelist" class="option">whitelist</li>`;
 		}
+		if (EnableSpectrum) {
+			optionsHTML += `<li data-value="spectrum" class="option">spectrum</li>`;
+		}
 		optionsHTML += `</ul>`;
 		modeContainer.innerHTML = optionsHTML;
 
@@ -803,6 +817,10 @@ function toggleScan(isLongPressAction) {
                     <li data-value="50" class="option">50 dBf</li>
                     <li data-value="55" class="option">55 dBf</li>
                     <li data-value="60" class="option">60 dBf</li>
+					<li data-value="65" class="option">65 dBf</li>
+                    <li data-value="70" class="option">70 dBf</li>
+                    <li data-value="75" class="option">75 dBf</li>
+                    <li data-value="80" class="option">80 dBf</li>
                 </ul>
             `;
         } else if (signalValue === 'dBµV') {        
@@ -821,6 +839,10 @@ function toggleScan(isLongPressAction) {
                     <li data-value="50" class="option">50 dBµV</li>
                     <li data-value="55" class="option">55 dBµV</li>
                     <li data-value="60" class="option">60 dBµV</li>
+					<li data-value="65" class="option">65 dBµV</li>
+                    <li data-value="70" class="option">70 dBµV</li>
+                    <li data-value="75" class="option">85 dBµV</li>
+                    <li data-value="80" class="option">90 dBµV</li>
                 </ul>
             `;
         } else if (signalValue === 'dBm') {        
@@ -839,6 +861,10 @@ function toggleScan(isLongPressAction) {
                     <li data-value="-70" class="option">-70 dBm</li>
                     <li data-value="-65" class="option">-65 dBm</li>
                     <li data-value="-60" class="option">-60 dBm</li>
+					<li data-value="-55" class="option">-55 dBm</li>
+					<li data-value="-50" class="option">-50 dBm</li>
+					<li data-value="-45" class="option">-45 dBm</li>
+					<li data-value="-40" class="option">-40 dBm</li>
                 </ul>
             `;
         }
@@ -886,19 +912,23 @@ function toggleScan(isLongPressAction) {
             closeAllDropdowns(); // Close all other dropdowns
             dropdown.style.display = isOpen ? 'none' : 'block';
         });
-
-        options.forEach(option => {
+		
+		options.forEach(option => {
             option.addEventListener('click', () => {
                 const value = option.getAttribute('data-value');
                 input.value = option.textContent.trim();
                 input.setAttribute('data-value', value); // Set the data-value attribute
                 dropdown.style.display = 'none'; // Close the dropdown after selection
-
+				
                 if (commandPrefix === 'I') {
                     SendValue(value, ScannerMode, ScanHoldTime);
+					if (value >= SpectrumLimiterValueStatus && ScannerModeStatus === 'spectrum') {
+						sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${SpectrumLimiterValueStatus} ${signalValue})!`, false, false);
+					}
                 }
                 if (commandPrefix === 'M') {
                     SendValue(Sensitivity, value, ScanHoldTime); // Convert seconds to milliseconds
+					ScannerModeStatus = value;
                 }
                 if (commandPrefix === 'K') {
                     SendValue(Sensitivity, ScannerMode, value);
