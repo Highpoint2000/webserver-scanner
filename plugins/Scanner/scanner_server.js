@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA)  ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA3) ///
 ///                                                         ///
-///  by Highpoint               last update: 18.12.24       ///
+///  by Highpoint               last update: 20.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -28,7 +28,8 @@ const defaultConfig = {
     StartAutoScan: 'off',				// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off',				// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 
-    defaultSensitivityValue: 30,		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    defaultSensitivityValue: 30,		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    SpectrumLimiterValue: 60,			// only valid for Spectrum Scan - default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100 | in dBm: -110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40,-40
     defaultScanHoldTime: 7,				// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
     defaultScannerMode: 'normal',		// Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
 	scanIntervalTime: 500,				// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
@@ -36,6 +37,7 @@ const defaultConfig = {
 
 	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
 	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
+	EnableSpectrum: false,				// Enable Spectrum, set it 'true' or 'false' 
 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
 	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
@@ -130,6 +132,7 @@ const StartAutoScan = configPlugin.StartAutoScan;
 const AntennaSwitch = configPlugin.AntennaSwitch;
 
 const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
+const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
 const defaultScannerMode = configPlugin.defaultScannerMode;
 const scanIntervalTime = configPlugin.scanIntervalTime;
@@ -137,6 +140,7 @@ const scanBandwith = configPlugin.scanBandwith;
 
 const EnableBlacklist = configPlugin.EnableBlacklist;
 const EnableWhitelist = configPlugin.EnableWhitelist;
+const EnableSpectrum = configPlugin.EnableSpectrum;
 
   let GPS_PORT = configPlugin.GPS_PORT;
   let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
@@ -193,6 +197,7 @@ function updateSettings() {
     // Check if the variables EnableBlacklist and EnableWhitelist already exist
     let hasEnableBlacklist = /const EnableBlacklist = .+;/.test(targetData);
     let hasEnableWhitelist = /const EnableWhitelist = .+;/.test(targetData);
+	let hasEnableSpectrum = /const EnableSpectrum = .+;/.test(targetData);
 
     // Replace or add the definitions
     let updatedData = targetData;
@@ -209,6 +214,13 @@ function updateSettings() {
     } else {
       // If EnableWhitelist does not exist, add it at the beginning
       updatedData = `const EnableWhitelist = ${EnableWhitelist};\n` + updatedData;
+    }
+	
+	if (hasEnableSpectrum) {
+      updatedData = updatedData.replace(/const hasEnableSpectrum = .*;/, `const hasEnableSpectrum = ${hasEnableSpectrum};`);
+    } else {
+      // If hasEnableSpectrum does not exist, add it at the beginning
+      updatedData = `const hasEnableSpectrum = ${hasEnableSpectrum};\n` + updatedData;
     }
 
     // Update/write the target file
@@ -256,12 +268,12 @@ let DataPluginsSocket;
 let autoScanSocket;
 let blacklist = [];
 let whitelist = [];
+let spectrum = [];
 let isScanning = false;
 let currentFrequency = 0;
 let previousFrequency = 0;
 let checkStrengthCounter = 0;
 let stereo_detect = false;
-let sensitivityValue = defaultSensitivityValue;
 let modeValue = defaultScannerMode;
 let stereo_forced_user = 'stereo';
 let scanInterval = null; 
@@ -293,6 +305,8 @@ let GPSdetectionOn = false;
 let GPSdetectionOff = true;
 let GPSmodulOn = false;
 let GPSmodulOff = false;
+let sigArray = [];
+let sigArray1 = [];
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -326,8 +340,9 @@ function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, S
             Sensitivity: Sensitivity,
             ScannerMode: ScannerMode,
 			ScanHoldTime: ScanHoldTime,
+			SpectrumLimiterValue: SpectrumLimiterValue,
             StatusFMLIST: StatusFMLIST,
-			InfoFMLIST: InfoFMLIST
+			InfoFMLIST: InfoFMLIST		
         },
         source: source,
         target: target
@@ -356,7 +371,11 @@ async function TextWebSocket(messageData) {
                 } else {
                     logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" mode "${defaultScannerMode}" scanholdtime "${defaultScanHoldTime}"`);
 					if (Scan === 'on') {
-						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+						if (ScannerMode === 'spectrum') {
+							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+						} else {
+							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+						}
 						AutoScan();
 					}
                 }
@@ -444,6 +463,59 @@ async function DataPluginsWebSocket() {
                 try {
                     const message = JSON.parse(event.data);
                     // console.log("Received message:", message);
+					
+					if (message.type === 'sigArray') {
+						sigArray = message.value; // Save sigArray
+
+						if (!Array.isArray(sigArray) || sigArray.length === 0) {
+							reject(new Error('sigArray is empty.'));
+							return;
+						}
+
+						// Helper function for floating-point precision
+						const isCloseEnough = (a, b) => Math.abs(a - b) <= 0.1;
+
+						// Step 1: Create a list of frequencies to exclude
+						const excludeIndices = new Set();
+						const excludedFrequencies = []; // List for debugging output
+
+						// Collect all frequencies with sig > 70 and their neighbors
+						sigArray.forEach((item, index) => {
+						const sig = parseFloat(item.sig);
+						const freq = parseFloat(item.freq);
+
+						if (sig > 70) {
+						// Exclude the current frequency
+						excludeIndices.add(index);
+						excludedFrequencies.push(freq); // Add to debug list
+
+						// Check and exclude the previous frequency
+						if (index - 1 >= 0) {
+						const prevFreq = parseFloat(sigArray[index - 1].freq);
+						excludeIndices.add(index - 1); // Always exclude
+						excludedFrequencies.push(prevFreq); // Add to debug list
+						}
+
+						// Check the next frequency
+						if (index + 1 < sigArray.length) {
+							const nextFreq = parseFloat(sigArray[index + 1].freq);
+							if (isCloseEnough(freq, nextFreq)) {
+								excludeIndices.add(index + 1);
+								excludedFrequencies.push(nextFreq); // Add to debug list
+							}
+						}
+					}
+				});
+
+				// Debug output: List of all frequencies to exclude
+				// console.log('Excluded Frequencies and Neighbors:', excludedFrequencies);
+
+				// Step 2: Copy all values that are not in the exclusion list
+				sigArray1 = sigArray.filter((_, index) => !excludeIndices.has(index));
+
+				// Output the result
+				// console.log('Filtered sigArray1:', sigArray1);
+			}
 
                     if (message.type === 'Scanner' && message.source !== source) {
 
@@ -497,6 +569,7 @@ async function DataPluginsWebSocket() {
 											Sensitivity,
 											ScannerMode,
 											ScanHoldTime,
+											SpectrumLimiterValue,
 											FMLIST_Autolog
 										);
 								
@@ -519,11 +592,37 @@ async function DataPluginsWebSocket() {
 											Sensitivity,
 											ScannerMode,
 											ScanHoldTime,
+											SpectrumLimiterValue,
 											FMLIST_Autolog
 										);
 								
 										DataPluginsSocket.send(JSON.stringify(responseMessage));
 									}
+								}
+								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'spectrum' && EnableSpectrum) {
+										ScannerMode = message.value.ScannerMode;
+										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
+										
+										responseMessage = createMessage(
+											'response',
+											message.source,
+											Scan,
+											'',
+											Sensitivity,
+											ScannerMode,
+											ScanHoldTime,
+											SpectrumLimiterValue,
+											FMLIST_Autolog
+										);
+								
+										DataPluginsSocket.send(JSON.stringify(responseMessage));
+
+										if (sigArray.length === 0) { // Check if signal array is empty
+											currentFrequency = tuningLowerLimit; // Set to start spectrum analysis frequency
+											sendDataToClient(currentFrequency); // Send the updated frequency to the client
+											startSpectrumAnalyse(); // Start spectrum analysis
+										}
+
 								}
                                 if (message.value.ScanHoldTime !== undefined && message.value.ScanHoldTime !== '') {
                                     ScanHoldTime = message.value.ScanHoldTime;
@@ -561,6 +660,7 @@ async function DataPluginsWebSocket() {
                                     Sensitivity,
                                     ScannerMode,
                                     ScanHoldTime,
+									SpectrumLimiterValue,
 									FMLIST_Autolog
                                 );
 								
@@ -575,7 +675,11 @@ async function DataPluginsWebSocket() {
 									    sendCommandToClient('J1');
 									} else {
 										logInfo(`Scanner starts auto-scan [IP: ${message.source}]`);
-										logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+										if (ScannerMode === 'spectrum') {
+											logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+										} else {
+											logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+										}
 										AutoScan();
 									}
 																	
@@ -728,7 +832,11 @@ function checkUserCount(users) {
                                 sendCommandToClient('J1');
                             } else {
                                 logInfo(`Scanner starts auto-scan automatically [User: ${users}]`);
-                                logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+								if (ScannerMode === 'spectrum') {
+									logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+								} else {
+									logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+								}
                                 isScanning = false;
                                 AutoScan();
                             }
@@ -1061,111 +1169,212 @@ function stopAutoScan() {
     isScanning = false;
 }
 
-function startScan(direction) {
-	clearInterval(scanInterval); // Stops the scan interval
-	
-    if (isScanning) {
-        return; // Do not start a new scan if one is already running
+async function setupSendSocket() {
+
+    return new Promise((resolve, reject) => {
+        const message = JSON.stringify({
+            type: 'spectrum-graph',
+            value: {
+                status: 'scan',
+                ip: '127.0.0.1',
+            },
+        });
+
+        DataPluginsSocket.send(message);
+
+    });
+}
+
+
+async function startSpectrumAnalyse() {
+    try {
+        await setupSendSocket(); // Wait for WebSocket processing
+        if (sigArray.length > 0) {
+            sigArray.forEach(item => {
+                //logInfo(`freq: ${item.freq}, sig: ${item.sig}`);
+            });
+        } else {
+            //logInfo('No data in sigArray.');
+        }
+    } catch (error) {
+        //console.error('Error during WebSocket communication:', error.message);
     }
-	
+}
+
+function startScan(direction) {
+    clearInterval(scanInterval); // Stops any active scan interval from the previous scan
+    
+    if (isScanning) {
+        return; // Prevent starting a new scan if one is already running
+    }
+
+    // If the current frequency is invalid (NaN) or zero, set it to the lower tuning limit
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
         currentFrequency = tuningLowerLimit;
     }
 
+    // Function to update the frequency during the scan
     function updateFrequency() {
         if (!isScanning) {
-            logInfo('Scanning has been stopped.');
-            return; // Exit the function if scanning has been stopped
+            logInfo('Scanning has been stopped.'); // Log that scanning was stopped
+            return; // Exit the function if scanning is stopped
         }
-		
-        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
-        if (direction === 'up') {
-			if (currentFrequency < '74.00') {
-			    currentFrequency += 0.01;
-			} else {
-				currentFrequency += 0.1;
-			}
-            if (currentFrequency > tuningUpperLimit) {
-				if (Scan === 'on') {
-				   sendNextAntennaCommand();
-				   if (BEEP_CONTROL) {
-					 fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
-				   }
-				}
-                currentFrequency = tuningLowerLimit;
+
+        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+        
+        // If scanning upwards
+        if (direction === 'up' ) {
+            if (currentFrequency < 74.00) {
+                currentFrequency += 0.01; // Increase by 0.01 if frequency is less than 74 MHz
+            } else {
+                currentFrequency += 0.1; // Increase by 0.1 above 74 MHz
             }
-        } else if (direction === 'down') {
-			if (currentFrequency < '74.00') {
-			    currentFrequency -= 0.01;
-			} else {
-				currentFrequency -= 0.1;
-			}
+            // If the frequency exceeds the upper limit, reset to the lower limit
+            if (currentFrequency > tuningUpperLimit) {
+                if (Scan === 'on') {
+                    sendNextAntennaCommand(); // Send the next antenna command
+                    if (BEEP_CONTROL) {
+                        // Play a beep sound when reaching the upper limit
+                        fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
+                    }
+                }
+                currentFrequency = tuningLowerLimit; // Reset to the lower limit
+            }
+        } 
+        // If scanning downwards
+        else if (direction === 'down') {
+            if (currentFrequency < 74.00) {
+                currentFrequency -= 0.01; // Decrease by 0.01 if frequency is less than 74 MHz
+            } else {
+                currentFrequency -= 0.1; // Decrease by 0.1 above 74 MHz
+            }
+
+            // If the frequency goes below the lower limit, reset to the upper limit
             if (currentFrequency < tuningLowerLimit) {
-                currentFrequency = tuningUpperLimit;
+                currentFrequency = tuningUpperLimit; // Reset to the upper limit
             }
         }
 
-        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place	
-			
+        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+
+        // Handle blacklist mode
         if (!ScanPE5PVB) {
             if (ScannerMode === 'blacklist' && Scan === 'on' && EnableBlacklist) {
-                while (isInBlacklist(currentFrequency, blacklist)) {
+                while (isInBlacklist(currentFrequency, blacklist)) { 
+                    // Skip over frequencies that are in the blacklist
                     if (direction === 'up') {
-						if (currentFrequency < '74.00') {
-							currentFrequency += 0.01;
-						} else {
-							currentFrequency += 0.1;
-						}
-                        if (currentFrequency > tuningUpperLimit) {
-                            currentFrequency = tuningLowerLimit;			
+                        if (currentFrequency < 74.00) {
+                            currentFrequency += 0.01;
+                        } else {
+                            currentFrequency += 0.1;
                         }
-                    } else if (direction === 'down') {
-						if (currentFrequency < '74.00') {
-							currentFrequency -= 0.01;
-						} else {
-							currentFrequency -= 0.1;
-						}
-                        if (currentFrequency < tuningLowerLimit) {
-                            currentFrequency = tuningUpperLimit;
-                        }
-                    }
-                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
-                }
-						
-				
-            } else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {			
-                while (!isInWhitelist(currentFrequency, whitelist)) {				
-                    if (direction === 'up') {
-						if (currentFrequency < '74.00') {
-							currentFrequency += 0.01;
-						} else {
-							currentFrequency += 0.1;
-						}
                         if (currentFrequency > tuningUpperLimit) {
                             currentFrequency = tuningLowerLimit;
                         }
                     } else if (direction === 'down') {
-						if (currentFrequency < '74.00') {
-							currentFrequency -= 0.01;
-						} else {
-							currentFrequency -= 0.1;
-						}
+                        if (currentFrequency < 74.00) {
+                            currentFrequency -= 0.01;
+                        } else {
+                            currentFrequency -= 0.1;
+                        }
                         if (currentFrequency < tuningLowerLimit) {
                             currentFrequency = tuningUpperLimit;
                         }
                     }
-                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal place
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
                 }
-            }
+            } 
+            // Handle whitelist mode
+            else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {			
+                while (!isInWhitelist(currentFrequency, whitelist)) { 
+                    // Only scan frequencies in the whitelist
+                    if (direction === 'up') {
+                        if (currentFrequency < 74.00) {
+                            currentFrequency += 0.01;
+                        } else {
+                            currentFrequency += 0.1;
+                        }
+                        if (currentFrequency > tuningUpperLimit) {
+                            currentFrequency = tuningLowerLimit;
+                        }
+                    } else if (direction === 'down') {
+                        if (currentFrequency < 74.00) {
+                            currentFrequency -= 0.01;
+                        } else {
+                            currentFrequency -= 0.1;
+                        }
+                        if (currentFrequency < tuningLowerLimit) {
+                            currentFrequency = tuningUpperLimit;
+                        }
+                    }
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+                }
+            }	
+            else if (ScannerMode === 'spectrum' && Scan === 'on' && sigArray1.length !== 0 && EnableSpectrum) {
+                    // Filter valid frequencies based on the signal strength and sensitivity
+					// console.log(sigArray1);
+					
+					const validFrequencies = sigArray1
+						.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue)
+						.map(item => parseFloat(item.freq));
+
+                    // Keep updating the frequency until it matches a valid frequency
+                    while (!validFrequencies.includes(currentFrequency)) {
+                        if (direction === 'up') {
+                            if (currentFrequency < 74.00) {
+                                currentFrequency += 0.01;
+                            } else {
+                                currentFrequency += 0.1;
+                            }
+                            if (currentFrequency > tuningUpperLimit) {
+								currentFrequency = tuningLowerLimit; // Set to start spectrum analysis frequency
+								
+								if (BEEP_CONTROL) {
+								// Play a beep sound when reaching the upper limit
+									fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
+								}
+								sendDataToClient(currentFrequency); // Send the updated frequency to the client
+                                sigArray = []; // Reset signal array
+                                startSpectrumAnalyse(); // Trigger spectrum analysis
+                                return; // Exit further processing in this cycle
+                            }
+                        } else if (direction === 'down') {
+                            if (currentFrequency < 74.00) {
+                                currentFrequency -= 0.01;
+                            } else {
+                                currentFrequency -= 0.1;
+                            }
+                            if (currentFrequency < tuningLowerLimit) {
+                                currentFrequency = tuningUpperLimit; // Reset to the upper limit
+                            }
+                        }
+
+                        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+
+                        // Exit the loop once a valid frequency is found
+                        if (validFrequencies.includes(currentFrequency)) {
+                            break;
+                        }
+                    }
+             }
         }
-
-        sendDataToClient(currentFrequency);
 		
-	}
+		if (ScannerMode === 'spectrum' && Scan === 'on' && sigArray.length !== 0 && EnableSpectrum && Sensitivity > SpectrumLimiterValue) {
+			logError(`Scanner Error: ${Sensitivity}>${SpectrumLimiterValue } ---> Sensitivity must be smaller than SpectrumLimiter!`);
+		}
 
-    isScanning = true;
-    updateFrequency();
-	scanInterval = setInterval(updateFrequency, scanIntervalTime);
+        if (ScannerMode === 'spectrum' && Scan === 'on' && EnableSpectrum) {
+			if (sigArray.length !== 0 && Sensitivity < SpectrumLimiterValue) {
+				sendDataToClient(currentFrequency); // Send the updated frequency to the client
+			}
+		} else {
+			sendDataToClient(currentFrequency); // Send the updated frequency to the client
+		}
+    }
+
+    isScanning = true; // Mark scanning as in progress
+    updateFrequency(); // Call update frequency once before starting the interval
+    scanInterval = setInterval(updateFrequency, scanIntervalTime); // Set up the scanning interval
 }
 
 function isInBlacklist(frequency, blacklist) {
@@ -1241,15 +1450,24 @@ function checkWhitelist() {
     });
 }
 
+function checkSpectrum() {
+    // Check if the whitelist feature is enabled
+    if (!EnableWhitelist) {
+        logInfo('Whitelist is not enabled. Skipping check.');
+        return;
+    }
+}
+
        function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
-                                  
-			let ScanHoldTimeValue = ScanHoldTime * 10;	
-            if (stereo_detect === true || picode.length > 1) {
+
+			let ScanHoldTimeValue = ScanHoldTime * 10;
+		
+            if (stereo_detect === true || picode.length > 1 || ScannerMode === 'spectrum' && Scan === 'on') {
 
                 if (strength > Sensitivity || picode.length > 1) {					
-					// console.log(strength, Sensitivity);
+					//console.log(strength, Sensitivity);
 
-                    if (picode.length > 1) {
+                    if (picode.length > 1 && ScannerMode !== 'spectrum') {
                         ScanHoldTimeValue += 50;
                     }				
 				           
@@ -1268,9 +1486,10 @@ function checkWhitelist() {
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();				
 								
-								if ((checkStrengthCounter > ScanHoldTimeValue) || ps.length > 1 && !ps.includes('?') && stationid) {
+								if ((checkStrengthCounter > ScanHoldTimeValue) || ps.length > 1 && !ps.includes('?') && stationid)  {
 									
 										if (picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
+
 											writeCSVLogEntry(true); // filtered log
 											if (!RAWLog) {
 												writeHTMLLogEntry(true); // filtered log
@@ -1290,9 +1509,9 @@ function checkWhitelist() {
 										startScan('up'); // Restart scanning after the delay
 									
                                 } 
-								
+															
                  			} else {
-								
+
 								if (picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
 									if (!RAWLog) {
@@ -1312,7 +1531,7 @@ function checkWhitelist() {
 							isScanning = false; // Updates a flag indicating scanning status
 							startScan('up');
 						}
-					}
+					}				
                 }
             } else {
 				if (Scan === 'on') {
