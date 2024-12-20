@@ -14,6 +14,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - Added acoustic signaling during scanning operation and gps status
 - Daily update check for admin
 - Scan algorithm revised
+- Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
 
 ## Installation notes:
 
@@ -40,7 +41,8 @@ The following variables can be changed in the configPlugin.json:
     StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 	
-    defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    SpectrumLimiterValue: 60,	// only valid for Spectrum Scan - default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100 | in dBm: -110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40,-40
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
     defaultScannerMode: 'normal', 	// Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
@@ -48,6 +50,7 @@ The following variables can be changed in the configPlugin.json:
 
     EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
     EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
+    EnableSpectrum: false,		// Enable Spectrum, set it 'true' or 'false' / spectrum graph plugin must be installed!
 
     /// FMDX SCANNER OPTIONS ///
 
@@ -87,6 +90,7 @@ The following variables can be changed in the configPlugin.json:
 - If there are several web servers, it makes sense to use a central server to register the logs that have already been sent. The [CanLogServer](https://github.com/Highpoint2000/canlog-server) can provide this functionality. When the server is used, the log interval set in the scanner.json is inactive because the log interval set for the server takes precedence!
 - The computer's standard sound output is used for acoustic signaling during the scanning process
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
+- To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
