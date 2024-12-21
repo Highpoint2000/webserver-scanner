@@ -484,7 +484,7 @@ async function DataPluginsWebSocket() {
 						const sig = parseFloat(item.sig);
 						const freq = parseFloat(item.freq);
 
-						if (sig > 70) {
+						if (sig > SpectrumLimiterValue) {
 						// Exclude the current frequency
 						excludeIndices.add(index);
 						excludedFrequencies.push(freq); // Add to debug list
@@ -1335,6 +1335,7 @@ function startScan(direction) {
 								}
 								sendDataToClient(currentFrequency); // Send the updated frequency to the client
                                 sigArray = []; // Reset signal array
+								sigArray1 = []; // Reset signal array
                                 startSpectrumAnalyse(); // Trigger spectrum analysis
                                 return; // Exit further processing in this cycle
                             }
