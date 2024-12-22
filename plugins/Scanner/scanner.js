@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA3) ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA4) ///
 ///                                                         ///
-///  by Highpoint               last update: 20.12.24       ///
+///  by Highpoint               last update: 22.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -24,7 +24,7 @@
 	
 	const EnableBlacklist = true; // This value is automatically updated via the config file
 	const EnableWhitelist = true; // This value is automatically updated via the config file
-	const EnableSpectrum = true; // This value is automatically updated via the config file
+	const EnableSpectrumScan = true; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -763,7 +763,7 @@ function toggleScan(isLongPressAction) {
 		if (EnableWhitelist) {
 			optionsHTML += `<li data-value="whitelist" class="option">whitelist</li>`;
 		}
-		if (EnableSpectrum) {
+		if (EnableSpectrumScan) {
 			optionsHTML += `<li data-value="spectrum" class="option">spectrum</li>`;
 		}
 		optionsHTML += `</ul>`;
