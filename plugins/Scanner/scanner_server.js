@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA3) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA4) ///
 ///                                                         ///
-///  by Highpoint               last update: 20.12.24       ///
+///  by Highpoint               last update: 22.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -29,16 +29,18 @@ const defaultConfig = {
     AntennaSwitch: 'off',				// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 
     defaultSensitivityValue: 30,		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    SpectrumLimiterValue: 100,			// only valid for Spectrum Scan - default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100 | in dBm: -110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40,-40
     defaultScanHoldTime: 5,				// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
     defaultScannerMode: 'normal',		// Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
 	scanIntervalTime: 500,				// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
 	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
+	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
+	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
+    SpectrumLimiterValue: 100,			// default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100
+
 	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
 	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
-	EnableSpectrum: false,				// Enable Spectrum, set it 'true' or 'false' 
-
+ 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
 	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
 	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
@@ -132,15 +134,17 @@ const StartAutoScan = configPlugin.StartAutoScan;
 const AntennaSwitch = configPlugin.AntennaSwitch;
 
 const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
-const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
 const defaultScannerMode = configPlugin.defaultScannerMode;
 const scanIntervalTime = configPlugin.scanIntervalTime;
 const scanBandwith = configPlugin.scanBandwith;
 
+const EnableSpectrumScan = configPlugin.EnableSpectrumScan;
+const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
+const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
+
 const EnableBlacklist = configPlugin.EnableBlacklist;
 const EnableWhitelist = configPlugin.EnableWhitelist;
-const EnableSpectrum = configPlugin.EnableSpectrum;
 
   let GPS_PORT = configPlugin.GPS_PORT;
   let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
@@ -197,7 +201,7 @@ function updateSettings() {
     // Check if the variables EnableBlacklist and EnableWhitelist already exist
     let hasEnableBlacklist = /const EnableBlacklist = .+;/.test(targetData);
     let hasEnableWhitelist = /const EnableWhitelist = .+;/.test(targetData);
-	let hasEnableSpectrum = /const EnableSpectrum = .+;/.test(targetData);
+	let hasEnableSpectrumScan = /const EnableSpectrumScan = .+;/.test(targetData);
 
     // Replace or add the definitions
     let updatedData = targetData;
@@ -216,11 +220,11 @@ function updateSettings() {
       updatedData = `const EnableWhitelist = ${EnableWhitelist};\n` + updatedData;
     }
 	
-	if (hasEnableSpectrum) {
-      updatedData = updatedData.replace(/const hasEnableSpectrum = .*;/, `const hasEnableSpectrum = ${hasEnableSpectrum};`);
+	if (hasEnableSpectrumScan) {
+      updatedData = updatedData.replace(/const hasEnableSpectrumScan = .*;/, `const hasEnableSpectrumScan = ${hasEnableSpectrumScan};`);
     } else {
-      // If hasEnableSpectrum does not exist, add it at the beginning
-      updatedData = `const hasEnableSpectrum = ${hasEnableSpectrum};\n` + updatedData;
+      // If hasEnableSpectrumScan does not exist, add it at the beginning
+      updatedData = `const hasEnableSpectrumScan = ${hasEnableSpectrumScan};\n` + updatedData;
     }
 
     // Update/write the target file
@@ -307,6 +311,7 @@ let GPSmodulOn = false;
 let GPSmodulOff = false;
 let sigArray = [];
 let sigArray1 = [];
+let sigArray2 = [];
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -465,13 +470,9 @@ async function DataPluginsWebSocket() {
                     // console.log("Received message:", message);
 					
 					if (message.type === 'sigArray') {
+	
 						sigArray = message.value; // Save sigArray
-
-						if (!Array.isArray(sigArray) || sigArray.length === 0) {
-							reject(new Error('sigArray is empty.'));
-							return;
-						}
-
+	
 						// Helper function for floating-point precision
 						const isCloseEnough = (a, b) => Math.abs(a - b) <= 0.1;
 
@@ -479,43 +480,71 @@ async function DataPluginsWebSocket() {
 						const excludeIndices = new Set();
 						const excludedFrequencies = []; // List for debugging output
 
-						// Collect all frequencies with sig > 70 and their neighbors
+						// Collect all frequencies with sig > SpectrumLimiterValue and their neighbors
 						sigArray.forEach((item, index) => {
-						const sig = parseFloat(item.sig);
-						const freq = parseFloat(item.freq);
+							
+							const sig = parseFloat(item.sig);
+							const freq = parseFloat(item.freq);
+							let SpectrumLimiter;
 
-						if (sig > SpectrumLimiterValue) {
-						// Exclude the current frequency
-						excludeIndices.add(index);
-						excludedFrequencies.push(freq); // Add to debug list
-
-						// Check and exclude the previous frequency
-						if (index - 1 >= 0) {
-						const prevFreq = parseFloat(sigArray[index - 1].freq);
-						excludeIndices.add(index - 1); // Always exclude
-						excludedFrequencies.push(prevFreq); // Add to debug list
-						}
-
-						// Check the next frequency
-						if (index + 1 < sigArray.length) {
-							const nextFreq = parseFloat(sigArray[index + 1].freq);
-							if (isCloseEnough(freq, nextFreq)) {
-								excludeIndices.add(index + 1);
-								excludedFrequencies.push(nextFreq); // Add to debug list
+							if (SpectrumLimiterValue < 70) {
+								SpectrumLimiter = 70; 
+							} else {
+								SpectrumLimiter = SpectrumLimiterValue; 
 							}
-						}
+
+							if (sig > SpectrumLimiter) {
+								// Exclude the current frequency
+								excludeIndices.add(index);
+								excludedFrequencies.push(freq); // Add to debug list
+
+								// Check and exclude the previous frequency
+								if (index - 1 >= 0) {
+									const prevFreq = parseFloat(sigArray[index - 1].freq);
+									excludeIndices.add(index - 1); // Always exclude
+									excludedFrequencies.push(prevFreq); // Add to debug list
+								}
+
+								// Check the next frequency
+								if (index + 1 < sigArray.length) {
+									const nextFreq = parseFloat(sigArray[index + 1].freq);
+									if (isCloseEnough(freq, nextFreq)) {
+										excludeIndices.add(index + 1);
+										excludedFrequencies.push(nextFreq); // Add to debug list
+									}
+								}
+							}
+						});
+
+						// Reset sigArray1 for a new filtered result
+						sigArray1 = sigArray.filter((_, index) => !excludeIndices.has(index));
+
+						// Step 2: Filter sigArray1 to only include items whose freq is not in sigArray2
+						// or whose sig differs by more than ±SpectrumChangeValue from the corresponding freq in sigArray2
+						const freqMap2 = new Map(
+							sigArray2.map(item => [parseFloat(item.freq), parseFloat(item.sig)])
+						);
+
+						sigArray1 = sigArray1.filter(item => {
+							
+							const freq = parseFloat(item.freq);
+							const sig = parseFloat(item.sig);
+
+							if (!freqMap2.has(freq)) {
+								return true; // Frequency not found in sigArray2
+							}
+
+							const sig2 = freqMap2.get(freq);
+							return Math.abs(sig - sig2) > SpectrumChangeValue; // Absolute difference in sig is more than SpectrumChangeValue
+						});
+	
+						// Step 3: Copy the current content of sigArray1 into sigArray2 for comparison
+						sigArray2 = Array.from(sigArray || []); // Ensure sigArray1 exists before copying
+
+						// Output the final filtered sigArray1
+						// console.log('sigArray2 (for comparison):', sigArray2);
+						// console.log('Final Filtered sigArray1:', sigArray1);
 					}
-				});
-
-				// Debug output: List of all frequencies to exclude
-				// console.log('Excluded Frequencies and Neighbors:', excludedFrequencies);
-
-				// Step 2: Copy all values that are not in the exclusion list
-				sigArray1 = sigArray.filter((_, index) => !excludeIndices.has(index));
-
-				// Output the result
-				// console.log('Filtered sigArray1:', sigArray1);
-			}
 
                     if (message.type === 'Scanner' && message.source !== source) {
 
@@ -599,7 +628,7 @@ async function DataPluginsWebSocket() {
 										DataPluginsSocket.send(JSON.stringify(responseMessage));
 									}
 								}
-								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'spectrum' && EnableSpectrum) {
+								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'spectrum' && EnableSpectrumScan) {
 										ScannerMode = message.value.ScannerMode;
 										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
 										
@@ -729,7 +758,6 @@ function sendDataToClient(frequency) {
     if (textSocket && textSocket.readyState === WebSocket.OPEN) {
         const dataToSend = `T${(frequency * 1000).toFixed(0)}`;
         textSocket.send(dataToSend);
-        // logInfo("WebSocket sent:", dataToSend);
     } else {
         logError('WebSocket not open.');
         setTimeout(() => sendDataToClient(frequency), 100); // Retry after a short delay
@@ -888,11 +916,12 @@ function checkUserCount(users) {
 			if (BEEP_CONTROL) {
 				fs.createReadStream('./plugins/Scanner/sounds/beep_long_double.wav').pipe(new Speaker());
 			}
-			           
-            if (DefaultFreq !== '' && enableDefaultFreq) {
-                sendDataToClient(DefaultFreq);
-            } else {
-				sendDataToClient(saveAutoscanFrequency);
+			if (ScannerMode !== 'spectrum' && !EnableSpectrumScan) {         
+				if (DefaultFreq !== '' && enableDefaultFreq) {
+					sendDataToClient(DefaultFreq);
+				} else {
+					sendDataToClient(saveAutoscanFrequency);
+				}
 			}
         }
     }
@@ -1310,7 +1339,7 @@ function startScan(direction) {
                     currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
                 }
             }	
-            else if (ScannerMode === 'spectrum' && Scan === 'on' && sigArray1.length !== 0 && EnableSpectrum) {
+            else if (ScannerMode === 'spectrum' && Scan === 'on' && sigArray.length !== 0 && EnableSpectrumScan) {
                     // Filter valid frequencies based on the signal strength and sensitivity
 					// console.log(sigArray1);
 					
@@ -1334,8 +1363,7 @@ function startScan(direction) {
 									fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
 								}
 								sendDataToClient(currentFrequency); // Send the updated frequency to the client
-                                sigArray = []; // Reset signal array
-								sigArray1 = []; // Reset signal array
+								sigArray = [];
                                 startSpectrumAnalyse(); // Trigger spectrum analysis
                                 return; // Exit further processing in this cycle
                             }
@@ -1360,11 +1388,11 @@ function startScan(direction) {
              }
         }
 		
-		if (ScannerMode === 'spectrum' && Scan === 'on' && sigArray.length !== 0 && EnableSpectrum && Sensitivity > SpectrumLimiterValue) {
+		if (ScannerMode === 'spectrum' && Scan === 'on' && sigArray.length !== 0 && EnableSpectrumScan && Sensitivity > SpectrumLimiterValue) {
 			logError(`Scanner Error: ${Sensitivity}>${SpectrumLimiterValue } ---> Sensitivity must be smaller than SpectrumLimiter!`);
 		}
 
-        if (ScannerMode === 'spectrum' && Scan === 'on' && EnableSpectrum) {
+        if (ScannerMode === 'spectrum' && Scan === 'on' && EnableSpectrumScan) {
 			if (sigArray.length !== 0 && Sensitivity < SpectrumLimiterValue) {
 				sendDataToClient(currentFrequency); // Send the updated frequency to the client
 			}
