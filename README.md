@@ -15,7 +15,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - Daily update check for admin
 - Scan algorithm revised
 - Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
-- Added difference scan option
+- Added spectrum difference scan option
 
 ## Installation notes:
 
