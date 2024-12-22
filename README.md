@@ -55,7 +55,7 @@ The following variables can be changed in the configPlugin.json:
     
     EnableSpectrumScan: false,	// Enable Spectrum, set it 'true' or 'false'
     SpectrumChangeValue: 0,		// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 100,	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
+    SpectrumLimiterValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
     SpectrumPlusMinusValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
     /// FMDX SCANNER OPTIONS ///
