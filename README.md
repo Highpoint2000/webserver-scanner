@@ -54,8 +54,8 @@ The following variables can be changed in the configPlugin.json:
     /// SPECTRUM SCANNER OPTIONS ///
     
     EnableSpectrumScan: false,	// Enable Spectrum, set it 'true' or 'false'
-    SpectrumChangeValue: 0,	// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 100,		// default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100
+    SpectrumChangeValue: 0,		// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
+    SpectrumLimiterValue: 100,	// default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100
 
     /// FMDX SCANNER OPTIONS ///
 
@@ -96,6 +96,8 @@ The following variables can be changed in the configPlugin.json:
 - The computer's standard sound output is used for acoustic signaling during the scanning process
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
 - To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0
+- Difference Scan Option: The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used
+
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
