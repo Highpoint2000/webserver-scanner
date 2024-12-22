@@ -7,7 +7,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-### v3.0 BETA (FMDX Scanner Version)
+### v3.0 BETA 4 (FMDX Scanner Version)
 
 - XML protocol converted to URDS format for upcoming FMLIST upload
 - Processing of GPS data (connection to COM PORT)
