@@ -34,13 +34,13 @@ const defaultConfig = {
 	scanIntervalTime: 500,				// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
 	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
+	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
+	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
+
 	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
 	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
     SpectrumLimiterValue: 100,			// default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100
 
-	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
-	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
- 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
 	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
 	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
@@ -139,12 +139,12 @@ const defaultScannerMode = configPlugin.defaultScannerMode;
 const scanIntervalTime = configPlugin.scanIntervalTime;
 const scanBandwith = configPlugin.scanBandwith;
 
+const EnableBlacklist = configPlugin.EnableBlacklist;
+const EnableWhitelist = configPlugin.EnableWhitelist;
+
 const EnableSpectrumScan = configPlugin.EnableSpectrumScan;
 const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
 const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
-
-const EnableBlacklist = configPlugin.EnableBlacklist;
-const EnableWhitelist = configPlugin.EnableWhitelist;
 
   let GPS_PORT = configPlugin.GPS_PORT;
   let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
