@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA4) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA5) ///
 ///                                                         ///
-///  by Highpoint               last update: 22.12.24       ///
+///  by Highpoint               last update: 23.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -30,7 +30,7 @@ const defaultConfig = {
 
     defaultSensitivityValue: 30,		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 5,				// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
-    defaultScannerMode: 'normal',		// Set the startmode: 'normal', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+    defaultScannerMode: 'normal',		// Set the startmode: 'normal', 'spectrum', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
 	scanIntervalTime: 500,				// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
 	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
@@ -39,7 +39,8 @@ const defaultConfig = {
 
 	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
 	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 100,			// default is 100 / Value in dBf/dBµV: 10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100
+    SpectrumLimiterValue: 50,			// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
+	SpectrumPlusMinusValue: 50,		// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
 	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
@@ -145,6 +146,7 @@ const EnableWhitelist = configPlugin.EnableWhitelist;
 const EnableSpectrumScan = configPlugin.EnableSpectrumScan;
 const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
 const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
+const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
   let GPS_PORT = configPlugin.GPS_PORT;
   let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
@@ -472,7 +474,7 @@ async function DataPluginsWebSocket() {
 					if (message.type === 'sigArray') {
 	
 						sigArray = message.value; // Save sigArray
-	
+						
 						// Helper function for floating-point precision
 						const isCloseEnough = (a, b) => Math.abs(a - b) <= 0.1;
 
@@ -485,39 +487,33 @@ async function DataPluginsWebSocket() {
 							
 							const sig = parseFloat(item.sig);
 							const freq = parseFloat(item.freq);
-							let SpectrumLimiter;
-
-							if (SpectrumLimiterValue < 70) {
-								SpectrumLimiter = 70; 
-							} else {
-								SpectrumLimiter = SpectrumLimiterValue; 
+							
+							if (sig > SpectrumPlusMinusValue) {
+								const prevFreq = parseFloat(sigArray[index - 1].freq);
+								excludeIndices.add(index - 1); // Always exclude
+								excludedFrequencies.push(prevFreq); // Add to debug list						
 							}
-
-							if (sig > SpectrumLimiter) {
-								// Exclude the current frequency
-								excludeIndices.add(index);
+							
+							if (sig > SpectrumLimiterValue) {
+								excludeIndices.add(index); // Always exclude
 								excludedFrequencies.push(freq); // Add to debug list
-
-								// Check and exclude the previous frequency
-								if (index - 1 >= 0) {
-									const prevFreq = parseFloat(sigArray[index - 1].freq);
-									excludeIndices.add(index - 1); // Always exclude
-									excludedFrequencies.push(prevFreq); // Add to debug list
-								}
-
-								// Check the next frequency
-								if (index + 1 < sigArray.length) {
-									const nextFreq = parseFloat(sigArray[index + 1].freq);
-									if (isCloseEnough(freq, nextFreq)) {
-										excludeIndices.add(index + 1);
-										excludedFrequencies.push(nextFreq); // Add to debug list
-									}
-								}
 							}
+
+							if (sig > SpectrumPlusMinusValue) {
+								const nextFreq = parseFloat(sigArray[index + 1].freq);
+								excludeIndices.add(index + 1); // Always exclude
+								excludedFrequencies.push(nextFreq); // Add to debug list
+							}
+
 						});
+						
+						// Log excluded frequencies for debugging
+						// console.log('Excluded frequencies:', excludedFrequencies);
 
 						// Reset sigArray1 for a new filtered result
 						sigArray1 = sigArray.filter((_, index) => !excludeIndices.has(index));
+
+						// console.log('Filtered sigArray1:', sigArray1);
 
 						// Step 2: Filter sigArray1 to only include items whose freq is not in sigArray2
 						// or whose sig differs by more than ±SpectrumChangeValue from the corresponding freq in sigArray2
@@ -529,6 +525,10 @@ async function DataPluginsWebSocket() {
 							
 							const freq = parseFloat(item.freq);
 							const sig = parseFloat(item.sig);
+							
+							if (sig < Sensitivity) {
+								return false;
+							}
 
 							if (!freqMap2.has(freq)) {
 								return true; // Frequency not found in sigArray2
@@ -536,6 +536,8 @@ async function DataPluginsWebSocket() {
 
 							const sig2 = freqMap2.get(freq);
 							return Math.abs(sig - sig2) > SpectrumChangeValue; // Absolute difference in sig is more than SpectrumChangeValue
+							
+							
 						});
 	
 						// Step 3: Copy the current content of sigArray1 into sigArray2 for comparison
@@ -544,6 +546,7 @@ async function DataPluginsWebSocket() {
 						// Output the final filtered sigArray1
 						// console.log('sigArray2 (for comparison):', sigArray2);
 						// console.log('Final Filtered sigArray1:', sigArray1);
+
 					}
 
                     if (message.type === 'Scanner' && message.source !== source) {
@@ -916,13 +919,13 @@ function checkUserCount(users) {
 			if (BEEP_CONTROL) {
 				fs.createReadStream('./plugins/Scanner/sounds/beep_long_double.wav').pipe(new Speaker());
 			}
-			if (ScannerMode !== 'spectrum' && !EnableSpectrumScan) {         
-				if (DefaultFreq !== '' && enableDefaultFreq) {
-					sendDataToClient(DefaultFreq);
-				} else {
-					sendDataToClient(saveAutoscanFrequency);
-				}
+     
+			if (DefaultFreq !== '' && enableDefaultFreq) {
+				sendDataToClient(DefaultFreq);
+			} else {
+				sendDataToClient(saveAutoscanFrequency);
 			}
+
         }
     }
 }
@@ -1486,20 +1489,19 @@ function checkSpectrum() {
         return;
     }
 }
-
        function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
 
 			let ScanHoldTimeValue = ScanHoldTime * 10;
 		
             if (stereo_detect === true || picode.length > 1 || ScannerMode === 'spectrum' && Scan === 'on') {
 
-                if (strength > Sensitivity || picode.length > 1) {					
+                if (strength > Sensitivity || picode.length > 1 || ScannerMode === 'spectrum' && Scan === 'on') {					
 					//console.log(strength, Sensitivity);
 
                     if (picode.length > 1 && ScannerMode !== 'spectrum') {
                         ScanHoldTimeValue += 50;
                     }				
-				           
+				    // console.log(checkStrengthCounter,ScanHoldTimeValue);
 					clearInterval(scanInterval); // Clears a previously defined scanning interval
 					isScanning = false; // Updates a flag indicating scanning status					
 
@@ -1530,13 +1532,12 @@ function checkSpectrum() {
 												
 										}
 										
-										isScanning = false; 									
-										checkStrengthCounter = 0; // Reset the counter
-										stereo_detect = false;
-										station = '';	
-										Savefreq = freq;	
-										startScan('up'); // Restart scanning after the delay
-									
+											isScanning = false;
+											checkStrengthCounter = 0; // Reset the counter
+											stereo_detect = false;
+											station = '';
+											Savefreq = freq;
+											startScan('up'); // Restart scanning after the delay						
                                 } 
 															
                  			} else {
@@ -1553,6 +1554,7 @@ function checkSpectrum() {
 								}
 							}
                 } else {
+
 					if (Scan === 'on') {
 						if (checkStrengthCounter > 10) {
 							clearInterval(scanInterval); // Clears a previously defined scanning interval
@@ -1563,6 +1565,7 @@ function checkSpectrum() {
 					}				
                 }
             } else {
+
 				if (Scan === 'on') {
                     if (checkStrengthCounter > 10) {
                         clearInterval(scanInterval); // Clears a previously defined scanning interval
