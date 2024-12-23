@@ -40,7 +40,7 @@ const defaultConfig = {
 	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
 	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
     SpectrumLimiterValue: 50,			// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
-	SpectrumPlusMinusValue: 50,		// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
+	SpectrumPlusMinusValue: 70,		// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
 	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
