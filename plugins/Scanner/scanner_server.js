@@ -323,8 +323,10 @@ let GPSdetectionOff = true;
 let GPSmodulOn = false;
 let GPSmodulOff = false;
 let sigArray = [];
-let sigArray1 = [];
-let sigArray2 = [];
+let sigArraySpectrum = [];
+let sigArrayDifference = [];
+let sigArraySave = [];
+let validFrequencies;
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -521,22 +523,19 @@ async function DataPluginsWebSocket() {
 						// Log excluded frequencies for debugging
 						// console.log('Excluded frequencies:', excludedFrequencies);
 
-						// Reset sigArray1 for a new filtered result
-						sigArray1 = sigArray.filter((_, index) => !excludeIndices.has(index));
+						// Reset sigArraySpectrum for a new filtered result
+						sigArraySpectrum = sigArray.filter((_, index) => !excludeIndices.has(index));
+						sigArrayDifference = sigArraySpectrum;
 
-						// console.log('Filtered sigArray1:', sigArray1);
+						// console.log('Filtered sigArraySpectrum:', sigArraySpectrum);
 
-						if (ScannerMode !== 'difference') {
-							SpectrumChangeValue = 0;
-						}
-
-						// Step 2: Filter sigArray1 to only include items whose freq is not in sigArray2
-						// or whose sig differs by more than ±SpectrumChangeValue from the corresponding freq in sigArray2
+						// Step 2: Filter sigArrayDifference to only include items whose freq is not in sigArraySave
+						// or whose sig differs by more than ±SpectrumChangeValue from the corresponding freq in sigArraySave
 						const freqMap2 = new Map(
-							sigArray2.map(item => [parseFloat(item.freq), parseFloat(item.sig)])
+							sigArraySave.map(item => [parseFloat(item.freq), parseFloat(item.sig)])
 						);
 
-						sigArray1 = sigArray1.filter(item => {
+						sigArrayDifference = sigArrayDifference.filter(item => {
 							
 							const freq = parseFloat(item.freq);
 							const sig = parseFloat(item.sig);
@@ -546,7 +545,7 @@ async function DataPluginsWebSocket() {
 							}
 
 							if (!freqMap2.has(freq)) {
-								return true; // Frequency not found in sigArray2
+								return true; // Frequency not found in sigArraySave
 							}
 
 							const sig2 = freqMap2.get(freq);
@@ -555,12 +554,11 @@ async function DataPluginsWebSocket() {
 							
 						});
 	
-						// Step 3: Copy the current content of sigArray1 into sigArray2 for comparison
-						sigArray2 = Array.from(sigArray || []); // Ensure sigArray1 exists before copying
+						// Step 3: Copy the current content of sigArraySpectrum into sigArraySave for comparison
+						sigArraySave = Array.from(sigArray || []); // Ensure sigArraySpectrum exists before copying
 
-						// Output the final filtered sigArray1
-						// console.log('sigArray2 (for comparison):', sigArray2);
-						// console.log('Final Filtered sigArray1:', sigArray1);
+						// console.log('sigArraySave (for comparison):', sigArraySave);
+						// console.log('Filtered sigArrayDifference:', sigArrayDifference);
 
 					}
 
@@ -1359,12 +1357,20 @@ function startScan(direction) {
             }	
             else if (Scan === 'on' && sigArray.length !== 0 && (ScannerMode === 'spectrum' && EnableSpectrumScan || ScannerMode === 'difference' && EnableDifferenceScan)) {
                     // Filter valid frequencies based on the signal strength and sensitivity
-					// console.log(sigArray1);
+					// console.log(sigArraySpectrum);
 					
-					const validFrequencies = sigArray1
-						.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue)
-						.map(item => parseFloat(item.freq));
-
+					if (ScannerMode === 'spectrum') {
+						validFrequencies = sigArraySpectrum
+							.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue)
+							.map(item => parseFloat(item.freq));
+					}
+					
+					if (ScannerMode === 'difference') {
+						validFrequencies = sigArrayDifference
+							.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue)
+							.map(item => parseFloat(item.freq));
+					}
+					
                     // Keep updating the frequency until it matches a valid frequency
                     while (!validFrequencies.includes(currentFrequency)) {
                         if (direction === 'up') {
