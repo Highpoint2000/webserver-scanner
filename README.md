@@ -15,7 +15,7 @@ This plugin provides scanning functions for the FM-DX web server.
 - Daily update check for admin
 - Scan algorithm revised
 - Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
-- Added spectrum difference scan option
+- Added ultrafast difference scan option with limiter and filter for strong station (spectrum graph plugin must be installed!)
 
 ## Installation notes:
 
@@ -53,7 +53,8 @@ The following variables can be changed in the configPlugin.json:
     
     /// SPECTRUM SCANNER OPTIONS ///
     
-    EnableSpectrumScan: false,	// Enable Spectrum, set it 'true' or 'false'
+    EnableSpectrumScan: false,	// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
+    EnableDifferenceScan: false,	// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
     SpectrumChangeValue: 0,		// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
     SpectrumLimiterValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
     SpectrumPlusMinusValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
@@ -97,7 +98,7 @@ The following variables can be changed in the configPlugin.json:
 - The computer's standard sound output is used for acoustic signaling during the scanning process
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
 - To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. Use the variable Spectrum PlusMinus Value to set a signal strength of a strong/local station independently of the Spectrum Limiter Value, where the neighboring channels (+/- 0.1 MHz) should be filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0 !!! 
-- Difference Scan Option: The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used
+- Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned.
 
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
