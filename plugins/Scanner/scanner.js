@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA7) ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA8) ///
 ///                                                         ///
-///  by Highpoint               last update: 25.12.24       ///
+///  by Highpoint               last update: 26.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -25,7 +25,9 @@
 	const EnableBlacklist = true; // This value is automatically updated via the config file
 	const EnableWhitelist = true; // This value is automatically updated via the config file
 	const EnableSpectrumScan = true; // This value is automatically updated via the config file
+	const EnableSpectrumScanBL = true; // This value is automatically updated via the config file
 	const EnableDifferenceScan = true; // This value is automatically updated via the config file
+	const EnableDifferenceScanBL = true; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -267,7 +269,7 @@
                         scannerButtonsExecuted = true; // Mark as executed
 
                         if (isTuneAuthenticated) {
-							if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
+							if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
 								sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Limit: ${SpectrumLimiterValue} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
 								if (SpectrumLimiterValue !== 'undefined' && SpectrumLimiterValue !== '') {
 									SpectrumLimiterValueStatus = SpectrumLimiterValue;
@@ -767,9 +769,16 @@ function toggleScan(isLongPressAction) {
 		if (EnableSpectrumScan) {
 			optionsHTML += `<li data-value="spectrum" class="option">spectrum</li>`;
 		}
+		if (EnableSpectrumScanBL) {
+			optionsHTML += `<li data-value="spectrumBL" class="option">spectrumBL</li>`;
+		}
 		if (EnableDifferenceScan) {
 			optionsHTML += `<li data-value="difference" class="option">difference</li>`;
 		}
+		if (EnableDifferenceScanBL) {
+			optionsHTML += `<li data-value="differenceBL" class="option">differenceBL</li>`;
+		}
+
 		optionsHTML += `</ul>`;
 		modeContainer.innerHTML = optionsHTML;
 		
@@ -926,7 +935,7 @@ function toggleScan(isLongPressAction) {
 				
                 if (commandPrefix === 'I') {
                     SendValue(value, ScannerMode, ScanHoldTime);
-					if (value >= SpectrumLimiterValueStatus && (ScannerModeStatus === 'spectrum' || ScannerModeStatus === 'difference')) {
+					if (value >= SpectrumLimiterValueStatus && (ScannerModeStatus === 'spectrum' || ScannerModeStatus === 'spectrumBL' || ScannerModeStatus === 'difference' || ScannerModeStatus === 'differenceBL')) {
 						sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${SpectrumLimiterValueStatus} ${signalValue})!`, false, false);
 					}
                 }
