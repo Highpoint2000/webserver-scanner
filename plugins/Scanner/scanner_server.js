@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA6) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA7) ///
 ///                                                         ///
-///  by Highpoint               last update: 24.12.24       ///
+///  by Highpoint               last update: 25.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -35,10 +35,10 @@ const defaultConfig = {
 	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
 	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
-	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false'
+	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
 
-	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
-	EnableDifferenceScan: false,		// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
+	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
+	EnableDifferenceScan: false,		// Enable Spectrum, set it 'true' or 'false'
 	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
     SpectrumLimiterValue: 50,			// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
 	SpectrumPlusMinusValue: 70,			// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
@@ -488,43 +488,50 @@ async function DataPluginsWebSocket() {
 	
 						sigArray = message.value; // Save sigArray					
 						
-						// Helper function for floating-point precision
-						const isCloseEnough = (a, b) => Math.abs(a - b) <= 0.1;
-
-						// Step 1: Create a list of frequencies to exclude
-						const excludeIndices = new Set();
-						const excludedFrequencies = []; // List for debugging output
-
-						// Collect all frequencies with sig > SpectrumLimiterValue and their neighbors
-						sigArray.forEach((item, index) => {
-							
-							const sig = parseFloat(item.sig);
-							const freq = parseFloat(item.freq);
-							
-							if (sig > SpectrumPlusMinusValue) {
-								const prevFreq = parseFloat(sigArray[index - 1].freq);
-								excludeIndices.add(index - 1); // Always exclude
-								excludedFrequencies.push(prevFreq); // Add to debug list						
-							}
-							
-							if (sig > SpectrumLimiterValue) {
-								excludeIndices.add(index); // Always exclude
-								excludedFrequencies.push(freq); // Add to debug list
-							}
-
-							if (sig > SpectrumPlusMinusValue) {
-								const nextFreq = parseFloat(sigArray[index + 1].freq);
-								excludeIndices.add(index + 1); // Always exclude
-								excludedFrequencies.push(nextFreq); // Add to debug list
-							}
-
+						const primaryFrequencies = sigArray.filter(entry => {
+							const hasSecondDecimalZero = Math.round(entry.freq * 100) % 10 === 0;
+							return entry.sig > SpectrumLimiterValue && hasSecondDecimalZero;
 						});
-						
-						// Log excluded frequencies for debugging
-						// console.log('Excluded frequencies:', excludedFrequencies);
 
-						// Reset sigArraySpectrum for a new filtered result
-						sigArraySpectrum = sigArray.filter((_, index) => !excludeIndices.has(index));
+						let extendedFrequencies = [];
+
+						primaryFrequencies.forEach(primary => {
+							const freq = parseFloat(primary.freq); // Ensure freq is a number
+							if (isNaN(freq)) {
+								logError("Scanner invalid frequency:", primary.freq);
+								return; // Skip invalid frequencies
+							}
+
+							const lowerBound = parseFloat((freq - 0.1).toFixed(2));
+							const upperBound = parseFloat((freq + 0.1).toFixed(2));
+
+							// Decide based on the signal value of the primary frequency
+							if (primary.sig >= SpectrumPlusMinusValue) {
+								// Add frequencies in the range of the primary frequency
+								const inRange = sigArray.filter(entry => {
+									const entryFreq = parseFloat(entry.freq); // Ensure entry.freq is a number
+									return entryFreq >= lowerBound && entryFreq <= upperBound;
+								});
+								extendedFrequencies.push(...inRange);
+							}
+						});
+				
+						// Remove duplicate entries from extended frequencies
+						extendedFrequencies = Array.from(
+							new Map(extendedFrequencies.map(item => [item.freq, item])).values()
+						);
+
+						// Capture all remaining frequencies that are not part of extendedFrequencies or marked as primary frequency
+						sigArraySpectrum = sigArray.filter(entry => {
+							const isInExtendedFrequencies = extendedFrequencies.some(ext => ext.freq === entry.freq);
+							const isPrimary = primaryFrequencies.some(primary => primary.freq === entry.freq);
+							return !isInExtendedFrequencies && !isPrimary;
+						});
+
+						//console.log("Primary Frequencies:", primaryFrequencies);
+						//console.log("Extended Frequencies:", extendedFrequencies);
+						//console.log("Excluded Frequencies (sigArraySpectrum):", sigArraySpectrum);
+
 						sigArrayDifference = sigArraySpectrum;
 
 						// console.log('Filtered sigArraySpectrum:', sigArraySpectrum);
