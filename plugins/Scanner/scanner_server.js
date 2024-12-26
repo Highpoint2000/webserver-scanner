@@ -35,10 +35,10 @@ const defaultConfig = {
 	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
 	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
-	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
+	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false'
 
-	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
-	EnableDifferenceScan: false,		// Enable Spectrum, set it 'true' or 'false'
+	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
+	EnableDifferenceScan: false,		// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
 	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
     SpectrumLimiterValue: 50,			// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
 	SpectrumPlusMinusValue: 70,			// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
