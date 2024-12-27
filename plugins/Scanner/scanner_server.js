@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA8) ///
 ///                                                         ///
-///  by Highpoint               last update: 26.12.24       ///
+///  by Highpoint               last update: 27.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1997,12 +1997,7 @@ function getLogFilePathCSV(date, time) {
          // Update the header content as per your requirements
         let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly 
 
-		// let header = `10,"highpoint2000@gmail.com"\n`;
-		// header += `11,"8032","HIGHP"\n`;
-		// header += `12,""\n`;
-		// header += `13,"public",""\n`;
-		// header += `14,"fixed"\n`;
-		// header += `15, 63, 47, 16\n`; 
+		let header = ``;  // no header needed anymore
        
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -2084,7 +2079,7 @@ function writeCSVLogEntry(isFiltered) {
 	const OTHERPS = `""`;
 
     // Create the log entry line with the relevant data
-	let line = `${TYPE},${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},${ALLPSTEXT},${OTHERPS}\n`;
+	let line = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS}\n`;
 	
     try {
         // Append the log entry to the CSV file
