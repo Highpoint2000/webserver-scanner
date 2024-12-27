@@ -1982,7 +1982,7 @@ function getLogFilePathCSV(date, time) {
     }
     
     // Determine the filename based on the isFiltered flag
-    const fileName = `SCANNER_${date}.csv`;
+    const fileName = `scan_${date}_fm_rds.csv`;
     
     // Create the full path to the file
     const filePath = path.join(logDir, fileName);
