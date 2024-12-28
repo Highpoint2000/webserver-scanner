@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA8) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA9) ///
 ///                                                         ///
-///  by Highpoint               last update: 26.12.24       ///
+///  by Highpoint               last update: 28.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -44,7 +44,7 @@ const defaultConfig = {
 	SpectrumPlusMinusValue: 70,			// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
-	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: 4800)		
+	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: '4800')		
 	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
 
     RAWLog: false,						// Set to 'true' or 'false' for RAW data logging, default is false
@@ -358,6 +358,7 @@ let sigArraySave2 = [];
 let sigArraySave3 = [];
 let validFrequencies;
 let freqMap2;
+let logFilePath 
 
 if (tuningUpperLimit === '' || !tuningLimit) {
 	tuningUpperLimit = '108.0';
@@ -1236,6 +1237,7 @@ function initializeAntennas(Antennas) {
 
 // Function to send the command to the next activated antenna
 function sendNextAntennaCommand() {
+
     if (enabledAntennas.length < 2 || AntennaSwitch !== 'on') {
         // No need to switch if there's only one or no active antennas
         // console.log('No need to switch antennas.');
@@ -1973,16 +1975,19 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
     }
 }
 	
-function getLogFilePathCSV(date, time) {
+function getLogFilePathCSV(date, time, filename) {
     
     if (UTCtime) {
         const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
         time = utcTime;
         date = utcDate;
     }
+	
+	// Convert the UTCtime to "THHMMSS" format
+    const formattedTime = `T${time.replace(/:/g, '')}`;
     
     // Determine the filename based on the isFiltered flag
-    const fileName = `SCANNER_${date}.csv`;
+    const fileName = `scan_${date}${formattedTime}_TEF_fm_rds.csv`;
     
     // Create the full path to the file
     const filePath = path.join(logDir, fileName);
@@ -1997,12 +2002,7 @@ function getLogFilePathCSV(date, time) {
          // Update the header content as per your requirements
         let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly 
 
-		// let header = `10,"highpoint2000@gmail.com"\n`;
-		// header += `11,"8032","HIGHP"\n`;
-		// header += `12,""\n`;
-		// header += `13,"public",""\n`;
-		// header += `14,"fixed"\n`;
-		// header += `15, 63, 47, 16\n`; 
+		let header = ``;
        
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -2014,6 +2014,9 @@ function getLogFilePathCSV(date, time) {
     
     return filePath;
 }
+
+// Determine the path to the log file based on the current date and the isFiltered flag
+logFilePath = getLogFilePathCSV();
 
 function writeCSVLogEntry(isFiltered) {
     
@@ -2032,10 +2035,7 @@ function writeCSVLogEntry(isFiltered) {
     const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
       time = utcTime;
       date = utcDate;
-    
-    // Determine the path to the log file based on the current date and the isFiltered flag
-    const logFilePath = getLogFilePathCSV(date, time, isFiltered);
-	
+	     
 	// Data preparation for FMLIST
     const TYPE = `30`;
 
@@ -2058,10 +2058,10 @@ function writeCSVLogEntry(isFiltered) {
 	const SNRAX = Math.round(numericStrengthTop * 10);
 	const GPSLAT = typeof LAT === 'number' 
 		? `${LAT.toFixed(9)}` 
-		: `${parseFloat(config.identification.lat || 0).toFixed(9)}`;
+		: `${parseFloat(config.identification.lat || 0)}`;
 	const GPSLON = typeof LON === 'number' 
 		? `${LON.toFixed(9)}` 
-		: `${parseFloat(config.identification.lon || 0).toFixed(9)}`;
+		: `${parseFloat(config.identification.lon || 0)}`;
 
 	const GPSMODE = `${gpsmode}`;
 	const GPSALT = gpsmode === 3 && gpsalt ? `${parseFloat(gpsalt).toFixed(3)}` : '';
