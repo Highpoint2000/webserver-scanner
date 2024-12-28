@@ -7,7 +7,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-### v3.0 BETA 4 (FMDX Scanner Version)
+### v3.0 BETA (FMDX Scanner Version)
 
 - XML protocol converted to URDS format for upcoming FMLIST upload
 - Processing of GPS data (connection to COM PORT)
@@ -62,7 +62,7 @@ The following variables can be changed in the configPlugin.json:
     /// FMDX SCANNER OPTIONS ///
 
     GPS_PORT: '', 			// Connection port for GPS receiver (e.g.: 'COM1')
-    GPS_BAUDRATE: '',		// Baud rate for GPS receiver (e.g.: 4800)
+    GPS_BAUDRATE: '',		// Baud rate for GPS receiver (e.g.: '4800')
     BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
     /// HTML LOGGING OPTIONS ////
