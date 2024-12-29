@@ -516,7 +516,7 @@ async function DataPluginsWebSocket() {
                     const message = JSON.parse(event.data);
                     //console.log("Received message:", message);
 					
-					if (message.type === 'sigArray') {
+					if (message.type === 'sigArray' && message.isScanning) {
 				
 						sigArray = message.value; // Save sigArray					
 						
@@ -1299,7 +1299,9 @@ async function setupSendSocket() {
             },
         });
 
-        DataPluginsSocket.send(message);
+        setTimeout(() => {
+            DataPluginsSocket.send(message);
+        }, 400);
 
     });
 }
