@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA9) ///
 ///                                                         ///
-///  by Highpoint               last update: 28.12.24       ///
+///  by Highpoint               last update: 29.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -43,8 +43,8 @@ const defaultConfig = {
     SpectrumLimiterValue: 50,			// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
 	SpectrumPlusMinusValue: 70,			// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
-	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1')
-	GPS_BAUDRATE: '',					// Baud rate for GPS receiver (e.g.: '4800')		
+	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1' or ('/dev/ttyACM0'), if empty then GPS off
+	GPS_BAUDRATE: 4800,					// Baud rate for GPS receiver (e.g.: 4800)		
 	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
 
     RAWLog: false,						// Set to 'true' or 'false' for RAW data logging, default is false
@@ -514,10 +514,10 @@ async function DataPluginsWebSocket() {
             DataPluginsSocket.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
-                    // console.log("Received message:", message);
+                    //console.log("Received message:", message);
 					
 					if (message.type === 'sigArray') {
-	
+				
 						sigArray = message.value; // Save sigArray					
 						
 						const primaryFrequencies = sigArray.filter(entry => {
@@ -1473,6 +1473,7 @@ function startScan(direction) {
                             } else {
                                 currentFrequency += 0.1;
                             }
+							
                             if (currentFrequency > tuningUpperLimit) {
 								currentFrequency = tuningLowerLimit; // Set to start spectrum analysis frequency
 								sendNextAntennaCommand(); // Send the next antenna command
@@ -1977,11 +1978,9 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
 	
 function getLogFilePathCSV(date, time, filename) {
     
-    if (UTCtime) {
-        const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
-        time = utcTime;
-        date = utcDate;
-    }
+    const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+    time = utcTime;
+    date = utcDate;
 	
 	// Convert the UTCtime to "THHMMSS" format
     const formattedTime = `T${time.replace(/:/g, '')}`;
@@ -2056,12 +2055,17 @@ function writeCSVLogEntry(isFiltered) {
 	const SNRMIN = Math.round(numericStrength * 10);
 	const numericStrengthTop = parseFloat(strengthTop);
 	const SNRAX = Math.round(numericStrengthTop * 10);
-	const GPSLAT = typeof LAT === 'number' 
-		? `${LAT.toFixed(9)}` 
-		: `${parseFloat(config.identification.lat || 0)}`;
-	const GPSLON = typeof LON === 'number' 
-		? `${LON.toFixed(9)}` 
-		: `${parseFloat(config.identification.lon || 0)}`;
+	const GPSLAT = typeof LAT === 'number' && !isNaN(LAT)
+		? `${LAT.toFixed(9)}`
+		: (config.identification.lat && !isNaN(parseFloat(config.identification.lat))) 
+			? `${parseFloat(config.identification.lat).toFixed(9)}`
+			: "";
+
+	const GPSLON = typeof LON === 'number' && !isNaN(LON)
+		? `${LON.toFixed(9)}`
+		: (config.identification.lon && !isNaN(parseFloat(config.identification.lon))) 
+			? `${parseFloat(config.identification.lon).toFixed(9)}`
+			: "";
 
 	const GPSMODE = `${gpsmode}`;
 	const GPSALT = gpsmode === 3 && gpsalt ? `${parseFloat(gpsalt).toFixed(3)}` : '';
