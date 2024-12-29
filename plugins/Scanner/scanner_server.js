@@ -1978,10 +1978,6 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
 	
 function getLogFilePathCSV(date, time, filename) {
 	
-	if (!GPS_PORT) {
-		return;
-	}
-    
     const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
     time = utcTime;
     date = utcDate;
@@ -2031,10 +2027,6 @@ function writeCSVLogEntry(isFiltered) {
         return;
     }
 	
-	if (!GPS_PORT) {
-		return;
-	}
-
     const now = new Date();
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
