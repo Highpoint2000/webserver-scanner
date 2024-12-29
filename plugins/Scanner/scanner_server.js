@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA9) ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA10)///
 ///                                                         ///
-///  by Highpoint               last update: 29.12.24       ///
+///  by Highpoint               last update: 30.12.24       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -45,6 +45,7 @@ const defaultConfig = {
 
 	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1' or ('/dev/ttyACM0'), if empty then GPS off
 	GPS_BAUDRATE: 4800,					// Baud rate for GPS receiver (e.g.: 4800)		
+	GPS_HEIGHT: '',						// Enter fixed altitude in m or leave blank for altitude via GPS signal (e.g.: '160' )	
 	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
 
     RAWLog: false,						// Set to 'true' or 'false' for RAW data logging, default is false
@@ -152,6 +153,7 @@ const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
   let GPS_PORT = configPlugin.GPS_PORT;
   let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
+  let GPS_HEIGHT = configPlugin.GPS_HEIGHT;
 const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
 const RAWLog = configPlugin.RAWLog;
@@ -342,9 +344,10 @@ let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
 let textSocketLost;
 let scanBandwithSave;
+let ALT;
 let gpstime;
-let gpsalt;
-let gpsmode = 2; // Default value (no altitude data)
+let gpsalt = GPS_HEIGHT;
+let gpsmode = GPS_HEIGHT ? 2 : ''; // If GPS_HEIGHT has a value, set gpsmode to 2, otherwise set it to an empty string
 let GPSdetectionOn = false;
 let GPSdetectionOff = true;
 let GPSmodulOn = false;
@@ -1840,7 +1843,14 @@ function startGPSConnection() {
     } else if (parts[0] === '$GPGGA' && parts.length > 9) {
 
       gpsalt = parts[9];
-      gpsmode = gpsalt ? 3 : 2;
+	  
+	  if (GPS_HEIGHT) {
+		  gpsmode = 2;
+		  ALT = GPS_HEIGHT;
+      } else if (gpsalt !== undefined && gpsalt !== null && !isNaN(parseFloat(gpsalt))) {
+          gpsmode = 3;
+		  ALT = gpsalt;
+	  } 
 	  
 	  if (!GPSmodulOn) {
 		GPSmodulOn = true;
@@ -1864,7 +1874,7 @@ function startGPSConnection() {
         }
     }
 
-	if (!GPSdetectionOff && gpsmode === 2) {
+	if (!GPSdetectionOff && gpsmode !== 3) {
       logWarn(`No GPS data received`);
       GPSdetectionOff = true;
       GPSdetectionOn = false;
@@ -1873,10 +1883,6 @@ function startGPSConnection() {
         fs.createReadStream('./plugins/Scanner/sounds/beep_middlelong.wav').pipe(new Speaker());
       }
 
-      LAT = '';
-      LON = '';
-      gpsalt = '0';
-      gpsmode = 2;
     }
 
   });
@@ -1892,10 +1898,6 @@ function startGPSConnection() {
         fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
       }
 
-      LAT = '';
-      LON = '';
-      gpsalt = '0';
-      gpsmode = 2;
     }
 
     // Retry logic to handle connection loss
@@ -1915,10 +1917,6 @@ function startGPSConnection() {
         fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
       }
 
-      LAT = '';
-      LON = '';
-      gpsalt = '0';
-      gpsmode = 2;
     }
     setTimeout(() => {
       startGPSConnection(); // Retry after 5 seconds
@@ -1979,6 +1977,10 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
 }
 	
 function getLogFilePathCSV(date, time, filename) {
+	
+	if (!GPS_PORT) {
+		return;
+	}
     
     const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
     time = utcTime;
@@ -2028,6 +2030,10 @@ function writeCSVLogEntry(isFiltered) {
     if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB && EnableWhitelist) {
         return;
     }
+	
+	if (!GPS_PORT) {
+		return;
+	}
 
     const now = new Date();
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -2057,24 +2063,25 @@ function writeCSVLogEntry(isFiltered) {
 	const SNRMIN = Math.round(numericStrength * 10);
 	const numericStrengthTop = parseFloat(strengthTop);
 	const SNRAX = Math.round(numericStrengthTop * 10);
-	const GPSLAT = typeof LAT === 'number' && !isNaN(LAT)
-		? `${LAT.toFixed(9)}`
-		: (config.identification.lat && !isNaN(parseFloat(config.identification.lat))) 
-			? `${parseFloat(config.identification.lat).toFixed(9)}`
-			: "";
+	
+const GPSLAT = typeof LAT === 'number' && !isNaN(LAT)
+    ? `${LAT.toFixed(9)}`
+    : (!GPS_PORT && config.identification.lat && !isNaN(parseFloat(config.identification.lat))) 
+        ? `${parseFloat(config.identification.lat).toFixed(9)}`
+        : "";
 
-	const GPSLON = typeof LON === 'number' && !isNaN(LON)
-		? `${LON.toFixed(9)}`
-		: (config.identification.lon && !isNaN(parseFloat(config.identification.lon))) 
-			? `${parseFloat(config.identification.lon).toFixed(9)}`
-			: "";
+const GPSLON = typeof LON === 'number' && !isNaN(LON)
+    ? `${LON.toFixed(9)}`
+    : (!GPS_PORT && config.identification.lon && !isNaN(parseFloat(config.identification.lon))) 
+        ? `${parseFloat(config.identification.lon).toFixed(9)}`
+        : "";
 
 	const GPSMODE = `${gpsmode}`;
-	const GPSALT = gpsmode === 3 && gpsalt ? `${parseFloat(gpsalt).toFixed(3)}` : '';
+	const GPSALT = ALT ? `${parseFloat(ALT).toFixed(3)}` : '';
 	const GPSTIME = gpstime
 		? new Date(gpstime).toISOString().replace(/\.\d{3}Z$/, '.000Z') // Format gpstime
-		: new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');       // Format current date-time
-	
+		: new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
+
 	const PI = `0x${picode}`;
 	const PS = `"${ps}"`;
 	const TA = `${ta}`;
