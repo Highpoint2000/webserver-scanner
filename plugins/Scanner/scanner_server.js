@@ -344,9 +344,9 @@ let tuningUpperLimit = config.webserver.tuningUpperLimit;
 let tuningLimit = config.webserver.tuningLimit;
 let textSocketLost;
 let scanBandwithSave;
-let ALT;
 let gpstime;
-let gpsalt = GPS_HEIGHT;
+let ALT = GPS_HEIGHT;
+let gpsalt;
 let gpsmode = GPS_HEIGHT ? 2 : ''; // If GPS_HEIGHT has a value, set gpsmode to 2, otherwise set it to an empty string
 let GPSdetectionOn = false;
 let GPSdetectionOff = true;
