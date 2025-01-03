@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA10)///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA11)///
 ///                                                         ///
-///  by Highpoint               last update: 30.12.24       ///
+///  by Highpoint               last update: 04.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -22,43 +22,47 @@ const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.
 
 // Default values for the configuration file
 const defaultConfig = {
-	Scanmode: 1, 						// 0 - offline mode or 1 - online mode
-    Autoscan_PE5PVB_Mode: false,  		// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
-    Search_PE5PVB_Mode: false,			// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
-    StartAutoScan: 'off',				// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
-    AntennaSwitch: 'off',				// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
+    Scanmode: 1,                         // 0 - offline mode or 1 - online mode
+    Autoscan_PE5PVB_Mode: false,         // Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
+    Search_PE5PVB_Mode: false,           // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
+    StartAutoScan: 'off',                // Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
+    AntennaSwitch: 'off',                // Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 
-    defaultSensitivityValue: 30,		// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    defaultScanHoldTime: 5,				// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
-    defaultScannerMode: 'normal',		// Set the startmode: 'normal', 'spectrum', 'difference', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
-	scanIntervalTime: 500,				// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-	scanBandwith: 0,					// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    defaultSensitivityValue: 30,         // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    defaultScanHoldTime: 5,              // Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
+    defaultScannerMode: 'normal',        // Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+    scanIntervalTime: 500,               // Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
+    scanBandwith: 0,                     // Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
-	EnableBlacklist: false,				// Enable Blacklist, set it 'true' or 'false' 
-	EnableWhitelist: false,				// Enable Whitelist, set it 'true' or 'false' 
+    EnableBlacklist: false,              // Enable Blacklist, set it 'true' or 'false' 
+    EnableWhitelist: false,              // Enable Whitelist, set it 'true' or 'false' 
+	
+	tuningLowerLimit: '',	             // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
+	tuningUpperLimit: '',				 // Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
 
-	EnableSpectrumScan: false,			// Enable Spectrum, set it 'true' or 'false'
-	EnableDifferenceScan: false,		// Enable Spectrum, set it 'true' or 'false'
-	SpectrumChangeValue: 0,				// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 50,			// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
-	SpectrumPlusMinusValue: 70,			// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
+    EnableSpectrumScan: false,           // Enable Spectrum, set it 'true' or 'false'
+    EnableDifferenceScan: false,         // Enable Spectrum, set it 'true' or 'false'
+    SpectrumChangeValue: 0,              // default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
+    SpectrumLimiterValue: 50,            // default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
+    SpectrumPlusMinusValue: 70,          // default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
-	GPS_PORT: '', 						// Connection port for GPS receiver (e.g.: 'COM1' or ('/dev/ttyACM0'), if empty then GPS off
-	GPS_BAUDRATE: 4800,					// Baud rate for GPS receiver (e.g.: 4800)		
-	GPS_HEIGHT: '',						// Enter fixed altitude in m or leave blank for altitude via GPS signal (e.g.: '160' )	
-	BEEP_CONTROL: false,				// Acoustic control function for scanning operation (true or false)
+    RAWLog: false,                       // Set to 'true' or 'false' for RAW data logging, default is false
+    OnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false
+    UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true
 
-    RAWLog: false,						// Set to 'true' or 'false' for RAW data logging, default is false
-    OnlyFirstLog: false,				// For only first seen logging, set each station found to 'true' or 'false', default is false
-    UTCtime: true,						// Set to 'true' for logging with UTC Time, default is true
+    FMLIST_OM_ID: '',                    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
+    FMLIST_Autolog: 'off',               // Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_MinDistance: 200,             // set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
+    FMLIST_MaxDistance: 2000,            // set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
+    FMLIST_LogInterval: 60,              // Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
+    FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 
-	FMLIST_OM_ID: '',					// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-	FMLIST_Autolog: 'off',				// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
-	FMLIST_MinDistance: 200,			// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
-	FMLIST_MaxDistance: 2000,			// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
-	FMLIST_LogInterval: 60,				// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
-	FMLIST_CanLogServer: ''				// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
+    GPS_PORT: '',                        // Connection port for GPS receiver (e.g.: 'COM1' or ('/dev/ttyACM0') / if empty then GPS off
+    GPS_BAUDRATE: 4800,                  // Baud rate for GPS receiver (e.g.: 4800)        
+    GPS_HEIGHT: '',                      // Enter fixed altitude in m or leave blank for altitude via GPS signal (e.g.: '160' )    
+    BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
+
 
 // Function to merge default config with existing config and remove undefined values
 function mergeConfig(defaultConfig, existingConfig) {
@@ -145,16 +149,14 @@ const scanBandwith = configPlugin.scanBandwith;
 const EnableBlacklist = configPlugin.EnableBlacklist;
 const EnableWhitelist = configPlugin.EnableWhitelist;
 
+let tuningLowerLimit = configPlugin.tuningLowerLimit;
+let tuningUpperLimit = configPlugin.tuningUpperLimit;
+
 const EnableSpectrumScan = configPlugin.EnableSpectrumScan;
 const EnableDifferenceScan = configPlugin.EnableDifferenceScan;
 const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
 const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
 const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
-
-  let GPS_PORT = configPlugin.GPS_PORT;
-  let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
-  let GPS_HEIGHT = configPlugin.GPS_HEIGHT;
-const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
 const RAWLog = configPlugin.RAWLog;
 const OnlyFirstLog = configPlugin.OnlyFirstLog;
@@ -166,6 +168,11 @@ const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
+
+  let GPS_PORT = configPlugin.GPS_PORT;
+  let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
+  let GPS_HEIGHT = configPlugin.GPS_HEIGHT;
+const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
 const { execSync } = require('child_process');
 const NewModules = ['speaker'];
@@ -339,9 +346,6 @@ let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
 let HTML_LogfilePath;
 let HTML_LogfilePath_filtered;
-let tuningLowerLimit = config.webserver.tuningLowerLimit;
-let tuningUpperLimit = config.webserver.tuningUpperLimit;
-let tuningLimit = config.webserver.tuningLimit;
 let textSocketLost;
 let scanBandwithSave;
 let gpstime;
@@ -361,15 +365,26 @@ let sigArraySave2 = [];
 let sigArraySave3 = [];
 let validFrequencies;
 let freqMap2;
-let logFilePath 
+let logFilePathHTML;
+let logFilePathCSV;
 
-if (tuningUpperLimit === '' || !tuningLimit) {
-	tuningUpperLimit = '108.0';
+let tuningLimit = config.webserver.tuningLimit;
+
+if (tuningUpperLimit === '') {
+	tuningUpperLimit = config.webserver.tuningUpperLimit;
+	if (tuningUpperLimit === '' || !tuningLimit) {
+		tuningUpperLimit = '108.0';
+	}	
 }
 
-if (tuningLowerLimit === '' || !tuningLimit) {
-	tuningLowerLimit = '87.5';
+if (tuningLowerLimit === '') {
+	tuningLowerLimit = config.webserver.tuningLowerLimit;
+	if (tuningLowerLimit === '' || !tuningLimit) {
+		tuningLowerLimit = '87.5';
+	}
 }
+
+console.log(tuningLowerLimit, tuningUpperLimit);
 
 if (StartAutoScan !== 'auto') {
    Scan = StartAutoScan;
@@ -381,6 +396,15 @@ if (!FMLIST_OM_ID) {
 	FMLIST_OM_ID = config.extras.fmlistOmid;
 }
 
+// Function to check if URDS Plugin exists
+const filePath = path.resolve(__dirname, '../URDS-Uploader/urds-upload_server.js');
+let URDSupload = false; // Default value set to false
+if (fs.existsSync(filePath)) { // Check if the file exists
+    URDSupload = true;
+    logInfo(`Scanner detects URDS upload plugin ---> CSV logging is activated`);
+} else {
+	logInfo(`Scanner cannot find URDS upload plugin ---> CSV logging is deactivated`);
+}
 
 // Create a status message object
 function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST, InfoFMLIST) {
@@ -414,6 +438,9 @@ async function TextWebSocket(messageData) {
 
             textSocket.onopen = () => {
                 logInfo("Scanner connected to WebSocket");
+				if (Scan === 'on' && URDSupload) {
+					logFilePathCSV = getLogFilePathCSV(); // Determine the path to the log file based on the current date and time
+				}
 
                 if (ScanPE5PVB) {
                     sendCommandToClient(`I${defaultSensitivityValue}`);
@@ -431,7 +458,7 @@ async function TextWebSocket(messageData) {
 						} else {
 							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 						}
-						AutoScan();
+						AutoScan();					
 					}
                 }
 
@@ -790,6 +817,10 @@ async function DataPluginsWebSocket() {
 									Scan = message.value.Scan;
 									DataPluginsSocket.send(JSON.stringify(responseMessage));
 									
+									if (URDSupload) {
+										logFilePathCSV = getLogFilePathCSV(); // Determine the path to the log file based on the current date and time
+									}
+									
 									if (ScanPE5PVB) {
 										logInfo(`Scanner (PE5PVB mode) starts auto-scan [IP: ${message.source}]`);
 										logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
@@ -944,7 +975,7 @@ function checkUserCount(users) {
 								sendDataToClient(currentFrequency);
 								
 							}
-							
+													
                             // Log and handle the scan based on the mode
                             if (ScanPE5PVB) {
                                 logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
@@ -957,8 +988,10 @@ function checkUserCount(users) {
 								} else {
 									logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 								}
+															
                                 isScanning = false;
-                                AutoScan();
+                                AutoScan();								
+
                             }
 							
 							if (BEEP_CONTROL) {
@@ -1659,8 +1692,10 @@ function checkSpectrum() {
 								if ((checkStrengthCounter > ScanHoldTimeValue) || ps.length > 1 && !ps.includes('?') && stationid)  {
 									
 										if (picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
-
-											writeCSVLogEntry(true); // filtered log
+											
+											if (URDSupload && !ps.includes('?')) {
+												writeCSVLogEntry(); // filtered log
+											}
 											if (!RAWLog) {
 												writeHTMLLogEntry(true); // filtered log
 											}
@@ -1682,7 +1717,9 @@ function checkSpectrum() {
                  			} else {
 
 								if (picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
-									writeCSVLogEntry(true); // filtered log
+									if (URDSupload && !ps.includes('?')) {
+										writeCSVLogEntry(); // filtered log
+									}
 									if (!RAWLog) {
 										writeHTMLLogEntry(true); // filtered log
 									}
@@ -1855,7 +1892,7 @@ function startGPSConnection() {
 	  if (!GPSmodulOn) {
 		GPSmodulOn = true;
 		GPSmodulOff = false;
-		logInfo(`GPS Receiver detected: ${GPS_PORT} with ${GPS_BAUDRATE} bps`);
+		logInfo(`Scanner detected GPS Receiver: ${GPS_PORT} with ${GPS_BAUDRATE} bps`);
 		if (BEEP_CONTROL) {
 		  fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
 		}
@@ -1866,7 +1903,7 @@ function startGPSConnection() {
     } 
 	
 	if (!GPSdetectionOn && gpsmode === 3) {
-        logInfo(`GPS data received`);
+        logInfo(`Scanner received GPS data`);
         GPSdetectionOn = true;
         GPSdetectionOff = false;
         if (BEEP_CONTROL) {
@@ -1875,7 +1912,7 @@ function startGPSConnection() {
     }
 
 	if (!GPSdetectionOff && gpsmode !== 3) {
-      logWarn(`No GPS data received`);
+      logWarn(`Scanner received no GPS data `);
       GPSdetectionOff = true;
       GPSdetectionOn = false;
 
@@ -1890,7 +1927,7 @@ function startGPSConnection() {
   // Error handling for the serial port
   port.on('error', (err) => {
     if (!GPSmodulOff) {
-      logError(`GPS Error: ${err.message}`);
+      logError(`Scanner GPS Error: ${err.message}`);
       GPSmodulOff = true;
       GPSmodulOn = false;
 
@@ -1909,7 +1946,7 @@ function startGPSConnection() {
   // Monitor connection close and restart if necessary
   port.on('close', () => {
     if (!GPSmodulOff) {
-      logError(`GPS Error: Connection closed`);
+      logError(`Scanner GPS Error: Connection closed`);
       GPSmodulOff = true;
 	  GPSmodulOn = false;
 
@@ -1928,7 +1965,7 @@ function startGPSConnection() {
 // Function to check if the GPS is connected and try to reconnect
 function checkGPSConnection() {
   if (GPS_PORT && GPS_BAUDRATE && (!port || !port.isOpen)) {
-    logWarn('GPS connection lost. Attempting to reconnect...');
+    logWarn('Scanner lost GPS connection. Attempting to reconnect...');
     startGPSConnection();
   }
 }
@@ -1938,7 +1975,7 @@ gpsDetectionInterval = setInterval(checkGPSConnection, 60000); // Check every 60
 
 // Initialize GPS Connection
 if (GPS_PORT && GPS_BAUDRATE) {
-  logInfo('GPS connection starting...');
+  logInfo('Scanner starting GPS connection ...');
   startGPSConnection();
 }
 
@@ -1986,7 +2023,7 @@ function getLogFilePathCSV(date, time, filename) {
     const formattedTime = `T${time.replace(/:/g, '')}`;
     
     // Determine the filename based on the isFiltered flag
-    const fileName = `scan_${date}${formattedTime}_TEF_fm_rds.csv`;
+    const fileName = `${date}${formattedTime}_fm_rds.csv`;
     
     // Create the full path to the file
     const filePath = path.join(logDir, fileName);
@@ -2002,7 +2039,7 @@ function getLogFilePathCSV(date, time, filename) {
         let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly 
 
 		let header = ``;
-       
+      
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
             logInfo('Scanner created /logs/' + fileName);
@@ -2014,10 +2051,7 @@ function getLogFilePathCSV(date, time, filename) {
     return filePath;
 }
 
-// Determine the path to the log file based on the current date and the isFiltered flag
-logFilePath = getLogFilePathCSV();
-
-function writeCSVLogEntry(isFiltered) {
+function writeCSVLogEntry() {
     
     if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB && EnableBlacklist) {
         return;
@@ -2034,7 +2068,11 @@ function writeCSVLogEntry(isFiltered) {
     const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
       time = utcTime;
       date = utcDate;
-	     
+
+	if (!fs.existsSync(logFilePathCSV)) { // // Checks whether the file exists
+        logFilePathCSV = getLogFilePathCSV(); // Executes the function to reset the path
+	 }
+	       
 	// Data preparation for FMLIST
     const TYPE = `30`;
 
@@ -2093,7 +2131,7 @@ const GPSLON = typeof LON === 'number' && !isNaN(LON)
 	
     try {
         // Append the log entry to the CSV file
-        fs.appendFileSync(logFilePath, line, { flag: 'a' });
+        fs.appendFileSync(logFilePathCSV, line, { flag: 'a' });
 		if (BEEP_CONTROL && Scan === 'on' ) {
 			fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav').pipe(new Speaker());
 		}
@@ -2188,7 +2226,7 @@ function writeHTMLLogEntry(isFiltered) {
         date = utcDate;
     }
 	
-    const logFilePath = getLogFilePathHTML(date, time, isFiltered);
+    logFilePathHTML = getLogFilePathHTML(date, time, isFiltered);
 
 	let link1 = stationid !== '' && stationid !== 'offline' ? `<a href="#" onclick="window.open('https://fmscan.org/stream.php?i=${stationid}', 'newWindow', 'width=800,height=160'); return false;" target="_blank">STREAM</a>` : '';     
 	let link2 = stationid !== '' && stationid !== 'offline' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">MAP</a>` : '';     
@@ -2199,9 +2237,9 @@ function writeHTMLLogEntry(isFiltered) {
     let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${strength}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
 
     let logContent = '';
-    if (fs.existsSync(logFilePath)) {
+    if (fs.existsSync(logFilePathHTML)) {
         try {
-            logContent = fs.readFileSync(logFilePath, 'utf8');
+            logContent = fs.readFileSync(logFilePathHTML, 'utf8');
         } catch (error) {
             logError("Failed to read log file:", error.message);
             return;
@@ -2226,7 +2264,7 @@ function writeHTMLLogEntry(isFiltered) {
     updatedContent += endTag;
 
     try {
-        fs.writeFileSync(logFilePath, updatedContent, 'utf8');
+        fs.writeFileSync(logFilePathHTML, updatedContent, 'utf8');
     } catch (error) {
         logError("Failed to update the log file:", error.message);
     }
