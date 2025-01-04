@@ -2009,7 +2009,7 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
             throw new logError(`Invalid PTY value. Must be between 0 and ${europeProgrammes.length - 1}.`);
         }
     } catch (error) {
-        throw new logError(`Error processing the file '${relativePath}': ${error.message}`);
+        throw new logError(`Error processing the file ${relativePath}: ${error.message}`);
     }
 }
 	
