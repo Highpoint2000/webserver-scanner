@@ -9,13 +9,14 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ### v3.0 BETA (FMDX Scanner Version)
 
-- XML protocol converted to URDS format for upcoming FMLIST upload
+- XML protocol converted to URDS format (To upload the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
 - Processing of GPS data (connection to COM PORT)
 - Added acoustic signaling during scanning operation and gps status
 - Daily update check for admin
 - Scan algorithm revised
 - Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
 - Added ultrafast difference scan option with limiter and filter for strong station (spectrum graph plugin must be installed!)
+- Added tuningLowerLimit and tuningUpperLimit
 
 ## Installation notes:
 
@@ -50,6 +51,9 @@ The following variables can be changed in the configPlugin.json:
 
     EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
     EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
+
+    tuningLowerLimit: '',	        // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
+    tuningUpperLimit: '',		// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
     
     /// SPECTRUM SCANNER OPTIONS ///
     
@@ -99,7 +103,8 @@ The following variables can be changed in the configPlugin.json:
 - The computer's standard sound output is used for acoustic signaling during the scanning process
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
 - To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. Use the variable Spectrum PlusMinus Value to set a signal strength of a strong/local station independently of the Spectrum Limiter Value, where the neighboring channels (+/- 0.1 MHz) should be filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0 !!! 
-- Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned.
+- Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned
+- To upload the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
