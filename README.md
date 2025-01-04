@@ -9,7 +9,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ### v3.0 BETA (FMDX Scanner Version)
 
-- XML protocol converted to URDS format for upcoming FMLIST upload (To upload the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
+- XML protocol converted to URDS format (To upload the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
 - Processing of GPS data (connection to COM PORT)
 - Added acoustic signaling during scanning operation and gps status
 - Daily update check for admin
