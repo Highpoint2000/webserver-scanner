@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA11)///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.0)		///
 ///                                                         ///
-///  by Highpoint               last update: 04.01.25       ///
+///  by Highpoint               last update: 07.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -241,7 +241,7 @@
             const eventData = JSON.parse(event.data);
 
 			if (eventData.source !== clientIp) {
-				console.log(eventData);
+				//console.log(eventData);
 			}
 			
             if (eventData.type === 'Scanner' ) {
