@@ -340,6 +340,7 @@ let HTML_LogfilePath;
 let HTML_LogfilePath_filtered;
 let textSocketLost;
 let scanBandwithSave;
+let ALT;
 let gpstime;
 let gpsalt;
 let gpsmode;
@@ -1923,11 +1924,12 @@ function writeCSVLogEntry() {
 	const numericStrengthTop = parseFloat(strengthTop);
 	const SNRAX = Math.round(numericStrengthTop * 10);
 	
-	const GPSLAT = LAT;
-	const GPSLON = LON;
-	const GPSALT = ALT;
-	const GPSMODE = gpsmode;
-	const GPSTIME = gpstime;  
+	const GPSLAT = LAT || config.identification.lat;
+	const GPSLON = LON || config.identification.lon;
+
+	const GPSALT = ALT || '';
+	const GPSMODE = gpsmode || '';
+	const GPSTIME = gpstime || new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
 
 	const PI = `0x${picode}`;
 	const PS = `"${ps}"`;
