@@ -1,15 +1,13 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0 BETA11)///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0)		///
 ///                                                         ///
-///  by Highpoint               last update: 04.01.25       ///
+///  by Highpoint               last update: 07.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
-
-///  This plugin only works from web server version 1.3.1!!!
 
 const https = require('https');
 const path = require('path');
@@ -55,11 +53,8 @@ const defaultConfig = {
     FMLIST_MinDistance: 200,             // set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
     FMLIST_MaxDistance: 2000,            // set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60,              // Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
-    FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
+    FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 
-    GPS_PORT: '',                        // Connection port for GPS receiver (e.g.: 'COM1' or ('/dev/ttyACM0') / if empty then GPS off
-    GPS_BAUDRATE: 4800,                  // Baud rate for GPS receiver (e.g.: 4800)        
-    GPS_HEIGHT: '',                      // Enter fixed altitude in m or leave blank for altitude via GPS signal (e.g.: '160' )    
     BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
 
@@ -169,9 +164,6 @@ const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
 
-  let GPS_PORT = configPlugin.GPS_PORT;
-  let GPS_BAUDRATE = configPlugin.GPS_BAUDRATE;
-  let GPS_HEIGHT = configPlugin.GPS_HEIGHT;
 const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
 const { execSync } = require('child_process');
@@ -349,9 +341,8 @@ let HTML_LogfilePath_filtered;
 let textSocketLost;
 let scanBandwithSave;
 let gpstime;
-let ALT = GPS_HEIGHT;
 let gpsalt;
-let gpsmode = GPS_HEIGHT ? 2 : ''; // If GPS_HEIGHT has a value, set gpsmode to 2, otherwise set it to an empty string
+let gpsmode;
 let GPSdetectionOn = false;
 let GPSdetectionOff = true;
 let GPSmodulOn = false;
@@ -383,8 +374,6 @@ if (tuningLowerLimit === '') {
 		tuningLowerLimit = '87.5';
 	}
 }
-
-console.log(tuningLowerLimit, tuningUpperLimit);
 
 if (StartAutoScan !== 'auto') {
    Scan = StartAutoScan;
@@ -857,6 +846,21 @@ async function DataPluginsWebSocket() {
                                 break;
                         }
                     }
+					
+					// Check if the dataset is of type GPS
+					if (message.type === 'GPS') {
+						const gpsData = message.value;
+						//console.log(gpsData);
+						const { status, time, lat, lon, alt, mode } = gpsData;
+
+							LAT = lat;
+							LON = lon;
+							ALT = alt;
+							gpsmode = mode;
+							gpstime = time;
+							
+					}
+				
                 } catch (error) {
                     logError("Failed to handle message:", error);
                 }
@@ -1805,182 +1809,7 @@ function checkSpectrum() {
 							}								              
             }
         }	
-		
-/////////////////////////////////////////////  GPS //////////////////////////////////////////////////////////////////
-
-const { SerialPort } = require('serialport');
-const { ReadlineParser } = require('@serialport/parser-readline');
-
-let port;
-let parser;
-let gpsDetectionInterval;
-
-function startGPSConnection() {
-  const gpsBaudRate = Number(GPS_BAUDRATE) || 4800;
-
-  // Open the port only if it's not open
-  if (!port || port.isOpen === false) {
-    port = new SerialPort({ path: GPS_PORT, baudRate: gpsBaudRate });
-    parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
-  }
-
-  // Function to convert coordinates to decimal degrees
-  function convertToDecimalDegrees(degree, minute) {
-    return degree + minute / 60;
-  }
-
-  // Function to format time into hh:mm:ss
-  function formatTime(time) {
-    const hours = time.slice(0, 2);
-    const minutes = time.slice(2, 4);
-    const seconds = time.slice(4, 6);
-    return `${hours}:${minutes}:${seconds}`;
-  }
-
-  // Function to format GPS date and time into UTC format
-  function formatDateTime(date, time) {
-    const year = `20${date.slice(4, 6)}`; // Year (e.g., 231205 -> 2023)
-    const month = date.slice(2, 4);
-    const day = date.slice(0, 2);
-    const formattedTime = formatTime(time);
-    return `${year}-${month}-${day}T${formattedTime}Z`;
-  }
-
-  // Read and process data
-  parser.on('data', (data) => {
-    const parts = data.split(',');
-
-    if (parts[0] === '$GPRMC' && parts.length > 5) {
-      const date = parts[9];
-      const time = parts[1];
-      const status = parts[2];
-      const latitude = parts[3];
-      const latitudeDirection = parts[4];
-      const longitude = parts[5];
-      const longitudeDirection = parts[6];
-
-      if (status === 'A') {
-        const latDegrees = parseFloat(latitude.slice(0, 2));
-        const latMinutes = parseFloat(latitude.slice(2));
-        const latDecimal = convertToDecimalDegrees(latDegrees, latMinutes);
-
-        const lonDegrees = parseFloat(longitude.slice(0, 3));
-        const lonMinutes = parseFloat(longitude.slice(3));
-        const lonDecimal = convertToDecimalDegrees(lonDegrees, lonMinutes);
-
-        LAT = latitudeDirection === 'S' ? -latDecimal : latDecimal;
-        LON = longitudeDirection === 'W' ? -lonDecimal : lonDecimal;
-
-        const gpstime = formatDateTime(date, time);
-		
-		//logInfo(`Time: ${gpstime}, Latitude: ${LAT.toFixed(9)}, Longitude: ${LON.toFixed(9)}`);
-		
-      }
-	  
-    } else if (parts[0] === '$GPGGA' && parts.length > 9) {
-
-      gpsalt = parts[9];
-	  
-	  if (GPS_HEIGHT) {
-		  gpsmode = 2;
-		  ALT = GPS_HEIGHT;
-      } else if (gpsalt !== undefined && gpsalt !== null && !isNaN(parseFloat(gpsalt))) {
-          gpsmode = 3;
-		  ALT = gpsalt;
-	  } 
-	  
-	  if (!GPSmodulOn) {
-		GPSmodulOn = true;
-		GPSmodulOff = false;
-		logInfo(`Scanner detected GPS Receiver: ${GPS_PORT} with ${GPS_BAUDRATE} bps`);
-		if (BEEP_CONTROL) {
-		  fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
-		}
-    }
-  
-	  //logInfo(`Altitude: ${parseFloat(gpsalt || '0').toFixed(3)} meters, GPSMODE: ${gpsmode}`);
-	  
-    } 
-	
-	if (!GPSdetectionOn && gpsmode === 3) {
-        logInfo(`Scanner received GPS data`);
-        GPSdetectionOn = true;
-        GPSdetectionOff = false;
-        if (BEEP_CONTROL) {
-          fs.createReadStream('./plugins/Scanner/sounds/beep_short_tripple.wav').pipe(new Speaker());
-        }
-    }
-
-	if (!GPSdetectionOff && gpsmode !== 3) {
-      logWarn(`Scanner received no GPS data `);
-      GPSdetectionOff = true;
-      GPSdetectionOn = false;
-
-      if (BEEP_CONTROL) {
-        fs.createReadStream('./plugins/Scanner/sounds/beep_middlelong.wav').pipe(new Speaker());
-      }
-
-    }
-
-  });
-
-  // Error handling for the serial port
-  port.on('error', (err) => {
-    if (!GPSmodulOff) {
-      logError(`Scanner GPS Error: ${err.message}`);
-      GPSmodulOff = true;
-      GPSmodulOn = false;
-
-      if (BEEP_CONTROL) {
-        fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
-      }
-
-    }
-
-    // Retry logic to handle connection loss
-    setTimeout(() => {
-      startGPSConnection(); // Attempt to reconnect
-    }, 5000); // Retry after 5 seconds
-  });
-
-  // Monitor connection close and restart if necessary
-  port.on('close', () => {
-    if (!GPSmodulOff) {
-      logError(`Scanner GPS Error: Connection closed`);
-      GPSmodulOff = true;
-	  GPSmodulOn = false;
-
-      if (BEEP_CONTROL) {
-        fs.createReadStream('./plugins/Scanner/sounds/beep_extralong.wav').pipe(new Speaker());
-      }
-
-    }
-    setTimeout(() => {
-      startGPSConnection(); // Retry after 5 seconds
-    }, 5000);
-  });
-}
-
-
-// Function to check if the GPS is connected and try to reconnect
-function checkGPSConnection() {
-  if (GPS_PORT && GPS_BAUDRATE && (!port || !port.isOpen)) {
-    logWarn('Scanner lost GPS connection. Attempting to reconnect...');
-    startGPSConnection();
-  }
-}
-
-// Monitor the connection every 60 seconds
-gpsDetectionInterval = setInterval(checkGPSConnection, 60000); // Check every 60 seconds
-
-// Initialize GPS Connection
-if (GPS_PORT && GPS_BAUDRATE) {
-  logInfo('Scanner starting GPS connection ...');
-  startGPSConnection();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		
+				
 // Function to find the appropriate entry based on `pty`
 function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
     try {
@@ -2094,23 +1923,11 @@ function writeCSVLogEntry() {
 	const numericStrengthTop = parseFloat(strengthTop);
 	const SNRAX = Math.round(numericStrengthTop * 10);
 	
-const GPSLAT = typeof LAT === 'number' && !isNaN(LAT)
-    ? `${LAT.toFixed(9)}`
-    : (!GPS_PORT && config.identification.lat && !isNaN(parseFloat(config.identification.lat))) 
-        ? `${parseFloat(config.identification.lat).toFixed(9)}`
-        : "";
-
-const GPSLON = typeof LON === 'number' && !isNaN(LON)
-    ? `${LON.toFixed(9)}`
-    : (!GPS_PORT && config.identification.lon && !isNaN(parseFloat(config.identification.lon))) 
-        ? `${parseFloat(config.identification.lon).toFixed(9)}`
-        : "";
-
-	const GPSMODE = `${gpsmode}`;
-	const GPSALT = ALT ? `${parseFloat(ALT).toFixed(3)}` : '';
-	const GPSTIME = gpstime
-		? new Date(gpstime).toISOString().replace(/\.\d{3}Z$/, '.000Z') // Format gpstime
-		: new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
+	const GPSLAT = LAT;
+	const GPSLON = LON;
+	const GPSALT = ALT;
+	const GPSMODE = gpsmode;
+	const GPSTIME = gpstime;  
 
 	const PI = `0x${picode}`;
 	const PS = `"${ps}"`;
