@@ -11,7 +11,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 - XML protocol converted to URDS format (To upload the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
 - Processing of GPS data (GPS Receiver & [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
-- Added acoustic signaling during scanning operation and gps status
+- Added acoustic signaling during scanning operation
 - Daily update check for admin
 - Scan algorithm revised
 - Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
