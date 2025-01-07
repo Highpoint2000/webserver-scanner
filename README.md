@@ -9,7 +9,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ### v3.0 (FMDX Scanner Version)
 
-- XML protocol converted to URDS format (To upload the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
+- XML protocol converted to URDS format (To use the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
 - Processing of GPS data (GPS Receiver & [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
 - Added acoustic signaling during scanning operation
 - Daily update check for admin
@@ -63,13 +63,6 @@ The following variables can be changed in the configPlugin.json:
     SpectrumLimiterValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
     SpectrumPlusMinusValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
-    /// FMDX SCANNER OPTIONS ///
-
-    GPS_PORT: '', 			// Connection port for GPS receiver (e.g.: 'COM1' or ('/dev/ttyACM0'), if empty then GPS off
-    GPS_BAUDRATE: 4800,		// Baud rate for GPS receiver (e.g.: 4800)	
-    GPS_HEIGHT: '',			// Enter fixed altitude in m or leave blank for altitude via GPS signal (e.g.: '160' )
-    BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
-
     /// HTML LOGGING OPTIONS ////
 	
     RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging.  default is false
@@ -84,6 +77,8 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60,    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
+
+    BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
 ## Important notes: 
 
@@ -101,7 +96,7 @@ The following variables can be changed in the configPlugin.json:
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
 - To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. Use the variable Spectrum PlusMinus Value to set a signal strength of a strong/local station independently of the Spectrum Limiter Value, where the neighboring channels (+/- 0.1 MHz) should be filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0 !!! 
 - Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned
-- To upload the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
+- To use the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 - When GPS data is received, the location is updated dynamically (GPS receiver and [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
