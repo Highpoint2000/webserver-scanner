@@ -7,10 +7,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-### v3.0 BETA (FMDX Scanner Version)
+### v3.0 (FMDX Scanner Version)
 
 - XML protocol converted to URDS format (To upload the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
-- Processing of GPS data (connection to COM PORT)
+- Processing of GPS data (GPS Receiver & [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
 - Added acoustic signaling during scanning operation and gps status
 - Daily update check for admin
 - Scan algorithm revised
@@ -85,9 +85,6 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_LogInterval: 60,    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 
-
- 
-
 ## Important notes: 
 
 - Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!!
@@ -105,7 +102,7 @@ The following variables can be changed in the configPlugin.json:
 - To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. Use the variable Spectrum PlusMinus Value to set a signal strength of a strong/local station independently of the Spectrum Limiter Value, where the neighboring channels (+/- 0.1 MHz) should be filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0 !!! 
 - Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned
 - To upload the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
-
+- When GPS data is received, the location is updated dynamically (GPS receiver and [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
