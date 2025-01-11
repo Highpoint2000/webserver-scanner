@@ -95,6 +95,7 @@ The following variables can be changed in the configPlugin.json:
 - Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned
 - To use the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 - When GPS data is received, the location is updated dynamically (GPS receiver and [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
+- To use the fm-dx-monitor set the OnlyScanHoldTime 'on' and choose a minimum defaultScanHoldTime of 5 seconds
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
