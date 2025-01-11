@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.0)		///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.1)       ///
 ///                                                         ///
-///  by Highpoint               last update: 07.01.25       ///
+///  by Highpoint               last update: 12.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -25,6 +25,7 @@ const defaultConfig = {
     Search_PE5PVB_Mode: false,           // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
     StartAutoScan: 'off',                // Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off',                // Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
+	OnlyScanHoldTime: 'off',			 // Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
 
     defaultSensitivityValue: 30,         // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 5,              // Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
@@ -41,8 +42,8 @@ const defaultConfig = {
     EnableSpectrumScan: false,           // Enable Spectrum, set it 'true' or 'false'
     EnableDifferenceScan: false,         // Enable Spectrum, set it 'true' or 'false'
     SpectrumChangeValue: 0,              // default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 50,            // default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
-    SpectrumPlusMinusValue: 70,          // default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
+    SpectrumLimiterValue: 100,            // default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
+    SpectrumPlusMinusValue: 100,          // default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
     RAWLog: false,                       // Set to 'true' or 'false' for RAW data logging, default is false
     OnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false
@@ -134,11 +135,12 @@ const Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
 const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
 const StartAutoScan = configPlugin.StartAutoScan;
 const AntennaSwitch = configPlugin.AntennaSwitch;
+const OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
 
 const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
 const defaultScannerMode = configPlugin.defaultScannerMode;
-const scanIntervalTime = configPlugin.scanIntervalTime;
+  let scanIntervalTime = configPlugin.scanIntervalTime;
 const scanBandwith = configPlugin.scanBandwith;
 
 const EnableBlacklist = configPlugin.EnableBlacklist;
@@ -181,6 +183,27 @@ if (EnableDifferenceScan && EnableBlacklist) {
 	EnableDifferenceScanBL = true;
 }
 
+if (defaultScannerMode === 'spectrumBL' && !EnableSpectrumScanBL) {
+	defaultScannerMode = 'spectrum';
+}
+
+if (defaultScannerMode === 'differenceBL' && !EnableDifferenceScanBL) {
+	defaultScannerMode = 'difference';
+}
+
+if (SpectrumLimiterValue === 0) {
+    SpectrumLimiterValue = 100;
+}  
+
+if (SpectrumPlusMinusValue === 0) {
+    SpectrumPlusMinusValue = 100;
+}  
+
+if (scanIntervalTime > 1000) {
+	scanIntervalTime = 1000;
+}
+
+SpectrumPlusMinusValue
 function checkAndInstallNewModules() {
     NewModules.forEach(module => {
         const modulePath = path.join(__dirname, './../../node_modules', module);
@@ -213,7 +236,7 @@ function updateSettings() {
       logError('Error reading the scanner.js file:', err);
       return;
     }
-
+	
     // Check if the variables EnableBlacklist and EnableWhitelist already exist
     let hasEnableBlacklist = /const EnableBlacklist = .+;/.test(targetData);
     let hasEnableWhitelist = /const EnableWhitelist = .+;/.test(targetData);
@@ -240,31 +263,31 @@ function updateSettings() {
     }
 	
 	if (hasEnableSpectrumScan) {
-      updatedData = updatedData.replace(/const hasEnableSpectrumScan = .*;/, `const hasEnableSpectrumScan = ${hasEnableSpectrumScan};`);
+      updatedData = updatedData.replace(/const EnableSpectrumScan = .*;/, `const EnableSpectrumScan = ${EnableSpectrumScan};`);
     } else {
       // If hasEnableSpectrumScan does not exist, add it at the beginning
-      updatedData = `const hasEnableSpectrumScan = ${hasEnableSpectrumScan};\n` + updatedData;
+      updatedData = `const EnableSpectrumScan = ${EnableSpectrumScan};\n` + updatedData;
     }
 	
 	if (hasEnableSpectrumScanBL) {
-      updatedData = updatedData.replace(/const hasEnableSpectrumScanBL = .*;/, `const hasEnableSpectrumScanBL = ${hasEnableSpectrumScanBL};`);
+      updatedData = updatedData.replace(/const EnableSpectrumScanBL = .*;/, `const EnableSpectrumScanBL = ${EnableSpectrumScanBL};`);
     } else {
       // If hasEnableSpectrumScanBL does not exist, add it at the beginning
-      updatedData = `const hasEnableSpectrumScanBL = ${hasEnableSpectrumScanBL};\n` + updatedData;
+      updatedData = `const EnableSpectrumScanBL = ${EnableSpectrumScanBL};\n` + updatedData;
     }
 	
 	if (hasEnableDifferenceScan) {
-      updatedData = updatedData.replace(/const hasEnableDifferenceScan = .*;/, `const hasEnableDifferenceScan = ${hasEnableDifferenceScan};`);
+      updatedData = updatedData.replace(/const EnableDifferenceScan = .*;/, `const EnableDifferenceScan = ${EnableDifferenceScan};`);
     } else {
       // If hasEnableDifferenceScan does not exist, add it at the beginning
-      updatedData = `const hasEnableDifferenceScan = ${hasEnableDifferenceScan};\n` + updatedData;
+      updatedData = `const EnableDifferenceScan = ${EnableDifferenceScan};\n` + updatedData;
     }
 	
 	if (hasEnableDifferenceScanBL) {
-      updatedData = updatedData.replace(/const hasEnableDifferenceScanBL = .*;/, `const hasEnableDifferenceScanBL = ${hasEnableDifferenceScanBL};`);
+      updatedData = updatedData.replace(/const EnableDifferenceScanBL = .*;/, `const EnableDifferenceScanBL = ${EnableDifferenceScanBL};`);
     } else {
       // If hasEnableDifferenceScanBL does not exist, add it at the beginning
-      updatedData = `const hasEnableDifferenceScanBL = ${hasEnableDifferenceScanBL};\n` + updatedData;
+      updatedData = `const EnableDifferenceScanBL = ${EnableDifferenceScanBL};\n` + updatedData;
     }
 
     // Update/write the target file
@@ -342,12 +365,7 @@ let textSocketLost;
 let scanBandwithSave;
 let ALT;
 let gpstime;
-let gpsalt;
 let gpsmode;
-let GPSdetectionOn = false;
-let GPSdetectionOff = true;
-let GPSmodulOn = false;
-let GPSmodulOff = false;
 let sigArray = [];
 let sigArraySpectrum = [];
 let sigArrayDifference = [];
@@ -359,6 +377,9 @@ let validFrequencies;
 let freqMap2;
 let logFilePathHTML;
 let logFilePathCSV;
+let writeStatusCSV = true;
+let writeStatusHTMLLog = true;
+let writeStatusLogFMLIST = true;
 
 let tuningLimit = config.webserver.tuningLimit;
 
@@ -509,9 +530,15 @@ async function TextWebSocket(messageData) {
 function startSearch(direction) {
     // Restart scanning in the specified direction
     clearInterval(scanInterval);
-    isScanning = false;
-    setTimeout(() => startScan(direction), 150);
-    }
+	
+	if (isScanning) {
+		isScanning = false;
+		return;
+	} else {
+		isScanning = false;
+		setTimeout(() => startScan(direction), 150);
+	}
+}
 
 async function DataPluginsWebSocket() {
     if (!DataPluginsSocket || DataPluginsSocket.readyState === WebSocket.CLOSED) {
@@ -1044,7 +1071,10 @@ function checkUserCount(users) {
             }
 			
 			if (BEEP_CONTROL) {
-				fs.createReadStream('./plugins/Scanner/sounds/beep_long_double.wav').pipe(new Speaker());
+				setTimeout(() => {
+					fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav')
+						.pipe(new Speaker());
+				}, 500);
 			}
      
 			if (DefaultFreq !== '' && enableDefaultFreq) {
@@ -1167,6 +1197,11 @@ async function handleSocketMessage(messageData) {
 		erp = '';
 		
 	}
+	
+	//Filter for PIcode 0000
+	if (picode.includes('0000')) {
+		picode = '?';
+	}
 		
 	if (bandwith === "-1") {
 		bandwith = "0";
@@ -1194,7 +1229,7 @@ async function handleSocketMessage(messageData) {
 	if (ps === "") {
 		ps = "?";
 	}
-
+	
     if (isScanning) {
         if (stereo_forced && stereo_forced_user !== 'mono') {
             stereo_forced_user = 'mono';
@@ -1397,7 +1432,10 @@ function startScan(direction) {
                     sendNextAntennaCommand(); // Send the next antenna command
                     if (BEEP_CONTROL) {
                         // Play a beep sound when reaching the upper limit
-                        fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
+                        setTimeout(() => {
+							fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav')
+								.pipe(new Speaker());
+						}, 500);
                     }
                 }
                 currentFrequency = tuningLowerLimit; // Reset to the lower limit
@@ -1523,8 +1561,12 @@ function startScan(direction) {
 								
 								if (BEEP_CONTROL) {
 								// Play a beep sound when reaching the upper limit
-									fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
+									setTimeout(() => {
+										fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav')
+											.pipe(new Speaker());
+									}, 500);
 								}
+								
 								sendDataToClient(currentFrequency); // Send the updated frequency to the client
 								sigArray = [];
 
@@ -1653,13 +1695,15 @@ function checkWhitelist() {
     });
 }
 
-function checkSpectrum() {
-    // Check if the whitelist feature is enabled
-    if (!EnableWhitelist) {
-        logInfo('Whitelist is not enabled. Skipping check.');
-        return;
-    }
-}
+		function checkSpectrum() {
+		// Check if the whitelist feature is enabled
+			if (!EnableWhitelist) {
+				logInfo('Whitelist is not enabled. Skipping check.');
+				return;
+			}
+		}
+		
+		
        function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
 
 			let ScanHoldTimeValue = ScanHoldTime * 10;
@@ -1676,7 +1720,7 @@ function checkSpectrum() {
 					let tuningLowerLimitwith00 = Math.round(tuningLowerLimit * 100) / 100;
 					let formattedNumber = tuningLowerLimitwith00.toFixed(3);
 
-				    // console.log(checkStrengthCounter,ScanHoldTimeValue,currentFrequency,formattedNumber);	
+				    //console.log(checkStrengthCounter,ScanHoldTimeValue,currentFrequency,formattedNumber);	
 					if (currentFrequency !== formattedNumber) {
 						clearInterval(scanInterval); // Clears a previously defined scanning interval
 						isScanning = false; // Updates a flag indicating scanning status		
@@ -1694,18 +1738,19 @@ function checkSpectrum() {
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();				
 								
-								if ((checkStrengthCounter > ScanHoldTimeValue) || ps.length > 1 && !ps.includes('?') && stationid)  {
-									
+								if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
+
 										if (picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											
-											if (URDSupload && !ps.includes('?')) {
+											if (URDSupload) {
 												writeCSVLogEntry(); // filtered log
 											}
-											if (!RAWLog) {
+											
+											if (!RAWLog && stationid) {
 												writeHTMLLogEntry(true); // filtered log
 											}
 											
-											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
+											if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid ) {
 												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
 											}
 												
@@ -1720,16 +1765,25 @@ function checkSpectrum() {
                                 } 
 															
                  			} else {
-
-								if (picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq) {
-									if (URDSupload && !ps.includes('?')) {
+							
+								if (freq !== Savefreq) {
+									writeStatusCSV = true;
+									writeStatusHTMLLog = true;
+									writeStatusLogFMLIST = true;
+								}	
+									
+								if (picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
+									if (URDSupload && !ps.includes('?') && writeStatusCSV) {
 										writeCSVLogEntry(); // filtered log
+										writeStatusCSV = false;
 									}
-									if (!RAWLog) {
+									if (!RAWLog && stationid && writeStatusHTMLLog) {
 										writeHTMLLogEntry(true); // filtered log
+										writeStatusHTMLLog = false;
 									}
-									if (FMLIST_Autolog === 'on') {
+									if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid && writeStatusLogFMLIST) {
 										writeLogFMLIST(stationid, station, itu, city, distance, freq); 
+										writeStatusLogFMLIST = false;
 									}
 									Savefreq = freq;
 								}
@@ -1883,14 +1937,10 @@ function getLogFilePathCSV(date, time, filename) {
 
 function writeCSVLogEntry() {
     
-    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB && EnableBlacklist) {
+    if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'off' ) || (Scan === 'on' && (ScannerMode === 'blacklist' ||  ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }
     
-    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB && EnableWhitelist) {
-        return;
-    }
-	
     const now = new Date();
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
@@ -1904,8 +1954,6 @@ function writeCSVLogEntry() {
 	 }
 	       
 	// Data preparation for FMLIST
-    const TYPE = `30`;
-
 	const [seconds, nanoseconds] = process.hrtime(); // Returns [seconds, nanoseconds]
 	const nanoString = nanoseconds.toString().padStart(9, '0'); // Pad to 9 digits
 	const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`; // Format string
@@ -1946,7 +1994,7 @@ function writeCSVLogEntry() {
 	const OTHERPS = `""`;
 
     // Create the log entry line with the relevant data
-	let line = `${TYPE},${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},${ALLPSTEXT},${OTHERPS}\n`;
+	let line = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},${ALLPSTEXT},${OTHERPS}\n`;
 	
     try {
         // Append the log entry to the CSV file
@@ -2027,14 +2075,11 @@ function getLogFilePathHTML(date, time, isFiltered) {
 }
 
 function writeHTMLLogEntry(isFiltered) {
-    if (isInBlacklist(freq, blacklist) && ScannerMode === 'blacklist' && !ScanPE5PVB && EnableBlacklist) {
+	
+    if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'off' ) || (Scan === 'on' && (ScannerMode === 'blacklist' ||  ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }
-
-    if (!isInWhitelist(freq, whitelist) && ScannerMode === 'whitelist' && !ScanPE5PVB && EnableWhitelist) {
-        return;
-    }
-
+    
     const now = new Date();
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
