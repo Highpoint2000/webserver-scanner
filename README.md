@@ -7,16 +7,13 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-### v3.0 (FMDX Scanner Version)
+## v3.1
 
-- XML protocol converted to URDS format (To use the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
-- Processing of GPS data (GPS Receiver & [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
-- Added acoustic signaling during scanning operation
-- Daily update check for admin
-- Scan algorithm revised
-- Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
-- Added ultrafast difference scan option with limiter and filter for strong station (spectrum graph plugin must be installed!)
-- Added tuningLowerLimit and tuningUpperLimit
+- Search stop function when pressed repeatedly
+- Switch for mandatory use of ScanHoldTime implemented (useful for fm-dx-monitor!)
+- Column 30 in the urds log file removed (now supplemented with URDS Uploader from version 1.0d!) 
+- Logs with ? in the PS information are now logged
+- various code and scanner optimizations
 
 ## Installation notes:
 
@@ -108,6 +105,17 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 
 <details>
   <summary>History</summary>
+  
+### v3.0 (FMDX Scanner Version)
+
+- XML protocol converted to URDS format (To use the protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload))
+- Processing of GPS data (GPS Receiver & [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
+- Added acoustic signaling during scanning operation
+- Daily update check for admin
+- Scan algorithm revised
+- Added fast spectrum scan with limiter and filter for strong station (spectrum graph plugin must be installed!)
+- Added ultrafast difference scan option with limiter and filter for strong station (spectrum graph plugin must be installed!)
+- Added tuningLowerLimit and tuningUpperLimit
 
 ### v2.8d (only works from web server version 1.3.1 and CanLogServer 2.0!!!)
 
