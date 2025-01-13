@@ -11,6 +11,8 @@ This plugin provides scanning functions for the FM-DX web server.
 
 - The search bug has been fixed
 
+For URDS uploads, the uploader version from 1.0d upwards must be used!
+
 ## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
