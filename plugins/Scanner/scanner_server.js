@@ -338,6 +338,7 @@ let whitelist = [];
 let spectrum = [];
 let difference = [];
 let isScanning = false;
+let isSearching = false;
 let currentFrequency = 0;
 let previousFrequency = 0;
 let checkStrengthCounter = 0;
@@ -530,15 +531,19 @@ async function TextWebSocket(messageData) {
 function startSearch(direction) {
     // Restart scanning in the specified direction
     clearInterval(scanInterval);
-	
-	if (isScanning) {
-		isScanning = false;
+
+	if (isScanning && isSearching) {
+		isScanning = true;
+		isSearching = false;
 		return;
 	} else {
-		isScanning = false;
 		setTimeout(() => startScan(direction), 150);
+		isScanning = false;
+		isSearching = true;
 	}
 }
+
+let lastMessageTimestamp = 0;
 
 async function DataPluginsWebSocket() {
     if (!DataPluginsSocket || DataPluginsSocket.readyState === WebSocket.CLOSED) {
@@ -557,11 +562,18 @@ async function DataPluginsWebSocket() {
                 logInfo("Scanner WebSocket closed.");
                 setTimeout(DataPluginsWebSocket, 1000); // Increased delay for reconnection
             };
-			
+
             DataPluginsSocket.onmessage = (event) => {
                 try {
+                    const currentTime = Date.now();
+                    if (currentTime - lastMessageTimestamp < 50) {
+                        // Ignore the message if it's received within 500 ms of the last processed message
+                        return;
+                    }
+                    lastMessageTimestamp = currentTime;
+
                     const message = JSON.parse(event.data);
-                    //console.log("Received message:", message);
+                    // console.log("Received message:", message);
 					
 					if (message.type === 'sigArray' && message.isScanning) {
 				
@@ -704,7 +716,7 @@ async function DataPluginsWebSocket() {
                                 // logInfo(`Sent response message: ${JSON.stringify(responseMessage)}`);
                                 break;
 
-                            case 'send':
+                            case 'command':
 	                            if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
                                     Sensitivity = message.value.Sensitivity;
 									if (ScanPE5PVB) {        
@@ -816,19 +828,7 @@ async function DataPluginsWebSocket() {
 										// logInfo(`Scanner search up [IP: ${message.source}]`);
 									}
                                 }
-								
-								responseMessage = createMessage(
-                                    'broadcast',
-                                    message.source,
-                                    message.value.Scan,
-                                    '',
-                                    Sensitivity,
-                                    ScannerMode,
-                                    ScanHoldTime,
-									SpectrumLimiterValue,
-									FMLIST_Autolog
-                                );
-								
+															
                                 if (message.value.Scan === 'on' && Scan === 'off') {
 					
 									Scan = message.value.Scan;
@@ -1350,7 +1350,6 @@ function AutoScan() {
 
 function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
-	
 	if (scanBandwithSave === '0' || scanBandwithSave === 0) {
 		if (scanBandwith !== '0' && scanBandwith !== 0) {
 			logInfo('Scanner set bandwith from:', scanBandwith, 'kHz back to: auto mode');
@@ -1361,7 +1360,6 @@ function stopAutoScan() {
 		}		
 	}
 	textSocket.send(`W${scanBandwithSave}\n`);
-    isScanning = false;
 }
 
 async function setupSendSocket() {
@@ -1401,10 +1399,6 @@ async function startSpectrumAnalyse() {
 function startScan(direction) {
     clearInterval(scanInterval); // Stops any active scan interval from the previous scan
     
-    if (isScanning) {
-        return; // Prevent starting a new scan if one is already running
-    }
-
     // If the current frequency is invalid (NaN) or zero, set it to the lower tuning limit
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
         currentFrequency = tuningLowerLimit;
@@ -1412,6 +1406,7 @@ function startScan(direction) {
 
     // Function to update the frequency during the scan
     function updateFrequency() {
+		
         if (!isScanning) {
             //logInfo('Scanning has been stopped.'); // Log that scanning was stopped
             return; // Exit the function if scanning is stopped
@@ -1707,10 +1702,10 @@ function checkWhitelist() {
        function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
 
 			let ScanHoldTimeValue = ScanHoldTime * 10;
-		
-            if (stereo_detect === true || picode.length > 1 || ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' ) {
 
-                if (strength > Sensitivity || picode.length > 1 || ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' ) {					
+            if (stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {
+
+                if (strength > Sensitivity || picode.length > 1 || !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {					
 					//console.log(strength, Sensitivity);
 
                     if (picode.length > 1 && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
@@ -1756,7 +1751,7 @@ function checkWhitelist() {
 												
 										}
 										
-											isScanning = false;
+											//isScanning = false;
 											checkStrengthCounter = 0; // Reset the counter
 											stereo_detect = false;
 											station = '';
@@ -1788,6 +1783,8 @@ function checkWhitelist() {
 									Savefreq = freq;
 								}
 							}
+							isScanning = false;
+							
                 } else {
 
 					if (Scan === 'on') {
