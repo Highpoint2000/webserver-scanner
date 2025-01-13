@@ -7,13 +7,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.1
+## v3.1a
 
-- Search stop function when pressed repeatedly
-- Switch for mandatory use of ScanHoldTime implemented (useful for fm-dx-monitor!)
-- Column 30 in the urds log file removed (now supplemented with URDS Uploader from version 1.0d!) 
-- Logs with ? in the PS information are now logged
-- various code and scanner optimizations
+- The search bug has been fixed
 
 ## Installation notes:
 
@@ -106,6 +102,14 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 
 <details>
   <summary>History</summary>
+  
+### v3.1
+
+- Search stop function when pressed repeatedly
+- Switch for mandatory use of ScanHoldTime implemented (useful for fm-dx-monitor!)
+- Column 30 in the urds log file removed (now supplemented with URDS Uploader from version 1.0d!) 
+- Logs with ? in the PS information are now logged
+- various code and scanner optimizations  
   
 ### v3.0 (FMDX Scanner Version)
 
