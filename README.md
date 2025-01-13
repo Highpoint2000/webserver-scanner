@@ -38,7 +38,7 @@ The following variables can be changed in the configPlugin.json:
 	
     defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
-    defaultScannerMode: 'normal', 	// Set the startmode: 'normal', 'spectrum', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+    defaultScannerMode: 'normal', 	// Set the startmode: 'normal', 'blacklist', 'whitelist', 'spectrum', 'difference', 'spectrumBL' or 'differenceBL' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
     scanBandwith: 0,          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
