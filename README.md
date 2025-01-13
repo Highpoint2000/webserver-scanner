@@ -30,7 +30,7 @@ The following variables can be changed in the configPlugin.json:
 
     /// SCANNER OPTIONS ////
 
-     Scanmode: 1, 			// 0 - offline mode or 1 - offline mode (1- default)
+    Scanmode: 1, 			// 0 - offline mode or 1 - offline mode (1- default)
     Autoscan_PE5PVB_Mode: false,	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
     Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
     StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
