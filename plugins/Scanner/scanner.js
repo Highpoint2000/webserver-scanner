@@ -163,8 +163,9 @@
 
     // Send a search request
     async function sendSearch(SearchFunction) {
+
         try {
-            const searchMessage = createMessage('send', '', SearchFunction);
+            const searchMessage = createMessage('command', '', SearchFunction);
             if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
                 wsSendSocket.send(JSON.stringify(searchMessage));
                 console.log("Search message sent:", searchMessage);
@@ -174,13 +175,14 @@
             }
         } catch (error) {
             console.error(error);
-        }
+		}
     }
 
     // Send a scan request
     async function sendScan(ScanFunction) {
+
         try {
-            const scanMessage = createMessage('send', ScanFunction);
+            const scanMessage = createMessage('command', ScanFunction);
             if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
                 wsSendSocket.send(JSON.stringify(scanMessage));
                 console.log("Scanner sent message:", scanMessage);
@@ -195,8 +197,9 @@
 
     // Send values for sensitivity, scanner mode, and scan hold time
     async function SendValue(Sensitivity, ScannerMode, ScanHoldTime) {
+
         try {
-            const valueMessage = createMessage('send', '', '', Sensitivity, ScannerMode, ScanHoldTime);
+            const valueMessage = createMessage('command', '', '', Sensitivity, ScannerMode, ScanHoldTime);
             if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
                 wsSendSocket.send(JSON.stringify(valueMessage));
                 console.log("Value message sent:", valueMessage);
@@ -241,7 +244,7 @@
             const eventData = JSON.parse(event.data);
 
 			if (eventData.source !== clientIp) {
-				//console.log(eventData);
+			//console.log(eventData);
 			}
 			
             if (eventData.type === 'Scanner' ) {
