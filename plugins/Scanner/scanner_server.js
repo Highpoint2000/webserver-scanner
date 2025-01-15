@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.1a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.1b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 13.01.25       ///
+///  by Highpoint               last update: 15.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -565,15 +565,41 @@ async function DataPluginsWebSocket() {
 
             DataPluginsSocket.onmessage = (event) => {
                 try {
+					
+					const message = JSON.parse(event.data);
+                    // console.log("Received message:", message);
+
+                    let responseMessage;
+					
+					if (message.type === 'Scanner' && message.source !== source) {
+
+                        switch (message.value.status) {
+                            case 'request':
+                                // Create the response message
+                                responseMessage = createMessage(
+                                    'response',
+                                    message.source,
+                                    Scan,
+                                    '',
+                                    Sensitivity,
+                                    ScannerMode,
+                                    ScanHoldTime,
+									FMLIST_Autolog
+                                );
+
+                                // Send the response message
+                                DataPluginsSocket.send(JSON.stringify(responseMessage));
+                                // logInfo(`Sent response message: ${JSON.stringify(responseMessage)}`);
+                                break;
+						}
+					}									
+					
                     const currentTime = Date.now();
                     if (currentTime - lastMessageTimestamp < 50) {
                         // Ignore the message if it's received within 500 ms of the last processed message
                         return;
                     }
-                    lastMessageTimestamp = currentTime;
-
-                    const message = JSON.parse(event.data);
-                    // console.log("Received message:", message);
+                    lastMessageTimestamp = currentTime;  
 					
 					if (message.type === 'sigArray' && message.isScanning) {
 				
@@ -694,28 +720,7 @@ async function DataPluginsWebSocket() {
 						
 					}
 
-                    if (message.type === 'Scanner' && message.source !== source) {
-
-                        let responseMessage;
                         switch (message.value.status) {
-                            case 'request':
-                                // Create the response message
-                                responseMessage = createMessage(
-                                    'response',
-                                    message.source,
-                                    Scan,
-                                    '',
-                                    Sensitivity,
-                                    ScannerMode,
-                                    ScanHoldTime,
-									FMLIST_Autolog
-                                );
-
-                                // Send the response message
-                                DataPluginsSocket.send(JSON.stringify(responseMessage));
-                                // logInfo(`Sent response message: ${JSON.stringify(responseMessage)}`);
-                                break;
-
                             case 'command':
 	                            if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
                                     Sensitivity = message.value.Sensitivity;
@@ -870,10 +875,9 @@ async function DataPluginsWebSocket() {
                                 break;
 
                             default:
-                                logError(`Unknown status type: ${message.value.status}`);
+                                //logError(`Unknown status type: ${message.value.status}`);
                                 break;
                         }
-                    }
 					
 					// Check if the dataset is of type GPS
 					if (message.type === 'GPS') {
@@ -1432,8 +1436,8 @@ function startScan(direction) {
 								.pipe(new Speaker());
 						}, 500);
                     }
-                }
                 currentFrequency = tuningLowerLimit; // Reset to the lower limit
+                }
             }
         } 
         // If scanning downwards
@@ -1479,32 +1483,43 @@ function startScan(direction) {
                     currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
                 }
             } 
-            // Handle whitelist mode
-            else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {			
-                while (!isInWhitelist(currentFrequency, whitelist)) { 
-                    // Only scan frequencies in the whitelist
-                    if (direction === 'up') {
-                        if (currentFrequency < 74.00) {
-                            currentFrequency += 0.01;
-                        } else {
-                            currentFrequency += 0.1;
-                        }
-                        if (currentFrequency > tuningUpperLimit) {
-                            currentFrequency = tuningLowerLimit;
-                        }
-                    } else if (direction === 'down') {
-                        if (currentFrequency < 74.00) {
-                            currentFrequency -= 0.01;
-                        } else {
-                            currentFrequency -= 0.1;
-                        }
-                        if (currentFrequency < tuningLowerLimit) {
-                            currentFrequency = tuningUpperLimit;
-                        }
-                    }
-                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
-                }
-            }	
+
+			// Handle whitelist mode
+			else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {			
+				while (!isInWhitelist(currentFrequency, whitelist)) { 
+					// Track the previous frequency before changing the current frequency
+					const tempPreviousFrequency = currentFrequency;
+
+					// Only scan frequencies in the whitelist
+					if (direction === 'up') {
+						if (currentFrequency < 74.00) {
+							currentFrequency += 0.01;
+						} else {
+							currentFrequency += 0.1;
+						}
+						if (currentFrequency > tuningUpperLimit) {
+							currentFrequency = tuningLowerLimit;
+						}
+					} else if (direction === 'down') {
+						if (currentFrequency < 74.00) {
+							currentFrequency -= 0.01;
+						} else {
+							currentFrequency -= 0.1;
+						}
+						if (currentFrequency < tuningLowerLimit) {
+							currentFrequency = tuningUpperLimit;
+						}
+					}
+
+					currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+
+					// Check if current frequency is smaller than the previous frequency
+					if (currentFrequency < tempPreviousFrequency) {
+						sendNextAntennaCommand(); // Send the next antenna command
+					}
+				}
+			}
+	
             else if (Scan === 'on' && sigArray.length !== 0 && (ScannerMode === 'spectrum' && EnableSpectrumScan || ScannerMode === 'spectrumBL' && EnableSpectrumScanBL || ScannerMode === 'difference' && EnableDifferenceScan || ScannerMode === 'differenceBL' && EnableDifferenceScanBL)) {
                     // Filter valid frequencies based on the signal strength and sensitivity
 					// console.log(sigArraySpectrum);
@@ -1735,7 +1750,7 @@ function checkWhitelist() {
 								
 								if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
 
-										if (picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
+										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											
 											if (URDSupload) {
 												writeCSVLogEntry(); // filtered log
@@ -1767,7 +1782,7 @@ function checkWhitelist() {
 									writeStatusLogFMLIST = true;
 								}	
 									
-								if (picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
+								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
 									if (URDSupload && !ps.includes('?') && writeStatusCSV) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
