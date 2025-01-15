@@ -1,16 +1,14 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.1a)		///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.1b)		///
 ///                                                         ///
-///  by Highpoint               last update: 13.01.25       ///
+///  by Highpoint               last update: 15.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
-
-///  This plugin only works with web server version 1.3.1!!!
 
     const updateInfo = true; // Enable or disable version check
 
@@ -254,16 +252,16 @@
 					ScanPE5PVBstatus = ScanPE5PVB;
 				}	
 				
-				setTimeout(() => {
-					const element = document.getElementById('log-fmlist');
-					if (element) {
-						if (StatusFMLIST === 'on') {
-							element.style.display = 'none';
-						} else if (StatusFMLIST === 'off') {
-							element.style.display = 'block';
-						}
-				}
-				}, 50);
+				// setTimeout(() => {
+					// const element = document.getElementById('log-fmlist');
+					// if (element) {
+						// if (StatusFMLIST === 'on') {
+							// element.style.display = 'none';
+						// } else if (StatusFMLIST === 'off') {
+							// element.style.display = 'block';
+						// }
+				// }
+				// }, 150);
 
                 if (status === 'response' && eventData.target === clientIp) {
                     if (!scannerButtonsExecuted) {
