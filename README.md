@@ -7,9 +7,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.1a
+## v3.1b
 
-- The search bug has been fixed
+- Bug fixes and code optimizations
+- Added antenna switching for whitelist mode
 
 For URDS uploads, the uploader version from 1.0d upwards must be used!
 
@@ -104,6 +105,10 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 
 <details>
   <summary>History</summary>
+  
+### v3.1a
+
+- The search bug has been fixed
   
 ### v3.1
 
