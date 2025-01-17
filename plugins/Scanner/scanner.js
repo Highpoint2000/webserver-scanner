@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.1b)	    ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.1c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 15.01.25       ///
+///  by Highpoint               last update: 17.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.1b'; // Plugin version
+    const plugin_version = '3.1c'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -237,179 +237,232 @@
         }
     }
 
-    function handleWebSocketMessage(event) {
-        try {
-            const eventData = JSON.parse(event.data);
+let processingAllowed = true; // Allows message processing
 
-			if (eventData.source !== clientIp) {
-			//console.log(eventData);
-			}
-			
-            if (eventData.type === 'Scanner' ) {
-                const { status, ScanPE5PVB, SearchPE5PVB, Scan, Sensitivity, ScannerMode, ScanHoldTime, SpectrumLimiterValue, StatusFMLIST, InfoFMLIST } = eventData.value;
-						
-				if (typeof ScanPE5PVB !== 'undefined') {
-					ScanPE5PVBstatus = ScanPE5PVB;
-				}	
-				
-				// setTimeout(() => {
-					// const element = document.getElementById('log-fmlist');
-					// if (element) {
-						// if (StatusFMLIST === 'on') {
-							// element.style.display = 'none';
-						// } else if (StatusFMLIST === 'off') {
-							// element.style.display = 'block';
-						// }
-				// }
-				// }, 150);
+function handleWebSocketMessage(event) {
+    try {
+        const eventData = JSON.parse(event.data);
 
-                if (status === 'response' && eventData.target === clientIp) {
-                    if (!scannerButtonsExecuted) {
-                        ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime);
-                        SearchButtons();
-                        scannerButtonsExecuted = true; // Mark as executed
+        if (eventData.source !== clientIp) {
+            // Uncomment the line below to log event data from other sources
+            // console.log(eventData);
+        }
 
-                        if (isTuneAuthenticated) {
-							if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
-								sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Limit: ${SpectrumLimiterValue} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
-								if (SpectrumLimiterValue !== 'undefined' && SpectrumLimiterValue !== '') {
-									SpectrumLimiterValueStatus = SpectrumLimiterValue;
-									ScannerModeStatus = `${ScannerMode}`;
-								}
-							} else {
-								sendToast('info', 'Scanner', `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`, false, false);
-							}
+        if (eventData.type === 'Scanner') {
+            const {
+                status,
+                ScanPE5PVB,
+                SearchPE5PVB,
+                Scan,
+                Sensitivity,
+                ScannerMode,
+                ScanHoldTime,
+                SpectrumLimiterValue,
+                StatusFMLIST,
+                InfoFMLIST
+            } = eventData.value;
+
+            if (typeof ScanPE5PVB !== 'undefined') {
+                ScanPE5PVBstatus = ScanPE5PVB;
+            }
+
+            /*
+            // Uncomment the block below to handle the display of 'log-fmlist' element based on StatusFMLIST
+            setTimeout(() => {
+                const element = document.getElementById('log-fmlist');
+                if (element) {
+                    if (StatusFMLIST === 'on') {
+                        element.style.display = 'none';
+                    } else if (StatusFMLIST === 'off') {
+                        element.style.display = 'block';
+                    }
+                }
+            }, 150);
+            */
+
+            if (!processingAllowed) {
+                return; // Ignore the message if processing is not allowed
+            }
+
+            setTimeout(() => {
+                processingAllowed = true;
+            }, 100);
+
+            if (status === 'response' && eventData.target === clientIp) {
+                if (!scannerButtonsExecuted) {
+                    ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime);
+                    SearchButtons();
+                    scannerButtonsExecuted = true; // Mark as executed
+
+                    if (isTuneAuthenticated) {
+                        if (
+                            ScannerMode === 'spectrum' ||
+                            ScannerMode === 'spectrumBL' ||
+                            ScannerMode === 'difference' ||
+                            ScannerMode === 'differenceBL'
+                        ) {
+                            sendToast(
+                                'info',
+                                'Scanner',
+                                `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Limit: ${SpectrumLimiterValue} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`,
+                                false,
+                                false
+                            );
+                            if (SpectrumLimiterValue !== 'undefined' && SpectrumLimiterValue !== '') {
+                                SpectrumLimiterValueStatus = SpectrumLimiterValue;
+                                ScannerModeStatus = `${ScannerMode}`;
+                            }
+                        } else {
+                            sendToast(
+                                'info',
+                                'Scanner',
+                                `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`,
+                                false,
+                                false
+                            );
+                        }
+                    }
+                }
+
+                updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
+            } else if (
+                status === 'broadcast' &&
+                InfoFMLIST !== '' &&
+                InfoFMLIST !== undefined &&
+                InfoFMLIST.includes("successful")
+            ) {
+                sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);
+                processingAllowed = false;
+            } else if (
+                status === 'broadcast' &&
+                InfoFMLIST !== '' &&
+                InfoFMLIST !== undefined &&
+                InfoFMLIST.includes("failed")
+            ) {
+                sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);
+                processingAllowed = false;
+            } else if (status === 'broadcast' || status === 'send') {
+                updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
+                processingAllowed = false;
+            }
+
+            // Handle Scan button state
+            const ScanButton = document.getElementById('Scan-on-off');
+            const blinkTextElement = document.querySelector('#tune-buttons .blink');
+            const scannerControls = document.getElementById('scanner-controls');
+            const HideElement = document.querySelector('.panel-33.hide-phone.no-bg');
+            const volumeSliderParent = document.getElementById('volumeSlider')?.parentNode;
+
+            if (ScanButton) {
+                if (Scan === 'off') {
+                    const element = document.getElementById('log-fmlist');
+                    if (element) {
+                        element.style.display = 'block';
+                    }
+
+                    ScanButton.setAttribute('data-scan-status', 'off');
+                    ScanButton.classList.add('bg-color-3');
+                    ScanButton.classList.remove('bg-color-4');
+
+                    const freqDownElement = document.getElementById('freq-down');
+                    if (freqDownElement) {
+                        freqDownElement.style.display = 'block';
+                    }
+
+                    const freqUpElement = document.getElementById('freq-up');
+                    if (freqUpElement) {
+                        freqUpElement.style.display = 'block';
+                    }
+
+                    const searchDownElement = document.getElementById('search-down');
+                    if (searchDownElement) {
+                        searchDownElement.style.display = 'block';
+                    }
+
+                    const searchUpElement = document.getElementById('search-up');
+                    if (searchUpElement) {
+                        searchUpElement.style.display = 'block';
+                    }
+
+                    const commandInputElement = document.getElementById('commandinput');
+                    if (commandInputElement) {
+                        commandInputElement.style.display = 'block';
+                    }
+
+                    if (blinkTextElement) {
+                        blinkTextElement.style.display = 'none';
+                    }
+
+                    if (window.innerWidth < 769) {
+                        if (volumeSliderParent) {
+                            volumeSliderParent.style.display = 'none';
+                        }
+                        if (scannerControls) {
+                            scannerControls.style.display = 'none';
+                        }
+                        if (HideElement) {
+                            HideElement.classList.add('hide-phone');
                         }
                     }
 
-                    updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-              
-                } else if (status === 'broadcast' && InfoFMLIST !== '' && InfoFMLIST !== undefined && InfoFMLIST.includes("successful")) {		
-					sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);	
-				} else if (status === 'broadcast' && InfoFMLIST !== '' && InfoFMLIST !== undefined && InfoFMLIST.includes("failed")) {		
-					sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);						
-				} else if (status === 'broadcast' || status === 'send') {
-                    updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-                }
+                } else if (Scan === 'on') {
+                    const element = document.getElementById('log-fmlist');
+                    if (element) {
+                        element.style.display = 'none';
+                    }
 
-                // Handle Scan button state
-                const ScanButton = document.getElementById('Scan-on-off');
-                const blinkTextElement = document.querySelector('#tune-buttons .blink');
-                const scannerControls = document.getElementById('scanner-controls');
-                const HideElement = document.querySelector('.panel-33.hide-phone.no-bg');
-                const volumeSliderParent = document.getElementById('volumeSlider')?.parentNode;
-    
-                if (ScanButton) {
-                    if (Scan === 'off') {
-						
-						const element = document.getElementById('log-fmlist');
-						if (element) {
-							element.style.display = 'block';
-						}
-						
-                        ScanButton.setAttribute('data-scan-status', 'off');
-                        ScanButton.classList.add('bg-color-3');
-                        ScanButton.classList.remove('bg-color-4');
+                    ScanButton.setAttribute('data-scan-status', 'on');
+                    ScanButton.classList.add('bg-color-4');
+                    ScanButton.classList.remove('bg-color-3');
 
-                        const freqDownElement = document.getElementById('freq-down');
-                        if (freqDownElement) {
-                            freqDownElement.style.display = 'block';
+                    const freqDownElement = document.getElementById('freq-down');
+                    if (freqDownElement) {
+                        freqDownElement.style.display = 'none';
+                    }
+
+                    const freqUpElement = document.getElementById('freq-up');
+                    if (freqUpElement) {
+                        freqUpElement.style.display = 'none';
+                    }
+
+                    const searchDownElement = document.getElementById('search-down');
+                    if (searchDownElement) {
+                        searchDownElement.style.display = 'none';
+                    }
+
+                    const searchUpElement = document.getElementById('search-up');
+                    if (searchUpElement) {
+                        searchUpElement.style.display = 'none';
+                    }
+
+                    const commandInputElement = document.getElementById('commandinput');
+                    if (commandInputElement) {
+                        commandInputElement.style.display = 'none';
+                    }
+
+                    if (blinkTextElement) {
+                        blinkTextElement.style.display = 'block';
+                    }
+
+                    if (window.innerWidth < 769) {
+                        if (volumeSliderParent) {
+                            volumeSliderParent.style.display = 'none';
                         }
-
-                        const freqUpElement = document.getElementById('freq-up');
-                        if (freqUpElement) {
-                            freqUpElement.style.display = 'block';
+                        if (scannerControls) {
+                            scannerControls.style.display = 'flex';
                         }
-
-                        const searchDownElement = document.getElementById('search-down');
-                        if (searchDownElement) {
-                            searchDownElement.style.display = 'block';
-                        }
-
-                        const searchUpElement = document.getElementById('search-up');
-                        if (searchUpElement) {
-                            searchUpElement.style.display = 'block';
-                        }
-
-                        const commandInputElement = document.getElementById('commandinput');
-                        if (commandInputElement) {
-                            commandInputElement.style.display = 'block';
-                        }
-
-                        if (blinkTextElement) {
-                            blinkTextElement.style.display = 'none';
-                        }
-
-                        if (window.innerWidth < 769) {
-                            if (volumeSliderParent) {
-                                volumeSliderParent.style.display = 'none';
-                            }
-                            if (scannerControls) {
-                                scannerControls.style.display = 'none';
-                            }
-                            if (HideElement) {
-                                HideElement.classList.add('hide-phone');
-                            }
-                        }
-                        
-                    } else if (Scan === 'on') { 
-					
-						const element = document.getElementById('log-fmlist');
-						if (element) {
-							element.style.display = 'none';
-						}
-					
-                        ScanButton.setAttribute('data-scan-status', 'on');
-                        ScanButton.classList.add('bg-color-4');
-                        ScanButton.classList.remove('bg-color-3');
-
-                        const freqDownElement = document.getElementById('freq-down');
-                        if (freqDownElement) {
-                            freqDownElement.style.display = 'none';
-                        }
-
-                        const freqUpElement = document.getElementById('freq-up');
-                        if (freqUpElement) {
-                            freqUpElement.style.display = 'none';
-                        }
-
-                        const searchDownElement = document.getElementById('search-down');
-                        if (searchDownElement) {
-                            searchDownElement.style.display = 'none';
-                        }
-
-                        const searchUpElement = document.getElementById('search-up');
-                        if (searchUpElement) {
-                            searchUpElement.style.display = 'none';
-                        }
-
-                        const commandInputElement = document.getElementById('commandinput');
-                        if (commandInputElement) {
-                            commandInputElement.style.display = 'none';
-                        }
-
-                        if (blinkTextElement) {
-                            blinkTextElement.style.display = 'block';
-                        }
-
-                        if (window.innerWidth < 769) {
-                            if (volumeSliderParent) {
-                                volumeSliderParent.style.display = 'none';
-                            }
-                            if (scannerControls) {
-                                scannerControls.style.display = 'flex';
-                            }
-                            if (HideElement) {
-                                HideElement.classList.remove('hide-phone');
-                            }
+                        if (HideElement) {
+                            HideElement.classList.remove('hide-phone');
                         }
                     }
                 }
             }
-        } catch (error) {
-            console.error("Error handling WebSocket message:", error);
         }
+    } catch (error) {
+        console.error("Error handling WebSocket message:", error);
     }
+}
+
 
     // Update dropdown values for sensitivity, scanner mode, and scan hold time
     function updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime) {
