@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.1b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.1c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 15.01.25       ///
+///  by Highpoint               last update: 17.01.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1880,34 +1880,28 @@ function checkWhitelist() {
 // Function to find the appropriate entry based on `pty`
 function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
     try {
-        // Combine the base directory with the relative path
         const filePath = path.resolve(baseDir, relativePath);
-
-        // Read the file
         const fileContent = fs.readFileSync(filePath, 'utf8');
 
-        // Search for the array using a regular expression
         const arrayMatch = fileContent.match(/const europe_programmes\s*=\s*\[([\s\S]*?)\];/);
         if (!arrayMatch) {
-            throw new logError("The array 'europe_programmes' could not be found.");
+            throw new Error("The array 'europe_programmes' could not be found.");
         }
 
-        // Extract the content of the array
         const arrayString = `[${arrayMatch[1]}]`;
+        const europeProgrammes = JSON.parse(arrayString);
 
-        // Safely parse the array
-        const europeProgrammes = eval(arrayString); // Use eval cautiously, only with trusted code
-
-        // Check if the PTY value is valid
         if (pty >= 0 && pty < europeProgrammes.length) {
             return europeProgrammes[pty];
         } else {
-            throw new logError(`Invalid PTY value. Must be between 0 and ${europeProgrammes.length - 1}.`);
+            throw new Error(`Invalid PTY value. Must be between 0 and ${europeProgrammes.length - 1}.`);
         }
     } catch (error) {
-        throw new logError(`Error processing the file ${relativePath}: ${error.message}`);
+        console.error(`Error processing the file ${relativePath}: ${error.message}`);
+        return null; // Return a default value or handle as appropriate
     }
 }
+
 	
 function getLogFilePathCSV(date, time, filename) {
 	
