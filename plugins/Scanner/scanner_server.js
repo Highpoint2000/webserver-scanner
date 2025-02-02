@@ -13,6 +13,7 @@ const https = require('https');
 const path = require('path');
 const fs = require('fs');
 const { logInfo, logError, logWarn } = require('./../../server/console');
+const apiData = require('./../../server/datahandler');
 
 // Define the paths to the old and new configuration files
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
@@ -356,7 +357,7 @@ let StatusFMLIST = FMLIST_Autolog;
 let Scan;
 let enabledAntennas = [];
 let currentAntennaIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, af, saveAutoscanFrequency;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, af, saveAutoscanAntenna, saveAutoscanFrequency;
 let bandwith = 0;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
@@ -990,6 +991,7 @@ function checkUserCount(users) {
 
                             DataPluginsSocket.send(JSON.stringify(Message));
 							saveAutoscanFrequency = currentFrequency;
+                            if (AntennaSwitch && apiData.initialData.ant) saveAutoscanAntenna = apiData.initialData.ant;
 							
 							if (currentFrequency > '74.00') {
 
@@ -1085,6 +1087,7 @@ function checkUserCount(users) {
 				sendDataToClient(DefaultFreq);
 			} else {
 				sendDataToClient(saveAutoscanFrequency);
+                if (AntennaSwitch && saveAutoscanAntenna) textSocket.send(`Z${saveAutoscanAntenna}`);
 			}
 
         }
@@ -1366,6 +1369,7 @@ function stopAutoScan() {
 	textSocket.send(`W${scanBandwithSave}\n`);
 }
 
+let isSpectrumCooldown = false;
 async function setupSendSocket() {
 
     return new Promise((resolve, reject) => {
@@ -1378,8 +1382,18 @@ async function setupSendSocket() {
         });
 
         setTimeout(() => {
+            if (isSpectrumCooldown) { // Prevent Spectrum Graph socket spam if no signals detected
+                return;
+            }
+
+            isSpectrumCooldown = true;
+
             DataPluginsSocket.send(message);
-        }, 400);
+
+            setTimeout(() => {
+                isSpectrumCooldown = false;
+            }, 8000);
+        }, 400); 
 
     });
 }
@@ -2334,6 +2348,14 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
         console.log('Signal value is not a valid number:', dataHandler.sig); // Log an error message
         return; // Exit the function if the value is invalid
     }
+
+    // Log antenna name if antenna switch is enabled
+    let loggedAntenna = '';
+    if (Antennas.enabled) {
+        const antIndex = parseInt(apiData.initialData.ant) + 1;
+        const antName = Antennas[`ant${antIndex}`]?.name;
+        loggedAntenna = `, Antenna: ` + antName;
+    }
     
     // Prepare the data to be sent in the POST request
     const postData = JSON.stringify({
@@ -2356,7 +2378,7 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
             webserver_name: config.identification.tunerName.replace(/'/g, "\\'"), // Escape single quotes in the web server name
             omid: FMLIST_OM_ID, // OM ID for FMLIST
         },
-        log_msg: `Autologged PS: ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf`, // Log message including station name, PI, and signal strength
+        log_msg: `Autologged PS: ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf{loggedAntenna}`, // Log message including station name, PI, and signal strength
     });
 
     // Define the options for the HTTPS request
