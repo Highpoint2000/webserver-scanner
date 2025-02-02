@@ -332,6 +332,7 @@ function handleWebSocketMessage(event) {
                 InfoFMLIST.includes("successful")
             ) {
                 sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);
+                sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
                 processingAllowed = false;
             } else if (
                 status === 'broadcast' &&
@@ -340,6 +341,7 @@ function handleWebSocketMessage(event) {
                 InfoFMLIST.includes("failed")
             ) {
                 sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);
+                sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
                 processingAllowed = false;
             } else if (status === 'broadcast' || status === 'send') {
                 updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
