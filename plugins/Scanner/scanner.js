@@ -14,7 +14,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.2 BETA'; // Plugin version
+    const plugin_version = '3.2'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
