@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.1c)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.2)       ///
 ///                                                         ///
-///  by Highpoint               last update: 17.01.25       ///
+///  by Highpoint               last update: 08.02.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.1c'; // Plugin version
+    const plugin_version = '3.2 BETA'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -242,7 +242,8 @@ let processingAllowed = true; // Allows message processing
 function handleWebSocketMessage(event) {
     try {
         const eventData = JSON.parse(event.data);
-
+		// console.log(event.data);
+	
         if (eventData.source !== clientIp) {
             // Uncomment the line below to log event data from other sources
             // console.log(eventData);
@@ -332,7 +333,7 @@ function handleWebSocketMessage(event) {
                 InfoFMLIST.includes("successful")
             ) {
                 sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);
-                sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
+				sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
                 processingAllowed = false;
             } else if (
                 status === 'broadcast' &&
@@ -341,7 +342,7 @@ function handleWebSocketMessage(event) {
                 InfoFMLIST.includes("failed")
             ) {
                 sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);
-                sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
+				sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
                 processingAllowed = false;
             } else if (status === 'broadcast' || status === 'send') {
                 updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
@@ -562,49 +563,44 @@ function handleWebSocketMessage(event) {
         });
     }
 
-    function BlinkAutoScan() {
-        const element = document.getElementById('tune-buttons');
+function BlinkAutoScan() {
+    const container = document.getElementById('tune-buttons');
+    if (!container) return;
 
-        if (element) {
-            element.classList.remove('no-bg');
+    // Entferne ggf. eine vorhandene Hintergrund-Klasse
+    container.classList.remove('no-bg');
 
-            const blinkText = document.createElement('span');
-            blinkText.textContent = 'Autoscan active!';
+    // Container-Inhalt zentrieren (horizontal & vertikal)
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'center';
 
-            blinkText.classList.add('blink');
-            blinkText.style.display = 'none'; // Initially hide the element
+    // Blink-Text-Element erstellen
+    const blinkText = document.createElement('span');
+    blinkText.textContent = 'Autoscan active!';
+    blinkText.classList.add('blink');
+    container.appendChild(blinkText);
 
-            // Append the blinkText element to the parent element
-            element.appendChild(blinkText);
-
-            // Add styles for blinking effect
-            const style = document.createElement('style');
-            style.textContent = `
-                #tune-buttons {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100%;
-                }
-
-                .blink {
-                    font-size: 32px;
-                    font-weight: bold;
-                    font-family: Titillium Web, Calibri, sans-serif;
-                    color: red;
-                    animation: blink-animation 1s step-start 0s infinite;
-                }
-
-                @keyframes blink-animation {
-                    50% {
-                        opacity: 0;
-                    }
-                }
-            `;
-
-            document.head.appendChild(style);
+    // Nur CSS-Animation für dieses eine Element
+    const style = document.createElement('style');
+    style.textContent = `
+        .blink {
+            font-size: 32px;
+            font-weight: bold;
+            font-family: Titillium Web, Calibri, sans-serif;
+            color: red;
+            animation: blink-animation 1s step-start 0s infinite;
         }
-    }
+        @keyframes blink-animation {
+            50% {
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+
 
     // Helper functions to manage cookies
     function setCookie(name, value, days) {
