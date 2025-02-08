@@ -7,12 +7,15 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.1c
+## v3.2
 
-- Bug fixes 
-- duplicate messages removed
+- URDS RDS data added (e.g RT, Station ID, ECC)
+- Signal unit for URDS Log changed to dBµV
+- Added PS filter for error-free URDS logs
+- Added display of the current antenna and server short name for FMLIST logbook entries
+- Bug with the red flashing chat symbol fixed
 
-For URDS uploads, the uploader version from 1.0d upwards must be used!
+For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
 ## Installation notes:
 
@@ -38,6 +41,7 @@ The following variables can be changed in the configPlugin.json:
     Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
     StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
+	SignalStrengthUnit: 'dBf',	// Set to 'dBf', 'dBm' or 'dBµV' 
 	
     defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
@@ -73,6 +77,7 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60,    	// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
+	FMLIST_ShortServerName: '',	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
 
     BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
@@ -105,6 +110,13 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 
 <details>
   <summary>History</summary>
+  
+### v3.1c
+
+- Bug fixes 
+- duplicate messages removed
+
+For URDS uploads, the uploader version from 1.0d upwards must be used!
   
 ### v3.1b
 
