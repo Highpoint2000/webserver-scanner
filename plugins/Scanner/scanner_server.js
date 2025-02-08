@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.1c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2)       ///
 ///                                                         ///
-///  by Highpoint               last update: 17.01.25       ///
+///  by Highpoint               last update: 08.02.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -27,6 +27,7 @@ const defaultConfig = {
     StartAutoScan: 'off',                // Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off',                // Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 	OnlyScanHoldTime: 'off',			 // Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
+	SignalStrengthUnit: 'dBf',			 // Set to 'dBf', 'dBm' or 'dBµV' 
 
     defaultSensitivityValue: 30,         // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 5,              // Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
@@ -56,6 +57,7 @@ const defaultConfig = {
     FMLIST_MaxDistance: 2000,            // set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
     FMLIST_LogInterval: 60,              // Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
+	FMLIST_ShortServerName: '',		     // set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
 
     BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
@@ -137,6 +139,7 @@ const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
 const StartAutoScan = configPlugin.StartAutoScan;
 const AntennaSwitch = configPlugin.AntennaSwitch;
 const OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
+  let SignalStrengthUnit = configPlugin.SignalStrengthUnit;
 
 const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
@@ -166,6 +169,7 @@ const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
+  let FMLIST_ShortServerName = configPlugin.FMLIST_ShortServerName;
 
 const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
@@ -357,7 +361,7 @@ let StatusFMLIST = FMLIST_Autolog;
 let Scan;
 let enabledAntennas = [];
 let currentAntennaIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, af, saveAutoscanAntenna, saveAutoscanFrequency;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, ecc, af, rt0, rt1, rt, saveAutoscanAntenna,saveAutoscanFrequency;
 let bandwith = 0;
 let CSV_LogfilePath;
 let CSV_LogfilePath_filtered;
@@ -991,7 +995,8 @@ function checkUserCount(users) {
 
                             DataPluginsSocket.send(JSON.stringify(Message));
 							saveAutoscanFrequency = currentFrequency;
-                            if (AntennaSwitch && apiData.initialData.ant) saveAutoscanAntenna = apiData.initialData.ant;
+							
+							if (AntennaSwitch && apiData.initialData.ant) saveAutoscanAntenna = apiData.initialData.ant;
 							
 							if (currentFrequency > '74.00') {
 
@@ -1087,9 +1092,8 @@ function checkUserCount(users) {
 				sendDataToClient(DefaultFreq);
 			} else {
 				sendDataToClient(saveAutoscanFrequency);
-                if (AntennaSwitch && saveAutoscanAntenna) textSocket.send(`Z${saveAutoscanAntenna}`);
 			}
-
+			if (AntennaSwitch && saveAutoscanAntenna) textSocket.send(`Z${saveAutoscanAntenna}`);
         }
     }
 }
@@ -1170,6 +1174,10 @@ async function handleSocketMessage(messageData) {
     picode = messageData.pi;
     ps = messageData.ps;
     freq = messageData.freq;
+	ecc = messageData.ecc;
+	af = messageData.af;
+	rt0	= messageData.rt0;
+	rt1	= messageData.rt1;
     strength = messageData.sig;
 	strengthTop = messageData.sigTop;
 	rds = messageData.rds;
@@ -1181,7 +1189,6 @@ async function handleSocketMessage(messageData) {
 	ta = messageData.ta;
 	tp = messageData.tp;
 	pty = messageData.pty;
-	af = messageData.af;
 	
 	if (Scanmode === 1 ) {
 		
@@ -1235,6 +1242,20 @@ async function handleSocketMessage(messageData) {
 	
 	if (ps === "") {
 		ps = "?";
+	}
+	
+	if (!rt0 && rt1) {
+		rt = rt1;
+		} else if (!rt1 && rt0) {
+			rt = rt0;
+			} else if (rt0 && rt1) {
+				rt = `${rt0} ${rt1}`;
+			} else {
+				rt ='';
+			}
+
+	if (ecc === null) {
+		ecc = '';
 	}
 	
     if (isScanning) {
@@ -1764,7 +1785,7 @@ function checkWhitelist() {
 								
 								if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
 
-										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
+										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq && !ps.includes('?')) {
 											
 											if (URDSupload) {
 												writeCSVLogEntry(); // filtered log
@@ -1796,7 +1817,7 @@ function checkWhitelist() {
 									writeStatusLogFMLIST = true;
 								}	
 									
-								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
+								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && !ps.includes('?')) {
 									if (URDSupload && !ps.includes('?') && writeStatusCSV) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
@@ -1956,76 +1977,109 @@ function getLogFilePathCSV(date, time, filename) {
 }
 
 function writeCSVLogEntry() {
-    
-    if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'off' ) || (Scan === 'on' && (ScannerMode === 'blacklist' ||  ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
+    if (
+        isInBlacklist(freq, blacklist) && 
+        EnableBlacklist && 
+        (
+            Scan === 'off' ||
+            (
+                Scan === 'on' && (
+                    ScannerMode === 'blacklist' || 
+                    ScannerMode === 'spectrumBL' || 
+                    ScannerMode === 'differenceBL'
+                )
+            )
+        )
+    ) {
         return;
     }
     
     const now = new Date();
-    let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    let date = now.toISOString().split('T')[0];  // YYYY-MM-DD
     let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
     
-    const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
-      time = utcTime;
-      date = utcDate;
+    const { utcDate, utcTime } = getCurrentUTC(); // Get time in UTC
+    time = utcTime;
+    date = utcDate;
 
-	if (!fs.existsSync(logFilePathCSV)) { // // Checks whether the file exists
-        logFilePathCSV = getLogFilePathCSV(); // Executes the function to reset the path
-	 }
-	       
-	// Data preparation for FMLIST
-	const [seconds, nanoseconds] = process.hrtime(); // Returns [seconds, nanoseconds]
-	const nanoString = nanoseconds.toString().padStart(9, '0'); // Pad to 9 digits
-	const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`; // Format string
-	
-	const dateTimeString = `${date}T${time}`;
-	const dateObject = new Date(dateTimeString);
-	const UNIXTIME = Math.floor(dateObject.getTime() / 1000);
+    if (!fs.existsSync(logFilePathCSV)) {
+        // Checks whether the file exists
+        logFilePathCSV = getLogFilePathCSV(); // Resets the path if necessary
+    }
+    
+    // Data preparation for FMLIST
+    const [seconds, nanoseconds] = process.hrtime(); // Returns [seconds, nanoseconds]
+    const nanoString = nanoseconds.toString().padStart(9, '0'); // Pad to 9 digits
+    const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`; // Format string
+    
+    const dateTimeString = `${date}T${time}`;
+    const dateObject = new Date(dateTimeString);
+    const UNIXTIME = Math.floor(dateObject.getTime() / 1000);
 
-	const FREQTEXT = `freq`;
-	const numericFrequency = parseFloat(freq);
+    const FREQTEXT = `freq`;
+    const numericFrequency = parseFloat(freq);
     const frequencyInHz = Math.round(numericFrequency * 1_000_000);
-	const rdson = rds ? 1 : 0;	
-	
-	const numericStrength = parseFloat(strength);
-	const SNRMIN = Math.round(numericStrength * 10);
-	const numericStrengthTop = parseFloat(strengthTop);
-	const SNRAX = Math.round(numericStrengthTop * 10);
-	
-	const GPSLAT = LAT || config.identification.lat;
-	const GPSLON = LON || config.identification.lon;
+    const rdson = rds ? 1 : 0;   
+    
+    SignalStrengthUnit = SignalStrengthUnit.toLowerCase();
+    
+    let numericStrengthTop;
+    let numericStrength;
 
-	const GPSALT = ALT || '';
-	const GPSMODE = gpsmode || '';
-	const GPSTIME = gpstime || new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
+    if (SignalStrengthUnit === 'dbf') {
+        numericStrengthTop = parseFloat(strengthTop) - 10.875;
+        numericStrength = parseFloat(strength) - 10.875;
+    } else if (SignalStrengthUnit === 'dbm') {
+        numericStrengthTop = parseFloat(strengthTop) + 108.75;
+        numericStrength = parseFloat(strength) + 108.75;
+    } else {
+        numericStrengthTop = parseFloat(strengthTop);
+        numericStrength = parseFloat(strength);
+    }
 
-	const PI = `0x${picode}`;
-	const PS = `"${ps}"`;
-	const TA = `${ta}`;
-	const TP = `${tp}`;
-	
-	const MUSIC = `0`;
-	const ProgramType = `"${getProgrammeByPTYFromFile(pty, __dirname, './../../web/js/main.js')}"`;
-	const GRP = `"0A"`;
-	const STEREO = stereo ? 1 : 0;	
-	const DYNPTY = `0`;
-	const OTHERPI = ``;
-	const ALLPSTEXT = `"allps:"`;
-	const OTHERPS = `""`;
+    // Round to 2 decimal places
+    const SNRMIN = numericStrength.toFixed(2);
+    const SNRMAX = numericStrengthTop.toFixed(2);
+    
+    const GPSLAT = LAT || config.identification.lat;
+    const GPSLON = LON || config.identification.lon;
 
-    // Create the log entry line with the relevant data
-	let line = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},${ALLPSTEXT},${OTHERPS}\n`;
-	
+    const GPSALT = ALT || '';
+    const GPSMODE = gpsmode || '';
+    const GPSTIME = gpstime || new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
+
+    const PI = `0x${picode}`;
+    const PS = `"${ps}"`;
+    const TA = `${ta}`;
+    const TP = `${tp}`;
+    
+    const MUSIC = `0`;
+    const ProgramType = `"${getProgrammeByPTYFromFile(pty, __dirname, './../../web/js/main.js')}"`;
+    const GRP = `"0A"`;
+    const STEREO = stereo ? 1 : 0;  
+    const DYNPTY = `0`;
+    const OTHERPI = ``;
+    const ALLPSTEXT = `"allps:"`;
+    const OTHERPS = `""`;
+    const ECC = `"${ecc}"`;
+    const STATIONID = `"${stationid}"`;
+    const AF = `"${af}"`;
+    const RT = `"${rt}"`;
+
+    // Create the log entry line
+    let line = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT}\n`;
+    
     try {
         // Append the log entry to the CSV file
         fs.appendFileSync(logFilePathCSV, line, { flag: 'a' });
-		if (BEEP_CONTROL && Scan === 'on' ) {
-			fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav').pipe(new Speaker());
-		}
+        if (BEEP_CONTROL && Scan === 'on') {
+            fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav').pipe(new Speaker());
+        }
     } catch (error) {
         logError("Failed to write log entry:", error.message);
     }
 }
+
 
 function getLogFilePathHTML(date, time, isFiltered) {
     if (UTCtime) {
@@ -2080,8 +2134,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 
         header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>STRENGTH</th><th>DIST</th><th>AZ</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP</th><th>STRENGTH</th><th>DIST</th><th>AZ</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -2348,7 +2402,7 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
         console.log('Signal value is not a valid number:', dataHandler.sig); // Log an error message
         return; // Exit the function if the value is invalid
     }
-
+	
     // Log antenna name if antenna switch is enabled
     let loggedAntenna = '';
     if (Antennas.enabled) {
@@ -2357,29 +2411,38 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
         loggedAntenna = `, Antenna: ` + antName;
     }
     
+	FMLIST_ShortServerName = FMLIST_ShortServerName.substring(0, 10);	
+	if (FMLIST_ShortServerName === '') {
+			FMLIST_ShortServerName = `Autologged PS: `;
+		} else {
+			FMLIST_ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
+		}
+	
     // Prepare the data to be sent in the POST request
-    const postData = JSON.stringify({
-        station: {
-            freq: freq, // Frequency of the station
-            pi: picode, // PI code of the station
-            id: stationid, // ID of the station
-            rds_ps: ps.replace(/'/g, "\\'"), // Escape single quotes in the station name
-            signal: signalValue, // Use the validated signal value
-            tp: tp, // Transport type
-            ta: ta, // Traffic announcement
-            af_list: af, // Alternate frequency list
-        },
-            
-        server: {
-            uuid: config.identification.token, // Unique identifier for the server
-            latitude: config.identification.lat, // Latitude of the server
-            longitude: config.identification.lon, // Longitude of the server
-            address: config.identification.proxyIp.length > 1 ? config.identification.proxyIp : ('Matches request IP with port ' + config.webserver.port), // Proxy IP or request IP with port
-            webserver_name: config.identification.tunerName.replace(/'/g, "\\'"), // Escape single quotes in the web server name
-            omid: FMLIST_OM_ID, // OM ID for FMLIST
-        },
-        log_msg: `Autologged PS: ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf{loggedAntenna}`, // Log message including station name, PI, and signal strength
-    });
+	const postData = JSON.stringify({
+		station: {
+			freq: freq,
+			pi: picode,
+			id: stationid,
+			rds_ps: ps.replace(/'/g, "\\'"),
+			signal: signalValue,
+			tp: tp,
+			ta: ta,
+			af_list: af
+		},
+		server: {
+			uuid: config.identification.token,
+			latitude: config.identification.lat,
+			longitude: config.identification.lon,
+			address: config.identification.proxyIp.length > 1
+			? config.identification.proxyIp
+			: ('Matches request IP with port ' + config.webserver.port),
+			webserver_name: config.identification.tunerName.replace(/'/g, "\\'"),
+			omid: FMLIST_OM_ID
+		},
+		log_msg: `${FMLIST_ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf ${loggedAntenna}`
+	});
+
 
     // Define the options for the HTTPS request
     const options = {
