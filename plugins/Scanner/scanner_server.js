@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 08.02.25       ///
+///  by Highpoint               last update: 09.02.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -970,7 +970,7 @@ function checkUserCount(users) {
     // Check if the conditions for starting the auto-scan are met
     if (users === 0) {
         counter++; // Increment the counter when users === 0
-        if (counter >= 5) { // Check if the counter has reached 5
+        if (counter >= 15) { // Check if the counter has reached 15
             if (!autoScanActive && StartAutoScan === 'auto') {
                 if (!autoScanScheduled) {
                     // Set a timeout to start the auto-scan after 10 seconds
