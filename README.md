@@ -7,13 +7,12 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.2
+## v3.2a
 
-- URDS RDS data added (e.g RT, Station ID, ECC)
-- Signal unit for URDS Log changed to dBµV
-- Added PS filter for error-free URDS logs
-- Added display of the current antenna and server short name for FMLIST logbook entries
-- Bug with the red flashing chat symbol fixed
+- Corrected display of Auto Log button on smaller display
+- Fixed temporary display of small scanner buttons during reload
+- Start time for automatic scan increased from 5 seconds to 15 seconds
+- Small code corrections regarding writing the log file
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -111,12 +110,13 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 <details>
   <summary>History</summary>
   
-## v3.2a
+### v3.2
 
-- Corrected display of Auto Log button on smaller display
-- Fixed temporary display of small scanner buttons during reload
-- Start time for automatic scan increased from 5 seconds to 15 seconds
-- Small code corrections regarding writing the log file
+- URDS RDS data added (e.g RT, Station ID, ECC)
+- Signal unit for URDS Log changed to dBµV
+- Added PS filter for error-free URDS logs
+- Added display of the current antenna and server short name for FMLIST logbook entries
+- Bug with the red flashing chat symbol fixed
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
   
