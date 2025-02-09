@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.2)       ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.2a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 08.02.25       ///
+///  by Highpoint               last update: 09.02.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.2'; // Plugin version
+    const plugin_version = '3.2a'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -351,7 +351,7 @@ function handleWebSocketMessage(event) {
 
             // Handle Scan button state
             const ScanButton = document.getElementById('Scan-on-off');
-            const blinkTextElement = document.querySelector('#tune-buttons .blink');
+            const blinkTextElement = document.querySelector('#tune-buttons .autoscan-blink');
             const scannerControls = document.getElementById('scanner-controls');
             const HideElement = document.querySelector('.panel-33.hide-phone.no-bg');
             const volumeSliderParent = document.getElementById('volumeSlider')?.parentNode;
@@ -564,42 +564,62 @@ function handleWebSocketMessage(event) {
     }
 
 function BlinkAutoScan() {
-    const container = document.getElementById('tune-buttons');
-    if (!container) return;
-
-    // Entferne ggf. eine vorhandene Hintergrund-Klasse
-    container.classList.remove('no-bg');
-
-    // Container-Inhalt zentrieren (horizontal & vertikal)
-    container.style.display = 'flex';
-    container.style.justifyContent = 'center';
-    container.style.alignItems = 'center';
-
-    // Blink-Text-Element erstellen
-    const blinkText = document.createElement('span');
-    blinkText.textContent = 'Autoscan active!';
-    blinkText.classList.add('blink');
-    container.appendChild(blinkText);
-
-    // Nur CSS-Animation für dieses eine Element
-    const style = document.createElement('style');
-    style.textContent = `
-        .blink {
-            font-size: 32px;
-            font-weight: bold;
-            font-family: Titillium Web, Calibri, sans-serif;
-            color: red;
-            animation: blink-animation 1s step-start 0s infinite;
+    console.log('BlinkAutoScan started');
+    
+    const parentElement = document.getElementById('tune-buttons');
+    if (parentElement) {
+        // Ensure that the parent container serves as the positioning context
+        parentElement.style.position = 'relative';
+        
+        // Create a container for the blinking text if it does not already exist
+        let blinkContainer = parentElement.querySelector('.autoscan-blink-container');
+        if (!blinkContainer) {
+            blinkContainer = document.createElement('div');
+            blinkContainer.className = 'autoscan-blink-container';
+            // Position absolutely so it does not affect the layout flow
+            blinkContainer.style.position = 'absolute';
+            blinkContainer.style.top = '0';
+            blinkContainer.style.left = '0';
+            blinkContainer.style.width = '100%';
+            blinkContainer.style.height = '100%';
+            blinkContainer.style.pointerEvents = 'none';
+            // Initially hide the container to avoid layout shifts
+            blinkContainer.style.display = 'none';
+            parentElement.appendChild(blinkContainer);
         }
-        @keyframes blink-animation {
-            50% {
-                opacity: 0;
+    
+        // Create the blinking text element
+        const blinkText = document.createElement('span');
+        blinkText.textContent = 'Autoscan active!';
+        blinkText.classList.add('autoscan-blink');
+        // The text is created as a block element
+        blinkText.style.display = 'block';
+        blinkContainer.appendChild(blinkText);
+    
+        // Add CSS styles for the blinking text
+        const style = document.createElement('style');
+        style.textContent = `
+            .autoscan-blink {
+                font-size: 32px;
+                font-weight: bold;
+                font-family: "Titillium Web", Calibri, sans-serif;
+                color: red;
+                animation: autoscan-blink-animation 1s step-start infinite;
             }
-        }
-    `;
-    document.head.appendChild(style);
+            @keyframes autoscan-blink-animation {
+                50% { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    
+        // Show the container after a short timeout (e.g., 100ms)
+        setTimeout(() => {
+            blinkContainer.style.display = 'block';
+        }, 100); // Adjust the value as needed
+    } else {
+        console.warn('Element with the ID "tune-buttons" not found.');
+    }
 }
-
 
 
     // Helper functions to manage cookies
@@ -642,11 +662,16 @@ function BlinkAutoScan() {
                 ScannerButton.style.right = '8px';
                 ScannerButton.style.width = '100%';
                 ScannerButton.style.borderRadius = '15px';
-            } else {
-                ScannerButton.style.right = '1px';
+			} else if (window.innerWidth > 2000) {
+				ScannerButton.style.right = '1px';
                 ScannerButton.style.left = '0px';
                 ScannerButton.style.borderRadius = '0px';
                 ScannerButton.style.width = '98.0%';
+			} else {					
+                ScannerButton.style.right = '1px';
+                ScannerButton.style.left = '0px';
+                ScannerButton.style.borderRadius = '0px';
+                ScannerButton.style.width = '97.0%';
             }
         }
 
