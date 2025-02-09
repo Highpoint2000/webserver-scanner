@@ -1785,9 +1785,9 @@ function checkWhitelist() {
 								
 								if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
 
-										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq && !ps.includes('?')) {
+										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											
-											if (URDSupload) {
+											if (URDSupload && !ps.includes('?')) {
 												writeCSVLogEntry(); // filtered log
 											}
 											
@@ -1817,7 +1817,7 @@ function checkWhitelist() {
 									writeStatusLogFMLIST = true;
 								}	
 									
-								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && !ps.includes('?')) {
+								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
 									if (URDSupload && !ps.includes('?') && writeStatusCSV) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
