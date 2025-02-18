@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.2a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.2b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 09.02.25       ///
+///  by Highpoint               last update: 18.02.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,9 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.2a'; // Plugin version
+//- added background for autoscan active notification
+
+    const plugin_version = '3.2b'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -237,8 +239,6 @@
         }
     }
 
-let processingAllowed = true; // Allows message processing
-
 function handleWebSocketMessage(event) {
     try {
         const eventData = JSON.parse(event.data);
@@ -262,6 +262,8 @@ function handleWebSocketMessage(event) {
                 StatusFMLIST,
                 InfoFMLIST
             } = eventData.value;
+				
+			console.log(eventData.value);
 
             if (typeof ScanPE5PVB !== 'undefined') {
                 ScanPE5PVBstatus = ScanPE5PVB;
@@ -280,14 +282,6 @@ function handleWebSocketMessage(event) {
                 }
             }, 150);
             */
-
-            if (!processingAllowed) {
-                return; // Ignore the message if processing is not allowed
-            }
-
-            setTimeout(() => {
-                processingAllowed = true;
-            }, 100);
 
             if (status === 'response' && eventData.target === clientIp) {
                 if (!scannerButtonsExecuted) {
@@ -334,7 +328,6 @@ function handleWebSocketMessage(event) {
             ) {
                 sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);
 				sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
-                processingAllowed = false;
             } else if (
                 status === 'broadcast' &&
                 InfoFMLIST !== '' &&
@@ -343,10 +336,8 @@ function handleWebSocketMessage(event) {
             ) {
                 sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);
 				sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
-                processingAllowed = false;
             } else if (status === 'broadcast' || status === 'send') {
                 updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
-                processingAllowed = false;
             }
 
             // Handle Scan button state
@@ -568,6 +559,7 @@ function BlinkAutoScan() {
     
     const parentElement = document.getElementById('tune-buttons');
     if (parentElement) {
+		parentElement.classList.remove('no-bg');
         // Ensure that the parent container serves as the positioning context
         parentElement.style.position = 'relative';
         
@@ -593,7 +585,7 @@ function BlinkAutoScan() {
         blinkText.textContent = 'Autoscan active!';
         blinkText.classList.add('autoscan-blink');
         // The text is created as a block element
-        blinkText.style.display = 'block';
+        blinkText.style.display = 'none';
         blinkContainer.appendChild(blinkText);
     
         // Add CSS styles for the blinking text
