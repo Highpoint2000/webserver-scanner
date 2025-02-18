@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 09.02.25       ///
+///  by Highpoint               last update: 18.02.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1175,7 +1175,7 @@ async function handleSocketMessage(messageData) {
     ps = messageData.ps;
     freq = messageData.freq;
 	ecc = messageData.ecc;
-	af = messageData.af;
+	af = String(messageData.af).replace(/,/g, ';');
 	rt0	= messageData.rt0;
 	rt1	= messageData.rt1;
     strength = messageData.sig;
