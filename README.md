@@ -7,12 +7,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.2a
+## v3.2b
 
-- Corrected display of Auto Log button on smaller display
-- Fixed temporary display of small scanner buttons during reload
-- Start time for automatic scan increased from 5 seconds to 15 seconds
-- Small code corrections regarding writing the log file
+- Fixed the problem with the background and the display of the “autoscan active” screen
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -109,6 +106,17 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 
 <details>
   <summary>History</summary>
+ 
+## History
+ 
+### v3.2a
+
+- Corrected display of Auto Log button on smaller display
+- Fixed temporary display of small scanner buttons during reload
+- Start time for automatic scan increased from 5 seconds to 15 seconds
+- Small code corrections regarding writing the log file
+
+For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
   
 ### v3.2
 
