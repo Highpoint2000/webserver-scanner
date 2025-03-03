@@ -7,9 +7,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.2b
+## v3.2c
 
-- Fixed the problem with the background and the display of the “autoscan active” screen
+- fixed problem with doubled autologged entry 
+- small design adjustment
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -108,6 +109,10 @@ After activating/deactivating the plugin or making changes to the scanner.json s
   <summary>History</summary>
  
 ## History
+
+### v3.2b
+
+- Fixed the problem with the background and the display of the “autoscan active” screen
  
 ### v3.2a
 
