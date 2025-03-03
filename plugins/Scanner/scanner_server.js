@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 18.02.25       ///
+///  by Highpoint               last update: 03.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -2413,9 +2413,9 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
     
 	FMLIST_ShortServerName = FMLIST_ShortServerName.substring(0, 10);	
 	if (FMLIST_ShortServerName === '') {
-			FMLIST_ShortServerName = `Autologged PS: `;
+			let ShortServerName = `Autologged PS: `;
 		} else {
-			FMLIST_ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
+			let ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
 		}
 	
     // Prepare the data to be sent in the POST request
@@ -2440,7 +2440,7 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 			webserver_name: config.identification.tunerName.replace(/'/g, "\\'"),
 			omid: FMLIST_OM_ID
 		},
-		log_msg: `${FMLIST_ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf ${loggedAntenna}`
+		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf ${loggedAntenna}`
 	});
 
 
