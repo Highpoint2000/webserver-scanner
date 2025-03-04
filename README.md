@@ -7,10 +7,12 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.2c
+## v3.3
 
-- fixed problem with doubled autologged entry 
-- small design adjustment
+- Fixed an error when publishing a version 3.2c FMLIST entry
+- Whitelist entries are now also processed with 0.01 MHZ increments
+- Adding a new variable CSVcompletePS for logging with and without full PS information
+- minor code corrections
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -62,9 +64,10 @@ The following variables can be changed in the configPlugin.json:
 
     /// HTML LOGGING OPTIONS ////
 	
-    RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging.  default is false
-    OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false
-    UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true
+    RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
+    OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
+    UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 
     /// FMLIST LOGGING OPTIONS ////
  
@@ -97,6 +100,7 @@ The following variables can be changed in the configPlugin.json:
 - To use the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 - When GPS data is received, the location is updated dynamically (GPS receiver and [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
 - To use the fm-dx-monitor set the OnlyScanHoldTime 'on' and choose a minimum defaultScanHoldTime of 5 seconds
+- Whitelist entries are processed with 0.01 MHZ increments
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
@@ -109,6 +113,13 @@ After activating/deactivating the plugin or making changes to the scanner.json s
   <summary>History</summary>
  
 ## History
+
+### v3.2c
+
+- fixed problem with doubled autologged entry 
+- small design adjustment
+
+For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
 ### v3.2b
 
