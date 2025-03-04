@@ -66,7 +66,7 @@ The following variables can be changed in the configPlugin.json:
 	
     RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
     OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
-	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
+    CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 
     /// FMLIST LOGGING OPTIONS ////
