@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.2c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.3)      ///
 ///                                                         ///
-///  by Highpoint               last update: 03.03.25       ///
+///  by Highpoint               last update: 04.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -47,9 +47,10 @@ const defaultConfig = {
     SpectrumLimiterValue: 100,            // default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
     SpectrumPlusMinusValue: 100,          // default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
-    RAWLog: false,                       // Set to 'true' or 'false' for RAW data logging, default is false
-    OnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false
-    UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true
+    RAWLog: false,                       // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
+    OnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
+    UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 
     FMLIST_OM_ID: '',                    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
     FMLIST_Autolog: 'off',               // Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
@@ -161,6 +162,7 @@ const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
 const RAWLog = configPlugin.RAWLog;
 const OnlyFirstLog = configPlugin.OnlyFirstLog;
+const CSVcompletePS = configPlugin.CSVcompletePS
 const UTCtime = configPlugin.UTCtime;
 
   let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
@@ -372,6 +374,7 @@ let scanBandwithSave;
 let ALT;
 let gpstime;
 let gpsmode;
+let ShortServerName;
 let sigArray = [];
 let sigArraySpectrum = [];
 let sigArrayDifference = [];
@@ -403,11 +406,7 @@ if (tuningLowerLimit === '') {
 	}
 }
 
-if (StartAutoScan !== 'auto') {
-   Scan = StartAutoScan;
-} else {
-   Scan = 'off';
-}
+Scan = 'off';
 
 if (!FMLIST_OM_ID) {
 	FMLIST_OM_ID = config.extras.fmlistOmid;
@@ -463,19 +462,22 @@ async function TextWebSocket(messageData) {
                     sendCommandToClient(`I${defaultSensitivityValue}`);
                     sendCommandToClient(`K${defaultScanHoldTime}`);
 	                logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" scanholdtime "${defaultScanHoldTime}" (PE5PVB mode)`);
-					if (Scan === 'on' && Autoscan_PE5PVB_Mode) {
+					if (StartAutoScan === 'on' && Autoscan_PE5PVB_Mode) {
 						sendCommandToClient('J1');
-						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
+						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}" (PE5PVB mode)`);
 					}
                 } else {
                     logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" mode "${defaultScannerMode}" scanholdtime "${defaultScanHoldTime}"`);
-					if (Scan === 'on') {
+					if (StartAutoScan === 'on') {
 						if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
 							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 						} else {
 							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 						}
-						AutoScan();					
+						setTimeout(() => {
+						   Scan = 'on';
+						   AutoScan();
+						}, 2000);
 					}
                 }
 
@@ -1458,7 +1460,11 @@ function startScan(direction) {
             if (currentFrequency < 74.00) {
                 currentFrequency += 0.01; // Increase by 0.01 if frequency is less than 74 MHz
             } else {
-                currentFrequency += 0.1; // Increase by 0.1 above 74 MHz
+				if (Scan === 'on' && ScannerMode === 'whitelist' && EnableWhitelist) {		
+					currentFrequency += 0.01; // Decrease by 0.01 above 74 MHz
+				} else {
+					currentFrequency += 0.1; // Decrease by 0.1 above 74 MHz
+				}
             }
             // If the frequency exceeds the upper limit, reset to the lower limit
             if (currentFrequency > tuningUpperLimit) {
@@ -1475,12 +1481,17 @@ function startScan(direction) {
                 }
             }
         } 
+		
         // If scanning downwards
         else if (direction === 'down') {
             if (currentFrequency < 74.00) {
                 currentFrequency -= 0.01; // Decrease by 0.01 if frequency is less than 74 MHz
             } else {
-                currentFrequency -= 0.1; // Decrease by 0.1 above 74 MHz
+				if (Scan === 'on' && ScannerMode === 'whitelist' && EnableWhitelist) {		
+					currentFrequency -= 0.01; // Decrease by 0.01 above 74 MHz
+				} else {
+					currentFrequency -= 0.1; // Decrease by 0.1 above 74 MHz
+				}
             }
 
             // If the frequency goes below the lower limit, reset to the upper limit
@@ -1520,27 +1531,21 @@ function startScan(direction) {
             } 
 
 			// Handle whitelist mode
-			else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {			
+			else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {		
+
 				while (!isInWhitelist(currentFrequency, whitelist)) { 
+
 					// Track the previous frequency before changing the current frequency
 					const tempPreviousFrequency = currentFrequency;
 
 					// Only scan frequencies in the whitelist
 					if (direction === 'up') {
-						if (currentFrequency < 74.00) {
 							currentFrequency += 0.01;
-						} else {
-							currentFrequency += 0.1;
-						}
 						if (currentFrequency > tuningUpperLimit) {
 							currentFrequency = tuningLowerLimit;
 						}
 					} else if (direction === 'down') {
-						if (currentFrequency < 74.00) {
 							currentFrequency -= 0.01;
-						} else {
-							currentFrequency -= 0.1;
-						}
 						if (currentFrequency < tuningLowerLimit) {
 							currentFrequency = tuningUpperLimit;
 						}
@@ -1551,7 +1556,8 @@ function startScan(direction) {
 					// Check if current frequency is smaller than the previous frequency
 					if (currentFrequency < tempPreviousFrequency) {
 						sendNextAntennaCommand(); // Send the next antenna command
-					}
+					}			
+					
 				}
 			}
 	
@@ -1658,6 +1664,7 @@ function startScan(direction) {
 				sendDataToClient(currentFrequency); // Send the updated frequency to the client
 			}
 		} else {
+			//console.log('sendDataToClient',currentFrequency)
 			sendDataToClient(currentFrequency); // Send the updated frequency to the client
 		}
     }
@@ -1672,8 +1679,10 @@ function isInBlacklist(frequency, blacklist) {
 }
 
 function isInWhitelist(frequency, whitelist) {
-    return whitelist.some(f => Math.abs(f - frequency) < 0.05); // Allow small tolerance for floating-point comparisons
+    const roundedFrequency = Math.round(frequency * 100) / 100;
+    return whitelist.some(f => Math.round(f * 100) / 100 === roundedFrequency);
 }
+
 
 function checkBlacklist() {
 	
@@ -1787,7 +1796,7 @@ function checkWhitelist() {
 
 										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											
-											if (URDSupload && !ps.includes('?')) {
+											if ((CSVcompletePS && URDSupload && !ps.includes('?')) || (!CSVcompletePS && Savefreq !== freq)) {
 												writeCSVLogEntry(); // filtered log
 											}
 											
@@ -1818,7 +1827,7 @@ function checkWhitelist() {
 								}	
 									
 								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
-									if (URDSupload && !ps.includes('?') && writeStatusCSV) {
+									if (writeStatusCSV && ((URDSupload && !ps.includes('?')) || !CSVcompletePS)) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
 									}
@@ -2357,6 +2366,16 @@ function canLog(stationid, station, itu, city, distance, freq) {
 
 // Function to log to FMLIST
 async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
+	
+	// Convert freq to a number
+	freq = parseFloat(freq);
+
+	if (freq > 74.00) {
+		// First, round to one decimal place
+		let rounded = Number(freq.toFixed(1));
+		// Then, format it as a string with two decimal places
+		freq = rounded.toFixed(2);
+	}
     
     if (FMLIST_MinDistance < 150 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
         FMLIST_MinDistance = 150;
@@ -2413,9 +2432,9 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
     
 	FMLIST_ShortServerName = FMLIST_ShortServerName.substring(0, 10);	
 	if (FMLIST_ShortServerName === '') {
-			let ShortServerName = `Autologged PS: `;
+			ShortServerName = `Autologged PS: `;
 		} else {
-			let ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
+			ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
 		}
 	
     // Prepare the data to be sent in the POST request
