@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.3)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.3a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 04.03.25       ///
+///  by Highpoint               last update: 05.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -387,6 +387,7 @@ let freqMap2;
 let logFilePathHTML;
 let logFilePathCSV;
 let writeStatusCSV = true;
+writeStatusCSVps = false;
 let writeStatusHTMLLog = true;
 let writeStatusLogFMLIST = true;
 
@@ -1824,10 +1825,16 @@ function checkWhitelist() {
 									writeStatusCSV = true;
 									writeStatusHTMLLog = true;
 									writeStatusLogFMLIST = true;
+									writeStatusCSVps = true;
 								}	
-									
+																	
 								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
-									if (writeStatusCSV && ((URDSupload && !ps.includes('?')) || !CSVcompletePS)) {
+									
+									if (!ps.includes('?') && writeStatusCSVps && !CSVcompletePS) {
+										writeCSVLogEntry(); // filtered log
+										writeStatusCSVps = false;
+									}
+									if ((writeStatusCSV && URDSupload && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && !CSVcompletePS)) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
 									}
@@ -1985,19 +1992,20 @@ function getLogFilePathCSV(date, time, filename) {
     return filePath;
 }
 
+// Annahme: Diese Variablen liegen im Modul-Scope und bleiben zwischen Funktionsaufrufen erhalten.
+let lastFrequencyInHz = null;
+
 function writeCSVLogEntry() {
     if (
         isInBlacklist(freq, blacklist) && 
         EnableBlacklist && 
         (
             Scan === 'off' ||
-            (
-                Scan === 'on' && (
-                    ScannerMode === 'blacklist' || 
-                    ScannerMode === 'spectrumBL' || 
-                    ScannerMode === 'differenceBL'
-                )
-            )
+            (Scan === 'on' && (
+                ScannerMode === 'blacklist' || 
+                ScannerMode === 'spectrumBL' || 
+                ScannerMode === 'differenceBL'
+            ))
         )
     ) {
         return;
@@ -2005,21 +2013,21 @@ function writeCSVLogEntry() {
     
     const now = new Date();
     let date = now.toISOString().split('T')[0];  // YYYY-MM-DD
-    let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
+    let time = now.toTimeString().split(' ')[0];   // HH:MM:SS
     
     const { utcDate, utcTime } = getCurrentUTC(); // Get time in UTC
     time = utcTime;
     date = utcDate;
 
     if (!fs.existsSync(logFilePathCSV)) {
-        // Checks whether the file exists
-        logFilePathCSV = getLogFilePathCSV(); // Resets the path if necessary
+        // Falls Datei nicht existiert, neuen Pfad holen
+        logFilePathCSV = getLogFilePathCSV();
     }
     
-    // Data preparation for FMLIST
-    const [seconds, nanoseconds] = process.hrtime(); // Returns [seconds, nanoseconds]
-    const nanoString = nanoseconds.toString().padStart(9, '0'); // Pad to 9 digits
-    const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`; // Format string
+    // Datenaufbereitung für FMLIST
+    const [seconds, nanoseconds] = process.hrtime(); // Gibt [seconds, nanoseconds] zurück
+    const nanoString = nanoseconds.toString().padStart(9, '0'); // Auf 9 Stellen auffüllen
+    const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`;
     
     const dateTimeString = `${date}T${time}`;
     const dateObject = new Date(dateTimeString);
@@ -2034,7 +2042,6 @@ function writeCSVLogEntry() {
     
     let numericStrengthTop;
     let numericStrength;
-
     if (SignalStrengthUnit === 'dbf') {
         numericStrengthTop = parseFloat(strengthTop) - 10.875;
         numericStrength = parseFloat(strength) - 10.875;
@@ -2045,14 +2052,12 @@ function writeCSVLogEntry() {
         numericStrengthTop = parseFloat(strengthTop);
         numericStrength = parseFloat(strength);
     }
-
-    // Round to 2 decimal places
+    
     const SNRMIN = numericStrength.toFixed(2);
     const SNRMAX = numericStrengthTop.toFixed(2);
     
     const GPSLAT = LAT || config.identification.lat;
     const GPSLON = LON || config.identification.lon;
-
     const GPSALT = ALT || '';
     const GPSMODE = gpsmode || '';
     const GPSTIME = gpstime || new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
@@ -2075,20 +2080,44 @@ function writeCSVLogEntry() {
     const AF = `"${af}"`;
     const RT = `"${rt}"`;
 
-    // Create the log entry line
-    let line = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT}\n`;
-    
+    // Erzeuge die Log-Zeile als String
+    const newLine = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT}\n`;
+
     try {
-        // Append the log entry to the CSV file
-        fs.appendFileSync(logFilePathCSV, line, { flag: 'a' });
+        if (!CSVcompletePS) {
+            // Wenn CSVcompletePS false ist, dann:
+            if (lastFrequencyInHz !== null && lastFrequencyInHz === frequencyInHz) {
+                // Falls der Frequenzwert unverändert ist,
+                // Aktualisiere die letzte Zeile der CSV-Datei.
+                const fileContent = fs.readFileSync(logFilePathCSV, 'utf8');
+                const lines = fileContent.split('\n');
+                // Entferne ggf. ein leeres Element am Ende
+                if (lines[lines.length - 1] === '') {
+                    lines.pop();
+                }
+                // Ersetze die letzte Zeile durch newLine (ohne zusätzliches \n, da wir es später hinzufügen)
+
+                lines[lines.length - 1] = newLine.trim();						
+				fs.writeFileSync(logFilePathCSV, lines.join('\n') + '\n');
+				
+            } else {
+                // Frequenz hat sich geändert – schreibe eine neue Zeile an
+                fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
+                lastFrequencyInHz = frequencyInHz;
+            }
+        } else {
+            // Falls CSVcompletePS true ist, verhalte dich wie bisher: immer neue Zeile anhängen
+            fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
+        }
+        
         if (BEEP_CONTROL && Scan === 'on') {
-            fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav').pipe(new Speaker());
+            fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav')
+              .pipe(new Speaker());
         }
     } catch (error) {
         logError("Failed to write log entry:", error.message);
     }
 }
-
 
 function getLogFilePathHTML(date, time, isFiltered) {
     if (UTCtime) {
