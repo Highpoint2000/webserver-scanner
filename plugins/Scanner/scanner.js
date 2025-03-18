@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.3a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.3b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 05.03.25       ///
+///  by Highpoint               last update: 18.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,18 +14,18 @@
 	
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.3a'; // Plugin version
+    const plugin_version = '3.3b'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
 	const PluginUpdateKey = `${plugin_name}_lastUpdateNotification`; // Unique key for localStorage
 	
-	const EnableBlacklist = false; // This value is automatically updated via the config file
+	const EnableBlacklist = true; // This value is automatically updated via the config file
 	const EnableWhitelist = true; // This value is automatically updated via the config file
 	const EnableSpectrumScan = true; // This value is automatically updated via the config file
-	const EnableSpectrumScanBL = false; // This value is automatically updated via the config file
+	const EnableSpectrumScanBL = true; // This value is automatically updated via the config file
 	const EnableDifferenceScan = true; // This value is automatically updated via the config file
-	const EnableDifferenceScanBL = false; // This value is automatically updated via the config file
+	const EnableDifferenceScanBL = true; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
