@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.3b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.3c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 18.03.25       ///
+///  by Highpoint               last update: 21.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1192,7 +1192,6 @@ async function handleSocketMessage(messageData) {
 	ta = messageData.ta;
 	tp = messageData.tp;
 	pty = messageData.pty;
-    ps_errors = messageData.ps_errors; // AAD
 	
 	if (Scanmode === 1 ) {
 		
@@ -1240,7 +1239,7 @@ async function handleSocketMessage(messageData) {
 		stationid = 'offline';
 	}
 	   
-	if (messageData.ps_errors && typeof messageData.ps_errors === 'string' && /\b(2|3|4|5|6|7|8|9|10)\b/.test(messageData.ps_errors)) { // AAD
+	if (messageData.ps_errors && typeof messageData.ps_errors === 'string' && /\b(5|6|7|8|9|10)\b/.test(messageData.ps_errors)) {
 		ps += "?";
 	}
 	
@@ -1441,9 +1440,7 @@ async function startSpectrumAnalyse() {
 
 function startScan(direction) {
     clearInterval(scanInterval); // Stops any active scan interval from the previous scan
-
-    if (!ScanPE5PVB) ScanHoldTimeValue = ScanHoldTime * 10; // AAD
-
+    
     // If the current frequency is invalid (NaN) or zero, set it to the lower tuning limit
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
         currentFrequency = tuningLowerLimit;
@@ -1796,14 +1793,6 @@ function checkWhitelist() {
 								date = new Date().toLocaleDateString();
 								time = new Date().toLocaleTimeString();				
 								
-                                if (!ScanPE5PVB && ps_errors && typeof ps_errors === 'string' && /\b(2|3|4|5|6|7|8|9|10)\b/.test(ps_errors)) { // AAD
-                                    ScanHoldTimeValue = ScanHoldTime * 15;
-                                } else {
-                                    ScanHoldTimeValue = ScanHoldTime * 10;
-                                }
-
-                                if (OnlyScanHoldTime === 'off' && Number(distance) > 0 && Number(distance) < Number(FMLIST_MinDistance)) checkStrengthCounter = ScanHoldTimeValue + 1; // AAD // Scan up immediately because below minimum distance
-
 								if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
 
 										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
@@ -2499,7 +2488,7 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 			webserver_name: config.identification.tunerName.replace(/'/g, "\\'"),
 			omid: FMLIST_OM_ID
 		},
-		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf${loggedAntenna}`
+		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf ${loggedAntenna}`
 	});
 
 
