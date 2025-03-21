@@ -7,10 +7,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.3b
+## v3.3c
 
 - Fixed an issue when stopping the scan at the upper band limit
-- Code optimization for PS detection performed (thanks to AmateurAudioDude)
+- Rollback Code optimization from Version 3.3b
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -111,6 +111,13 @@ After activating/deactivating the plugin or making changes to the scanner.json s
   <summary>History</summary>
  
 ## History
+
+### v3.3b
+
+- Fixed an issue when stopping the scan at the upper band limit
+- Code optimization for PS detection performed (thanks to AmateurAudioDude)
+
+For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
 ### v3.3a
 
