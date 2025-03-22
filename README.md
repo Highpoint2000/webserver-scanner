@@ -10,6 +10,7 @@ This plugin provides scanning functions for the FM-DX web server.
 ## v3.3c
 
 - Fixed an issue when stopping the scan at the upper band limit
+- Removed duplicate message from FMLIST log
 - Rollback Code optimization from Version 3.3b
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
