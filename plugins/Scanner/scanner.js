@@ -1,7 +1,7 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.3b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.3c)      ///
 ///                                                         ///
 ///  by Highpoint               last update: 21.03.25       ///
 ///  powered by PE5PVB                                      ///
@@ -237,11 +237,13 @@
         }
     }
 
+let lastToastTime = 0; // Variable to store the timestamp of the last toast
+
 function handleWebSocketMessage(event) {
     try {
         const eventData = JSON.parse(event.data);
-		// console.log(event.data);
-	
+        // console.log(event.data);
+    
         if (eventData.source !== clientIp) {
             // Uncomment the line below to log event data from other sources
             // console.log(eventData);
@@ -260,26 +262,12 @@ function handleWebSocketMessage(event) {
                 StatusFMLIST,
                 InfoFMLIST
             } = eventData.value;
-				
-			console.log(eventData.value);
+                
+            console.log(eventData.value);
 
             if (typeof ScanPE5PVB !== 'undefined') {
                 ScanPE5PVBstatus = ScanPE5PVB;
             }
-
-            /*
-            // Uncomment the block below to handle the display of 'log-fmlist' element based on StatusFMLIST
-            setTimeout(() => {
-                const element = document.getElementById('log-fmlist');
-                if (element) {
-                    if (StatusFMLIST === 'on') {
-                        element.style.display = 'none';
-                    } else if (StatusFMLIST === 'off') {
-                        element.style.display = 'block';
-                    }
-                }
-            }, 150);
-            */
 
             if (status === 'response' && eventData.target === clientIp) {
                 if (!scannerButtonsExecuted) {
@@ -294,7 +282,7 @@ function handleWebSocketMessage(event) {
                             ScannerMode === 'difference' ||
                             ScannerMode === 'differenceBL'
                         ) {
-                            sendToast(
+                            sendToastWithCooldown(
                                 'info',
                                 'Scanner',
                                 `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Limit: ${SpectrumLimiterValue} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`,
@@ -306,7 +294,7 @@ function handleWebSocketMessage(event) {
                                 ScannerModeStatus = `${ScannerMode}`;
                             }
                         } else {
-                            sendToast(
+                            sendToastWithCooldown(
                                 'info',
                                 'Scanner',
                                 `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`,
@@ -324,16 +312,16 @@ function handleWebSocketMessage(event) {
                 InfoFMLIST !== undefined &&
                 InfoFMLIST.includes("successful")
             ) {
-                sendToast('success important', 'Scanner', `${InfoFMLIST}`, false, false);
-				sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
+                sendToastWithCooldown('success important', 'Scanner', `${InfoFMLIST}`, false, false);
+                sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
             } else if (
                 status === 'broadcast' &&
                 InfoFMLIST !== '' &&
                 InfoFMLIST !== undefined &&
                 InfoFMLIST.includes("failed")
             ) {
-                sendToast('error important', 'Scanner', `${InfoFMLIST}`, false, false);
-				sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
+                sendToastWithCooldown('error important', 'Scanner', `${InfoFMLIST}`, false, false);
+                sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
             } else if (status === 'broadcast' || status === 'send') {
                 updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
             }
@@ -454,6 +442,18 @@ function handleWebSocketMessage(event) {
         console.error("Error handling WebSocket message:", error);
     }
 }
+
+// Function to handle toast notifications with cooldown to prevent multiple toasts in 150ms
+function sendToastWithCooldown(type, title, message, autoClose = true, closeOnClick = true) {
+    const currentTime = new Date().getTime();
+    if (currentTime - lastToastTime < 150) {
+        return; // Ignore the toast if it's within 150ms of the last one
+    }
+
+    lastToastTime = currentTime; // Update the timestamp of the last toast
+    sendToast(type, title, message, autoClose, closeOnClick); // Show the toast
+}
+
 
 
     // Update dropdown values for sensitivity, scanner mode, and scan hold time
