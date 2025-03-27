@@ -7,11 +7,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
-## v3.3c
+## v3.4
 
-- Fixed an issue when stopping the scan at the upper band limit
-- Removed duplicate message from FMLIST log
-- Rollback Code optimization from Version 3.3b
+- Added option to create the URSD CSV log file, this also activates a map viewer button to open and evaluate the log file
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -65,6 +63,7 @@ The following variables can be changed in the configPlugin.json:
 	
     RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
     OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+	CSVcreate: true,			// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
     CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 
@@ -96,10 +95,11 @@ The following variables can be changed in the configPlugin.json:
 - For FMDX scanning operation, we recommend reducing the defaultScanHoldTime to 2-3 seconds and setting Autoscan_PE5PVB_Mode: false
 - To use the fast spectrum scan, the spectrum graph plugin must be installed. The SpectrumLimiterValue variable can be used to set an upper limit for the filter of strong transmitters. Transmitters that exceed this value are filtered out. Use the variable Spectrum PlusMinus Value to set a signal strength of a strong/local station independently of the Spectrum Limiter Value, where the neighboring channels (+/- 0.1 MHz) should be filtered out. To automatically recreate the spectrum after each frequency scan, the rescanDelay variable in the SpectrumGraph.json must be set to 0 !!! 
 - Difference Scan (extension of spectrum scan): The SpectrumChangeValue (dBf/dBµV) indicates in which +/- range the signal must differ from the previous scan for the frequency to be used. Only frequencies with this change are then scanned
-- To use the urds log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 - When GPS data is received, the location is updated dynamically (GPS receiver and [GPS plugin](https://github.com/Highpoint2000/GPS) required!)
 - To use the fm-dx-monitor set the OnlyScanHoldTime 'on' and choose a minimum defaultScanHoldTime of 5 seconds
 - Whitelist entries are processed with 0.01 MHZ increments
+- URDS CSV Log protocol and Map Viewer Button can be activated with CSVcreate option in the configuration settings
+- for manual or automatic upload the URDS CSV log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
@@ -113,18 +113,20 @@ After activating/deactivating the plugin or making changes to the scanner.json s
  
 ## History
 
+### v3.3c
+
+- Fixed an issue when stopping the scan at the upper band limit
+- Removed duplicate message from FMLIST log
+- Rollback Code optimization from Version 3.3b
+
 ### v3.3b
 
 - Fixed an issue when stopping the scan at the upper band limit
 - Code optimization for PS detection performed (thanks to AmateurAudioDude)
 
-For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
-
 ### v3.3a
 
 - improved CSV logging mode for PS information
-
-For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
 ### v3.3
 
