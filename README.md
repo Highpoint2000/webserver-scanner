@@ -7,6 +7,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/9b3401ac-1595-4f4b-a186-9f7e7c6eaead)
 
+![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
+
+
 ## v3.4
 
 - Added option to create the URSD CSV log file, this also activates a map viewer button to open and evaluate the log file
