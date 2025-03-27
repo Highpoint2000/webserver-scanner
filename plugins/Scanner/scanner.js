@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.3c)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.4)       ///
 ///                                                         ///
-///  by Highpoint               last update: 21.03.25       ///
+///  by Highpoint               last update: 27.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 	
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.3c'; // Plugin version
+    const plugin_version = '3.4'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -1045,6 +1045,92 @@ function toggleScan(isLongPressAction) {
             isTuneAuthenticated = false;
         }
     }
+	
+window.initializeMapViewerButton = function() {
+  const buttonId = "Mapviewer";
+  // Get current domain info
+  const currentDomain = window.location.hostname;
+  const currentPort = window.location.port ? ':' + window.location.port : '';
+  const baseUrl = `${window.location.protocol}//${currentDomain}${currentPort}`;
+  const csvFileUrl = `${baseUrl}/logs/CSVfilename`;
+
+  // Check if the CSV file exists by fetching it (cache-busting)
+  fetch(csvFileUrl, { cache: "no-cache" })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("File does not exist");
+      }
+      return response.text();
+    })
+    .then(initialContent => {
+      // The file exists; create the button.
+      const checkInterval = setInterval(() => {
+        if (typeof addIconToPluginPanel === 'function') {
+          clearInterval(checkInterval);
+          console.log("addIconToPluginPanel found, adding Map Viewer button...");
+
+          addIconToPluginPanel(buttonId, "Mapviewer", "solid", "globe", "Open URDS Map Viewer");
+
+          setTimeout(() => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+              button.addEventListener('click', () => {
+                // On button click, re-fetch the CSV file content
+                fetch(csvFileUrl, { cache: "no-cache" })
+                  .then(response => response.text())
+                  .then(fileContent => {
+                    const trimmedContent = fileContent.trim();
+                    if (trimmedContent === "NoFileName") {
+                      sendToast(
+                        'warning',
+                        'Scanner',
+                        'No CSV Logfile currently available!',
+                        false,
+                        false
+                      );
+                    } else {
+                      // Use the content as the CSV filename
+                      const url = `https://tef.noobish.eu/logos/URDSMapViewer.html?file=https://cors-proxy.de:13128/${baseUrl}/logs/${trimmedContent}`;
+                      console.log("Opening MapViewer URL:", url);
+                      window.open(url, '_blank');
+                    }
+                  })
+                  .catch(error => {
+                    console.error("Error reading CSV file:", error);
+                    sendToast(
+                      'warning',
+                      'Scanner',
+                      'Error reading CSV Logfile!',
+                      false,
+                      false
+                    );
+                  });
+              });
+
+              console.log("✅ MapViewer button added successfully!");
+            } else {
+              console.error("❌ MapViewer button was not created. Check if addIconToPluginPanel appended it correctly.");
+            }
+          }, 1000);
+        }
+      }, 500);
+
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.error("⏳ Timed out waiting for addIconToPluginPanel. Button not added.");
+      }, 10000);
+    })
+    .catch(error => {
+      console.error("CSV file not found:", error);
+    });
+};
+
+// Only initialize if not on a coarse pointer device (e.g. touch devices)
+if (!window.matchMedia("(pointer: coarse)").matches) {
+  initializeMapViewerButton();
+}
+
+
 
     document.addEventListener('DOMContentLoaded', () => {	
         BlinkAutoScan();
@@ -1058,6 +1144,5 @@ function toggleScan(isLongPressAction) {
 	if (updateInfo && isTuneAuthenticated) {
 		checkplugin_version();
 		}
-	}, 200);
-	
+	}, 200);	
 })();
