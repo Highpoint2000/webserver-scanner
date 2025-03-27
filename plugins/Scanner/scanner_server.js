@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.3c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.4)       ///
 ///                                                         ///
-///  by Highpoint               last update: 21.03.25       ///
+///  by Highpoint               last update: 27.03.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -49,6 +49,7 @@ const defaultConfig = {
 
     RAWLog: false,                       // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
     OnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+	CSVcreate: true,					 // Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
 	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 
@@ -162,6 +163,7 @@ const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
 const RAWLog = configPlugin.RAWLog;
 const OnlyFirstLog = configPlugin.OnlyFirstLog;
+const CSVcreate = configPlugin.CSVcreate
 const CSVcompletePS = configPlugin.CSVcompletePS
 const UTCtime = configPlugin.UTCtime;
 
@@ -413,15 +415,18 @@ if (!FMLIST_OM_ID) {
 	FMLIST_OM_ID = config.extras.fmlistOmid;
 }
 
-// Function to check if URDS Plugin exists
-const filePath = path.resolve(__dirname, '../URDS-Uploader/urds-upload_server.js');
-let URDSupload = false; // Default value set to false
-if (fs.existsSync(filePath)) { // Check if the file exists
-    URDSupload = true;
-    logInfo(`Scanner detects URDS upload plugin ---> CSV logging is activated`);
+if (CSVcreate) {
+    const csvFilenamePath = path.join(logDir, 'CSVfilename');
+    fs.writeFileSync(csvFilenamePath, 'NoFileName', { flag: 'w' });
+    logInfo('Scanner successfully updated /logs/CSVfilename with "NoFileName"');
 } else {
-	logInfo(`Scanner cannot find URDS upload plugin ---> CSV logging is deactivated`);
+    const csvFilenamePath = path.join(logDir, 'CSVfilename');
+    if (fs.existsSync(csvFilenamePath)) {
+        fs.unlinkSync(csvFilenamePath);
+        logInfo('Scanner successfully deleted /logs/CSVfilename');
+    }
 }
+
 
 // Create a status message object
 function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST, InfoFMLIST) {
@@ -455,7 +460,7 @@ async function TextWebSocket(messageData) {
 
             textSocket.onopen = () => {
                 logInfo("Scanner connected to WebSocket");
-				if (Scan === 'on' && URDSupload) {
+				if (Scan === 'on' && CSVcreate) {
 					logFilePathCSV = getLogFilePathCSV(); // Determine the path to the log file based on the current date and time
 				}
 
@@ -847,7 +852,7 @@ async function DataPluginsWebSocket() {
 									Scan = message.value.Scan;
 									DataPluginsSocket.send(JSON.stringify(responseMessage));
 									
-									if (URDSupload) {
+									if (CSVcreate) {
 										logFilePathCSV = getLogFilePathCSV(); // Determine the path to the log file based on the current date and time
 									}
 									
@@ -1797,7 +1802,7 @@ function checkWhitelist() {
 
 										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											
-											if ((CSVcompletePS && URDSupload && !ps.includes('?')) || (!CSVcompletePS && Savefreq !== freq)) {
+											if ((CSVcompletePS && CSVcreate && !ps.includes('?')) || (!CSVcompletePS && Savefreq !== freq)) {
 												writeCSVLogEntry(); // filtered log
 											}
 											
@@ -1834,7 +1839,7 @@ function checkWhitelist() {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSVps = false;
 									}
-									if ((writeStatusCSV && URDSupload && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && !CSVcompletePS)) {
+									if ((writeStatusCSV && CSVcreate && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && !CSVcompletePS)) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
 									}
@@ -1955,35 +1960,40 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
 
 	
 function getLogFilePathCSV(date, time, filename) {
-	
-    const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+    const { utcDate, utcTime } = getCurrentUTC(); // Get current time in UTC
     time = utcTime;
     date = utcDate;
-	
-	// Convert the UTCtime to "THHMMSS" format
+    
+    // Convert the UTC time to "THHMMSS" format
     const formattedTime = `T${time.replace(/:/g, '')}`;
     
-    // Determine the filename based on the isFiltered flag
+    // Construct the file name, e.g., "20250327T123456_fm_rds.csv"
     const fileName = `${date}${formattedTime}_fm_rds.csv`;
     
-    // Create the full path to the file
+    // Create the full path to the log file
     const filePath = path.join(logDir, fileName);
 
-    // Check if the directory exists, if not, create it
+    // Check if the log directory exists, if not, create it
     if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
     }
 
-    // Check if the file exists, if not, create it
+    // If the file does not exist, create it
     if (!fs.existsSync(filePath)) {
-         // Update the header content as per your requirements
-        let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Ensure special characters in ServerDescription are handled properly 
-
-		let header = ``;
+        // Adjust the header content as per your requirements
+        let formattedServerDescription = ServerDescription.replace(/\n/g, '\\n'); // Handle special characters
+        let header = ``; // Header content, adjust if necessary
       
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
             logInfo('Scanner created /logs/' + fileName);
+
+            // If CSVcreate is true, write the current fileName to the "CSVfilename" file in the log directory
+            if (CSVcreate) {
+                const csvFilenamePath = path.join(logDir, 'CSVfilename');
+                fs.writeFileSync(csvFilenamePath, fileName, { flag: 'w' });
+                logInfo('CSVfilename file successfully updated with the filename');
+            }
         } catch (error) {
             logError('Failed to create /logs/' + fileName, ':', error.message);
         }
@@ -1992,7 +2002,7 @@ function getLogFilePathCSV(date, time, filename) {
     return filePath;
 }
 
-// Annahme: Diese Variablen liegen im Modul-Scope und bleiben zwischen Funktionsaufrufen erhalten.
+
 let lastFrequencyInHz = null;
 
 function writeCSVLogEntry() {
