@@ -54,7 +54,7 @@ The following variables can be changed in the configPlugin.json:
     tuningLowerLimit: '',	        // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
     tuningUpperLimit: '',		// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
     
-    /// SPECTRUM SCANNER OPTIONS ///
+    /// SPECTRUM OPTIONS ///
     
     EnableSpectrumScan: false,	// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
     EnableDifferenceScan: false,	// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
@@ -62,7 +62,7 @@ The following variables can be changed in the configPlugin.json:
     SpectrumLimiterValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
     SpectrumPlusMinusValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
-    /// HTML LOGGING OPTIONS ////
+    /// LOGGING OPTIONS ////
 	
     RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
     OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
@@ -70,7 +70,7 @@ The following variables can be changed in the configPlugin.json:
     CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 
-    /// FMLIST LOGGING OPTIONS ////
+    /// FMLIST OPTIONS ////
  
     FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
     FMLIST_Autolog: 'off',		// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
