@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.4)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.4a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 27.03.25       ///
+///  by Highpoint               last update: 14.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -55,9 +55,9 @@ const defaultConfig = {
 
     FMLIST_OM_ID: '',                    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
     FMLIST_Autolog: 'off',               // Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
-    FMLIST_MinDistance: 200,             // set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 150)
-    FMLIST_MaxDistance: 2000,            // set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 151)
-    FMLIST_LogInterval: 60,              // Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
+    FMLIST_MinDistance: 200,             // set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
+    FMLIST_MaxDistance: 2000,            // set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 200)
+    FMLIST_LogInterval: 3600,            // Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
     FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 	FMLIST_ShortServerName: '',		     // set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
 
@@ -396,10 +396,13 @@ let writeStatusLogFMLIST = true;
 let tuningLimit = config.webserver.tuningLimit;
 
 if (tuningUpperLimit === '') {
-	tuningUpperLimit = config.webserver.tuningUpperLimit;
-	if (tuningUpperLimit === '' || !tuningLimit) {
-		tuningUpperLimit = '108.0';
-	}	
+    tuningUpperLimit = config.webserver.tuningUpperLimit;
+    if (tuningUpperLimit === '' || !tuningLimit) {
+        tuningUpperLimit = '108.0';
+    }
+}
+if (parseFloat(tuningUpperLimit) > 108.0) {
+    tuningUpperLimit = '108.0';
 }
 
 if (tuningLowerLimit === '') {
@@ -1484,7 +1487,9 @@ function startScan(direction) {
 						}, 500);
                     }
                 }
-                currentFrequency = tuningLowerLimit; // Reset to the lower limit
+                if (ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
+					currentFrequency = tuningLowerLimit; // Reset to the lower limit
+				}
             }
         } 
 		
@@ -1601,21 +1606,19 @@ function startScan(direction) {
 								!isInBlacklist(parseFloat(item.freq), blacklist)
 							)
 						.map(item => parseFloat(item.freq));
-					}
-					
+					}				
+				
                     // Keep updating the frequency until it matches a valid frequency
-                    while (!validFrequencies.includes(currentFrequency)) {
+                    while (!validFrequencies.includes(currentFrequency) || (Number(parseFloat(currentFrequency).toFixed(1)) === Number((parseFloat(tuningUpperLimit) + 0.1).toFixed(1)))) {
                         if (direction === 'up') {
                             if (currentFrequency < 74.00) {
                                 currentFrequency += 0.01;
                             } else {
                                 currentFrequency += 0.1;
-                            }
-							
+                            }					
                             if (currentFrequency > tuningUpperLimit) {
 								currentFrequency = tuningLowerLimit; // Set to start spectrum analysis frequency
-								sendNextAntennaCommand(); // Send the next antenna command
-								
+								sendNextAntennaCommand(); // Send the next antenna command						
 								if (BEEP_CONTROL) {
 								// Play a beep sound when reaching the upper limit
 									setTimeout(() => {
@@ -2375,8 +2378,8 @@ const logHistory = {};
 
 function canLog(stationid, station, itu, city, distance, freq) {
     const now = Date.now();
-    if (FMLIST_LogInterval < 60 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
-        FMLIST_LogInterval = 60;
+    if (FMLIST_LogInterval < 3600 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
+        FMLIST_LogInterval = 3600;
     }
     const logMinutes = 60 * FMLIST_LogInterval * 1000; // 60 minutes in milliseconds
     if (logHistory[stationid] && (now - logHistory[stationid]) < logMinutes) {
@@ -2416,11 +2419,11 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 		freq = rounded.toFixed(2);
 	}
     
-    if (FMLIST_MinDistance < 150 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
-        FMLIST_MinDistance = 150;
+    if (FMLIST_MinDistance < 200 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
+        FMLIST_MinDistance = 200;
     }
     
-    if (FMLIST_MaxDistance < 150 || FMLIST_MaxDistance === '' || FMLIST_MaxDistance === undefined) {
+    if (FMLIST_MaxDistance < 200 || FMLIST_MaxDistance === '' || FMLIST_MaxDistance === undefined) {
         FMLIST_MaxDistance = 2000;
     }
     
@@ -2461,6 +2464,9 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
         return; // Exit the function if the value is invalid
     }
 	
+    // Convert signal to dBµV instead of dBf
+    signalValue = (signalValue - 11.25).toFixed(0);  // Convert to dBµV
+
     // Log antenna name if antenna switch is enabled
     let loggedAntenna = '';
     if (Antennas.enabled) {
@@ -2475,6 +2481,9 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 		} else {
 			ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
 		}
+		
+	// Determine the type based on distance
+	const type = distance < 700 ? 'tropo' : 'sporadice';
 	
     // Prepare the data to be sent in the POST request
 	const postData = JSON.stringify({
@@ -2498,9 +2507,10 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 			webserver_name: config.identification.tunerName.replace(/'/g, "\\'"),
 			omid: FMLIST_OM_ID
 		},
-		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue.toFixed(0)} dBf ${loggedAntenna}`
+		type: type,  // Use the computed value for type
+		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue} dBµV ${loggedAntenna}`
 	});
-
+	
 
     // Define the options for the HTTPS request
     const options = {
