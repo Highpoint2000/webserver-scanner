@@ -10,9 +10,11 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
 
 
-## v3.4
+## v3.4a
 
-- Added option to create the URSD CSV log file, this also activates a map viewer button to open and evaluate the log file
+- Protocols with a distance >700km are now automatically marked as Es (Sporadic E) on FMLIST
+- The signal strength indication in the FMLIST Log has been changed to dBµV
+- The minimum distance for an automatic log entry is now 200 km and the repetition interval has been increased to 6 hours
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -115,6 +117,10 @@ After activating/deactivating the plugin or making changes to the scanner.json s
   <summary>History</summary>
  
 ## History
+
+### v3.4
+
+- Added option to create the URSD CSV log file, this also activates a map viewer button to open and evaluate the log file
 
 ### v3.3c
 
