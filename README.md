@@ -13,6 +13,7 @@ This plugin provides scanning functions for the FM-DX web server.
 ## v3.4b
 
 - Fixed incorrect display of server name in FMLIST log
+- Bug when disabling CSV log creation fixed
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
