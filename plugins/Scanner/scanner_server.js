@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.4a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.4b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 14.04.25       ///
+///  by Highpoint               last update: 15.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -2477,13 +2477,21 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
     
 	FMLIST_ShortServerName = FMLIST_ShortServerName.substring(0, 10);	
 	if (FMLIST_ShortServerName === '') {
+		if (ServerName === '') {
+			ShortServerName = `Autologged PS: `;
+		} else {
+			ShortServerName = `${ServerName} autologged PS: `;
+		}
+	} else {
+		if (FMLIST_ShortServerName === 'Autologged') {
 			ShortServerName = `Autologged PS: `;
 		} else {
 			ShortServerName = `${FMLIST_ShortServerName} autologged PS: `;
 		}
+	}
 		
 	// Determine the type based on distance
-	const type = distance < 700 ? 'tropo' : 'sporadice';
+	const type = distance < 900 ? 'tropo' : 'sporadice';
 	
     // Prepare the data to be sent in the POST request
 	const postData = JSON.stringify({
