@@ -1805,7 +1805,7 @@ function checkWhitelist() {
 
 										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
 											
-											if ((CSVcompletePS && CSVcreate && !ps.includes('?')) || (!CSVcompletePS && Savefreq !== freq)) {
+											if ((CSVcompletePS && CSVcreate && !ps.includes('?')) || (!CSVcompletePS && CSVcreate && Savefreq !== freq)) {
 												writeCSVLogEntry(); // filtered log
 											}
 											
@@ -1838,11 +1838,11 @@ function checkWhitelist() {
 																	
 								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
 									
-									if (!ps.includes('?') && writeStatusCSVps && !CSVcompletePS) {
+									if (!ps.includes('?') && writeStatusCSVps && !CSVcompletePS && CSVcreate) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSVps = false;
 									}
-									if ((writeStatusCSV && CSVcreate && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && !CSVcompletePS)) {
+									if ((writeStatusCSV && CSVcreate && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && CSVcreate && !CSVcompletePS)) {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
 									}
@@ -2097,31 +2097,33 @@ function writeCSVLogEntry() {
     const newLine = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT}\n`;
 
     try {
-        if (!CSVcompletePS) {
-            // Wenn CSVcompletePS false ist, dann:
-            if (lastFrequencyInHz !== null && lastFrequencyInHz === frequencyInHz) {
-                // Falls der Frequenzwert unverändert ist,
-                // Aktualisiere die letzte Zeile der CSV-Datei.
-                const fileContent = fs.readFileSync(logFilePathCSV, 'utf8');
-                const lines = fileContent.split('\n');
-                // Entferne ggf. ein leeres Element am Ende
-                if (lines[lines.length - 1] === '') {
-                    lines.pop();
-                }
-                // Ersetze die letzte Zeile durch newLine (ohne zusätzliches \n, da wir es später hinzufügen)
+		if (CSVcreate) {
+			if (!CSVcompletePS) {
+				// Wenn CSVcompletePS false ist, dann:
+				if (lastFrequencyInHz !== null && lastFrequencyInHz === frequencyInHz) {
+					// Falls der Frequenzwert unverändert ist,
+					// Aktualisiere die letzte Zeile der CSV-Datei.
+					const fileContent = fs.readFileSync(logFilePathCSV, 'utf8');
+					const lines = fileContent.split('\n');
+					// Entferne ggf. ein leeres Element am Ende
+					if (lines[lines.length - 1] === '') {
+						lines.pop();
+					}
+					// Ersetze die letzte Zeile durch newLine (ohne zusätzliches \n, da wir es später hinzufügen)
 
-                lines[lines.length - 1] = newLine.trim();						
-				fs.writeFileSync(logFilePathCSV, lines.join('\n') + '\n');
+					lines[lines.length - 1] = newLine.trim();						
+					fs.writeFileSync(logFilePathCSV, lines.join('\n') + '\n');
 				
-            } else {
-                // Frequenz hat sich geändert – schreibe eine neue Zeile an
-                fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
-                lastFrequencyInHz = frequencyInHz;
-            }
-        } else {
-            // Falls CSVcompletePS true ist, verhalte dich wie bisher: immer neue Zeile anhängen
-            fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
-        }
+				} else {
+					// Frequenz hat sich geändert – schreibe eine neue Zeile an
+					fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
+					lastFrequencyInHz = frequencyInHz;
+				}
+			} else {
+				// Falls CSVcompletePS true ist, verhalte dich wie bisher: immer neue Zeile anhängen
+				fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
+			}
+		}
         
         if (BEEP_CONTROL && Scan === 'on') {
             fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav')
