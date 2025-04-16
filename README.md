@@ -49,8 +49,8 @@ The following variables can be changed in the configPlugin.json:
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
     scanBandwith: 0,          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
-    EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' 
-    EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' 
+    EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
+    EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder  
 
     tuningLowerLimit: '',	        // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
     tuningUpperLimit: '',		// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
@@ -80,7 +80,8 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_LogInterval: 3600,    	// Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
     FMLIST_CanLogServer: '',	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 	FMLIST_ShortServerName: '',	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-
+	FMLIST_Blacklist: false,             // Enable Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+ 
     BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
 ## Important notes: 
@@ -104,6 +105,7 @@ The following variables can be changed in the configPlugin.json:
 - Whitelist entries are processed with 0.01 MHZ increments
 - URDS CSV Log protocol and Map Viewer Button can be activated with CSVcreate option in the configuration settings
 - for manual or automatic upload the URDS CSV log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
+- Add a blacklist function for the FMLIST log entries: File ../plugins/Scanner/blacklist_fmlist.txt You can enter frequencies 89.800 89.400 100.80 ... as well as PI codes D0DB D3C3 D3D5, or both in combination, separated by semicolons: 87.900;D3C3 Simply write the values ​​one below the other in the text file.
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
