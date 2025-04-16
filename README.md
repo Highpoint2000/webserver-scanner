@@ -10,10 +10,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
 
 
-## v3.4b
+## v3.5
 
-- Fixed incorrect display of server name in FMLIST log
-- Bug when disabling CSV log creation fixed
+- Add a blacklist function for the FMLIST log entries (see instructions!)
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -119,7 +118,12 @@ After activating/deactivating the plugin or making changes to the scanner.json s
  
 ## History
 
-## v3.4a
+### v3.4b
+
+- Fixed incorrect display of server name in FMLIST log
+- Bug when disabling CSV log creation fixed
+
+### v3.4a
 
 - Protocols with a distance >700km are now automatically marked as Es (Sporadic E) on FMLIST
 - The signal strength indication in the FMLIST Log has been changed to dBµV
