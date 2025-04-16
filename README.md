@@ -80,7 +80,7 @@ The following variables can be changed in the configPlugin.json:
     FMLIST_LogInterval: 3600,    	// Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
     FMLIST_CanLogServer: '',	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
 	FMLIST_ShortServerName: '',	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-	FMLIST_Blacklist: false,             // Enable Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	FMLIST_Blacklist: false,	// Enable Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
  
     BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
