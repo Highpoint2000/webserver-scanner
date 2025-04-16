@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.4b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.5)      ///
 ///                                                         ///
-///  by Highpoint               last update: 15.04.25       ///
+///  by Highpoint               last update: 16.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -35,8 +35,8 @@ const defaultConfig = {
     scanIntervalTime: 500,               // Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
     scanBandwith: 0,                     // Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
-    EnableBlacklist: false,              // Enable Blacklist, set it 'true' or 'false' 
-    EnableWhitelist: false,              // Enable Whitelist, set it 'true' or 'false' 
+    EnableBlacklist: false,              // Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
+    EnableWhitelist: false,              // Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
 	
 	tuningLowerLimit: '',	             // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
 	tuningUpperLimit: '',				 // Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
@@ -60,6 +60,7 @@ const defaultConfig = {
     FMLIST_LogInterval: 3600,            // Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
     FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 	FMLIST_ShortServerName: '',		     // set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
+	FMLIST_Blacklist: false,             // Enable Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
@@ -174,6 +175,7 @@ const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
   let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
 const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
   let FMLIST_ShortServerName = configPlugin.FMLIST_ShortServerName;
+  let FMLIST_Blacklist = configPlugin.FMLIST_Blacklist;
 
 const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
@@ -217,10 +219,10 @@ function checkAndInstallNewModules() {
     NewModules.forEach(module => {
         const modulePath = path.join(__dirname, './../../node_modules', module);
         if (!fs.existsSync(modulePath)) {
-            console.log(`Module ${module} is missing. Installing...`);
+            logInfo(`Module ${module} is missing. Installing...`);
             try {
                 execSync(`npm install ${module}`, { stdio: 'inherit' });
-                console.log(`Module ${module} installed successfully.`);
+                logInfo(`Module ${module} installed successfully.`);
             } catch (error) {
                 logError(`Error installing module ${module}:`, error);
                 process.exit(1);
@@ -418,6 +420,16 @@ if (!FMLIST_OM_ID) {
 	FMLIST_OM_ID = config.extras.fmlistOmid;
 }
 
+if (FMLIST_Blacklist) {
+    const blacklistFile = path.join(__dirname, 'blacklist_fmlist.txt');
+    if (fs.existsSync(blacklistFile)) {
+        logInfo('Scanner enabled FMLIST Blacklist');
+    } else {
+        logInfo('Scanner not found blacklist_fmlist.txt');
+        FMLIST_Blacklist = false;
+    }
+}
+
 if (CSVcreate) {
     const csvFilenamePath = path.join(logDir, 'CSVfilename');
     fs.writeFileSync(csvFilenamePath, 'NoFileName', { flag: 'w' });
@@ -429,7 +441,6 @@ if (CSVcreate) {
         logInfo('Scanner successfully deleted /logs/CSVfilename');
     }
 }
-
 
 // Create a status message object
 function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST, InfoFMLIST) {
@@ -1956,7 +1967,7 @@ function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
             throw new Error(`Invalid PTY value. Must be between 0 and ${europeProgrammes.length - 1}.`);
         }
     } catch (error) {
-        console.error(`Error processing the file ${relativePath}: ${error.message}`);
+        logError(`Error processing the file ${relativePath}: ${error.message}`);
         return null; // Return a default value or handle as appropriate
     }
 }
@@ -2438,6 +2449,42 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
     if (!stationid) {
         return; // Exit if station ID is missing
     }
+	
+	// --- Blacklist check ---
+	if (FMLIST_Blacklist) {
+		let blacklist = [];
+		try {
+			const raw = fs.readFileSync(path.join(__dirname, 'blacklist_fmlist.txt'), 'utf8');
+			blacklist = raw
+				.split(/\r?\n/)               // split into lines
+				.map(line => line.trim())     // trim whitespace
+				.filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
+		} catch (err) {
+			logError('Scanner could not load blacklist_fmlist.txt:', err);
+		}
+
+		// Build keys: "freq,picode", "freq" only, and "picode" only
+		const freqKey  = parseFloat(freq).toFixed(3);
+		const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
+		const comboKey = `${freqKey};${piKey}`;
+
+		if (blacklist.includes(comboKey)) {  // exact freq+PI match
+			logInfo(`${comboKey} was found in blacklist_fmlist.txt`);
+			return; // abort immediately if blacklisted
+		}
+		
+		if (blacklist.includes(freqKey)) {  // frequency-only match
+			logInfo(`${freqKey} was found in blacklist_fmlist.txt`);
+			return; // abort immediately if blacklisted
+		}
+		
+		if (blacklist.includes(piKey)) {  // PI-only match
+			logInfo(`${piKey} was found in blacklist_fmlist.txt`);
+			return; // abort immediately if blacklisted
+		}	
+		
+	}
+    // --- End blacklist check ---
        
     // Check if logging for the specified station ID can continue from CanLog Server
     if (FMLIST_CanLogServer) {
@@ -2462,7 +2509,7 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 
     // If signalValue is still not a number, handle the error
     if (isNaN(signalValue)) {
-        console.log('Signal value is not a valid number:', dataHandler.sig); // Log an error message
+        logInfo('Signal value is not a valid number:', dataHandler.sig); // Log an error message
         return; // Exit the function if the value is invalid
     }
 	
