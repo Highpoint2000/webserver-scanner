@@ -464,6 +464,61 @@ function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, S
     };
 }
 
+// Serialport status variables
+let alreadyWarnedMissingSerialportVars = false;
+let getSerialportStatus = null;
+
+(function initSerialportStatusSource() {
+  if (
+    apiData?.state &&
+    typeof apiData.state.isSerialportAlive !== 'undefined' &&
+    typeof apiData.state.isSerialportRetrying !== 'undefined'
+  ) {
+    getSerialportStatus = () => ({
+      isAlive: apiData.state.isSerialportAlive,
+      isRetrying: apiData.state.isSerialportRetrying
+    });
+  } else if (
+    typeof isSerialportAlive !== 'undefined' &&
+    typeof isSerialportRetrying !== 'undefined'
+  ) {
+    getSerialportStatus = () => ({
+      isAlive: isSerialportAlive,
+      isRetrying: isSerialportRetrying
+    });
+    logWarn("Scanner: Older Serialport status variables found.");
+  } else {
+    if (!alreadyWarnedMissingSerialportVars) {
+      alreadyWarnedMissingSerialportVars = true;
+      logWarn("Scanner: Serialport status variables not found.");
+    }
+  }
+})();
+
+function checkSerialportStatus() {
+  if (!getSerialportStatus) return;
+
+  const { isAlive, isRetrying } = getSerialportStatus();
+
+  if (!isAlive || isRetrying) {
+    if (textSocketLost) {
+      clearTimeout(textSocketLost);
+    }
+
+    textSocketLost = setTimeout(() => {
+      logInfo("Scanner connection lost, creating new WebSocket.");
+      if (textSocket) {
+        try {
+          textSocket.close(1000, 'Normal closure');
+        } catch (error) {
+          logInfo("Error closing WebSocket:", error);
+        }
+      }
+      textSocketLost = null;
+    }, 10000);
+  }
+}
+
 
 async function TextWebSocket(messageData) {
     let autoScanStopped = false; // Flag to ensure the block runs only once
@@ -507,24 +562,7 @@ async function TextWebSocket(messageData) {
                         const messageData = JSON.parse(event.data);
 						// console.log(messageData);
 
-                        if (!isSerialportAlive || isSerialportRetrying) {
-                          if (textSocketLost) {
-                            clearTimeout(textSocketLost);
-                          }
-
-                          textSocketLost = setTimeout(() => {
-                            // WebSocket reconnection required after serialport connection loss
-                            logInfo("Scanner connection lost, creating new WebSocket.");
-                            if (textSocket) {
-                              try {
-                                textSocket.close(1000, 'Normal closure');
-                              } catch (error) {
-                                logInfo("Error closing WebSocket:", error);
-                              }
-                            }
-                            textSocketLost = null;
-                          }, 10000);
-                        }
+                        checkSerialportStatus();
 
                         // Execute this block only once
                         const users = messageData.users;  
