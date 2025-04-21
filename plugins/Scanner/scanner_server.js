@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.5)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.6)      ///
 ///                                                         ///
-///  by Highpoint               last update: 16.04.25       ///
+///  by Highpoint               last update: 21.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -33,7 +33,7 @@ const defaultConfig = {
     defaultScanHoldTime: 5,              // Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
     defaultScannerMode: 'normal',        // Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,               // Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,                     // Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    scanBandwith: 0,                     // Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
     EnableBlacklist: false,              // Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
     EnableWhitelist: false,              // Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
@@ -52,6 +52,7 @@ const defaultConfig = {
 	CSVcreate: true,					 // Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
 	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
+	Log_Blacklist: false,        		 // Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     FMLIST_OM_ID: '',                    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
     FMLIST_Autolog: 'off',               // Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
@@ -60,7 +61,7 @@ const defaultConfig = {
     FMLIST_LogInterval: 3600,            // Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
     FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 	FMLIST_ShortServerName: '',		     // set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-	FMLIST_Blacklist: false,             // Enable Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	FMLIST_Blacklist: false,             // Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
@@ -167,6 +168,7 @@ const OnlyFirstLog = configPlugin.OnlyFirstLog;
 const CSVcreate = configPlugin.CSVcreate
 const CSVcompletePS = configPlugin.CSVcompletePS
 const UTCtime = configPlugin.UTCtime;
+  let Log_Blacklist = configPlugin.Log_Blacklist;
 
   let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
 const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
@@ -430,6 +432,16 @@ if (FMLIST_Blacklist) {
     }
 }
 
+if (Log_Blacklist) {
+    const LogBlacklistFile = path.join(__dirname, 'blacklist_log.txt');
+    if (fs.existsSync(LogBlacklistFile)) {
+        logInfo('Scanner enabled Log Blacklist');
+    } else {
+        logInfo('Scanner not found blacklist_log.txt');
+        Log_Blacklist = false;
+    }
+}
+
 if (CSVcreate) {
     const csvFilenamePath = path.join(logDir, 'CSVfilename');
     fs.writeFileSync(csvFilenamePath, 'NoFileName', { flag: 'w' });
@@ -462,6 +474,61 @@ function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, S
         source: source,
         target: target
     };
+}
+
+// Serialport status variables
+let alreadyWarnedMissingSerialportVars = false;
+let getSerialportStatus = null;
+
+(function initSerialportStatusSource() {
+  if (
+    apiData?.state &&
+    typeof apiData.state.isSerialportAlive !== 'undefined' &&
+    typeof apiData.state.isSerialportRetrying !== 'undefined'
+  ) {
+    getSerialportStatus = () => ({
+      isAlive: apiData.state.isSerialportAlive,
+      isRetrying: apiData.state.isSerialportRetrying
+    });
+  } else if (
+    typeof isSerialportAlive !== 'undefined' &&
+    typeof isSerialportRetrying !== 'undefined'
+  ) {
+    getSerialportStatus = () => ({
+      isAlive: isSerialportAlive,
+      isRetrying: isSerialportRetrying
+    });
+    logWarn("Scanner: Older Serialport status variables found.");
+  } else {
+    if (!alreadyWarnedMissingSerialportVars) {
+      alreadyWarnedMissingSerialportVars = true;
+      logWarn("Scanner: Serialport status variables not found.");
+    }
+  }
+})();
+
+function checkSerialportStatus() {
+  if (!getSerialportStatus) return;
+
+  const { isAlive, isRetrying } = getSerialportStatus();
+
+  if (!isAlive || isRetrying) {
+    if (textSocketLost) {
+      clearTimeout(textSocketLost);
+    }
+
+    textSocketLost = setTimeout(() => {
+      logInfo("Scanner connection lost, creating new WebSocket.");
+      if (textSocket) {
+        try {
+          textSocket.close(1000, 'Normal closure');
+        } catch (error) {
+          logInfo("Error closing WebSocket:", error);
+        }
+      }
+      textSocketLost = null;
+    }, 10000);
+  }
 }
 
 
@@ -507,24 +574,7 @@ async function TextWebSocket(messageData) {
                         const messageData = JSON.parse(event.data);
 						// console.log(messageData);
 
-                        if (!isSerialportAlive || isSerialportRetrying) {
-                          if (textSocketLost) {
-                            clearTimeout(textSocketLost);
-                          }
-
-                          textSocketLost = setTimeout(() => {
-                            // WebSocket reconnection required after serialport connection loss
-                            logInfo("Scanner connection lost, creating new WebSocket.");
-                            if (textSocket) {
-                              try {
-                                textSocket.close(1000, 'Normal closure');
-                              } catch (error) {
-                                logInfo("Error closing WebSocket:", error);
-                              }
-                            }
-                            textSocketLost = null;
-                          }, 10000);
-                        }
+                        checkSerialportStatus();
 
                         // Execute this block only once
                         const users = messageData.users;  
@@ -1383,13 +1433,13 @@ function AutoScan() {
     if (!isScanning) {
 		if (scanBandwith === '0' || scanBandwith === 0) {
 			if (bandwith !== '0' && bandwith !== 0) {
-				logInfo('Scanner set bandwith from:', bandwith, 'kHz to: auto mode');
+				logInfo('Scanner set bandwith from:', bandwith, 'Hz to: auto mode');
 			}
 		} else {
 			if (bandwith === '0' || bandwith === 0) {
-				logInfo('Scanner set bandwith from: auto mode to:', scanBandwith,  'kHz');
+				logInfo('Scanner set bandwith from: auto mode to:', scanBandwith,  'Hz');
 			} else {
-				logInfo('Scanner set bandwith from:', bandwith, 'kHz to:', scanBandwith,  'kHz');
+				logInfo('Scanner set bandwith from:', bandwith, 'Hz to:', scanBandwith,  'Hz');
 			}
 		}
 		scanBandwithSave = bandwith;
@@ -1402,11 +1452,11 @@ function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
 	if (scanBandwithSave === '0' || scanBandwithSave === 0) {
 		if (scanBandwith !== '0' && scanBandwith !== 0) {
-			logInfo('Scanner set bandwith from:', scanBandwith, 'kHz back to: auto mode');
+			logInfo('Scanner set bandwith from:', scanBandwith, 'Hz back to: auto mode');
 		}			
 	} else {
 		if (scanBandwith === '0' || scanBandwith === 0) {
-			logInfo('Scanner set bandwith from: auto mode back to:', scanBandwithSave, 'kHz');
+			logInfo('Scanner set bandwith from: auto mode back to:', scanBandwithSave, 'Hz');
 		}		
 	}
 	textSocket.send(`W${scanBandwithSave}\n`);
@@ -1779,7 +1829,43 @@ function checkWhitelist() {
 		
 		
        function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
+		   
+		   // --- Blacklist check ---
+			if (Log_Blacklist) {
+				let Logblacklist = [];
+				try {
+					const raw = fs.readFileSync(path.join(__dirname, 'blacklist_log.txt'), 'utf8');
+					Logblacklist = raw
+						.split(/\r?\n/)               // split into lines
+						.map(line => line.trim())     // trim whitespace
+						.filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
+					} catch (err) {
+						logError('Scanner could not load blacklist_log.txt:', err);
+					}
 
+				// Build keys: "freq,picode", "freq" only, and "picode" only
+				const freqKey  = parseFloat(freq).toFixed(3);
+				const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
+				const comboKey = `${freqKey};${piKey}`;
+
+				if (Logblacklist.includes(comboKey)) {  // exact freq+PI match
+					//logInfo(`${comboKey} was found in blacklist_log.txt`);
+					return; // abort immediately if blacklisted
+				}
+		
+				if (Logblacklist.includes(freqKey)) {  // frequency-only match
+					//logInfo(`${freqKey} was found in blacklist_log.txt`);
+					return; // abort immediately if blacklisted
+				}
+		
+				if (Logblacklist.includes(piKey)) {  // PI-only match
+					//logInfo(`${piKey} was found in blacklist_log.txt`);
+					return; // abort immediately if blacklisted
+				}	
+		
+			}
+			// --- End blacklist check ---
+       
 			let ScanHoldTimeValue = ScanHoldTime * 10;
 
             if (stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {
