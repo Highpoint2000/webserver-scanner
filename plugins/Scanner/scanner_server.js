@@ -1849,51 +1849,6 @@ function checkWhitelist() {
 						clearInterval(scanInterval); // Clears a previously defined scanning interval
 						isScanning = false; // Updates a flag indicating scanning status		
 					}
-					
-					// --- Blacklist check ---
-					if (Log_Blacklist) {
-						let Logblacklist = [];
-						try {
-							const raw = fs.readFileSync(path.join(__dirname, 'blacklist_log.txt'), 'utf8');
-							Logblacklist = raw
-								.split(/\r?\n/)               // split into lines
-								.map(line => line.trim())     // trim whitespace
-								.filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
-						} catch (err) {
-							logError('Scanner could not load blacklist_log.txt:', err);
-						}
-
-						// Build keys: "freq,picode", "freq" only, and "picode" only
-						const freqKey  = parseFloat(freq).toFixed(3);
-						const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
-						const comboKey = `${freqKey};${piKey}`;
-
-						if (Logblacklist.includes(comboKey)) {  // exact freq+PI match
-							//logInfo(`${comboKey} was found in blacklist_log.txt`);
-							clearInterval(scanInterval); // Clears a previously defined scanning interval
-							stereo_detect = false;
-							isScanning = false; // Updates a flag indicating scanning status
-							startScan('up');
-						}
-		
-						if (Logblacklist.includes(freqKey)) {  // frequency-only match
-							//logInfo(`${freqKey} was found in blacklist_log.txt`);
-							clearInterval(scanInterval); // Clears a previously defined scanning interval
-							stereo_detect = false;
-							isScanning = false; // Updates a flag indicating scanning status
-							startScan('up');
-						}
-		
-						if (Logblacklist.includes(piKey)) {  // PI-only match
-							//logInfo(`${piKey} was found in blacklist_log.txt`);
-							clearInterval(scanInterval); // Clears a previously defined scanning interval
-							stereo_detect = false;
-							isScanning = false; // Updates a flag indicating scanning status
-							startScan('up');
-						}	
-		
-					}
-					// --- End blacklist check ---			
 
 							if (RAWLog && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
 									writeHTMLLogEntry(false); // activate non filtered log
@@ -2129,6 +2084,42 @@ function writeCSVLogEntry() {
     ) {
         return;
     }
+	
+	// --- Blacklist check ---
+	if (Log_Blacklist) {
+		let Logblacklist = [];
+		try {
+			const raw = fs.readFileSync(path.join(__dirname, 'blacklist_log.txt'), 'utf8');
+			Logblacklist = raw
+				.split(/\r?\n/)               // split into lines
+				.map(line => line.trim())     // trim whitespace
+				.filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
+		} catch (err) {
+			logError('Scanner could not load blacklist_log.txt:', err);
+		}
+
+		// Build keys: "freq,picode", "freq" only, and "picode" only
+		const freqKey  = parseFloat(freq).toFixed(3);
+		const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
+		const comboKey = `${freqKey};${piKey}`;
+
+		if (Logblacklist.includes(comboKey)) {  // exact freq+PI match
+			//logInfo(`${comboKey} was found in blacklist_log.txt`);
+			return;
+		}
+		
+		if (Logblacklist.includes(freqKey)) {  // frequency-only match
+			//logInfo(`${freqKey} was found in blacklist_log.txt`);
+			return;
+		}
+		
+		if (Logblacklist.includes(piKey)) {  // PI-only match
+			//logInfo(`${piKey} was found in blacklist_log.txt`);
+			return;
+		}	
+		
+	}
+	// --- End blacklist check ---	
     
     const now = new Date();
     let date = now.toISOString().split('T')[0];  // YYYY-MM-DD
@@ -2312,6 +2303,42 @@ function writeHTMLLogEntry(isFiltered) {
     if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'off' ) || (Scan === 'on' && (ScannerMode === 'blacklist' ||  ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }
+	
+	// --- Blacklist check ---
+	if (Log_Blacklist) {
+		let Logblacklist = [];
+		try {
+			const raw = fs.readFileSync(path.join(__dirname, 'blacklist_log.txt'), 'utf8');
+			Logblacklist = raw
+				.split(/\r?\n/)               // split into lines
+				.map(line => line.trim())     // trim whitespace
+				.filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
+		} catch (err) {
+			logError('Scanner could not load blacklist_log.txt:', err);
+		}
+
+		// Build keys: "freq,picode", "freq" only, and "picode" only
+		const freqKey  = parseFloat(freq).toFixed(3);
+		const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
+		const comboKey = `${freqKey};${piKey}`;
+
+		if (Logblacklist.includes(comboKey)) {  // exact freq+PI match
+			//logInfo(`${comboKey} was found in blacklist_log.txt`);
+			return;
+		}
+		
+		if (Logblacklist.includes(freqKey)) {  // frequency-only match
+			//logInfo(`${freqKey} was found in blacklist_log.txt`);
+			return;
+		}
+		
+		if (Logblacklist.includes(piKey)) {  // PI-only match
+			//logInfo(`${piKey} was found in blacklist_log.txt`);
+			return;
+		}	
+		
+	}
+	// --- End blacklist check ---	
     
     const now = new Date();
     let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
