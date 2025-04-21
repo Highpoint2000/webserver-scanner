@@ -10,9 +10,11 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
 
 
-## v3.5
+## v3.6
 
-- Add a blacklist function for the FMLIST log entries (see instructions!)
+- Add a special blacklist function for the Logfile entries (see instructions!)
+- Future spamming protection for the scanner plugin implemented (Thanks to AmateurAudioDude!)
+- Bandwidth information changed to Hz
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -46,7 +48,7 @@ The following variables can be changed in the configPlugin.json:
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
     defaultScannerMode: 'normal', 	// Set the startmode: 'normal', 'blacklist', 'whitelist', 'spectrum', 'difference', 'spectrumBL' or 'differenceBL' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,          	// Set the bandwidth for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    scanBandwith: 0,          	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
     EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
     EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder  
@@ -69,7 +71,8 @@ The following variables can be changed in the configPlugin.json:
 	CSVcreate: true,		// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
     CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
-
+	Log_Blacklist: false,	// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 	
+	
     /// FMLIST OPTIONS ////
  
     FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
@@ -104,7 +107,8 @@ The following variables can be changed in the configPlugin.json:
 - Whitelist entries are processed with 0.01 MHZ increments
 - URDS CSV Log protocol and Map Viewer Button can be activated with CSVcreate option in the configuration settings
 - for manual or automatic upload the URDS CSV log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
-- Add a blacklist function for the FMLIST log entries: File ../plugins/Scanner/blacklist_fmlist.txt You can enter frequencies 89.800 89.400 100.80 ... as well as PI codes D0DB D3C3 D3D5, or both in combination, separated by semicolons: 87.900;D3C3 Simply write the values ​​one below the other in the text file.
+- Add a special blacklist function for the FMLIST entries: File ../plugins/Scanner/blacklist_fmlist.txt You can enter frequencies 89.800 89.400 100.80 ... as well as PI codes D0DB D3C3 D3D5, or both in combination, separated by semicolons: 87.900;D3C3 Simply write the values ​​one below the other in the text file.
+- Add a special blacklist function for the Logfile entries: File ../plugins/Scanner/blacklist_log.txt You can enter frequencies 89.800 89.400 100.80 ... as well as PI codes D0DB D3C3 D3D5, or both in combination, separated by semicolons: 87.900;D3C3 Simply write the values ​​one below the other in the text file.
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
@@ -117,6 +121,10 @@ After activating/deactivating the plugin or making changes to the scanner.json s
   <summary>History</summary>
  
 ## History
+
+### v3.5
+
+- Add a blacklist function for the FMLIST log entries (see instructions!)
 
 ### v3.4b
 
