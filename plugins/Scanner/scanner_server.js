@@ -216,6 +216,9 @@ if (scanIntervalTime > 1000) {
 	scanIntervalTime = 1000;
 }
 
+
+
+
 SpectrumPlusMinusValue
 function checkAndInstallNewModules() {
     NewModules.forEach(module => {
@@ -2148,16 +2151,16 @@ function writeCSVLogEntry() {
     const frequencyInHz = Math.round(numericFrequency * 1_000_000);
     const rdson = rds ? 1 : 0;   
     
-    SignalStrengthUnit = SignalStrengthUnit.toLowerCase();
+    SignalStrengthUnitLowerCase = SignalStrengthUnit.toLowerCase();
     
     let numericStrengthTop;
     let numericStrength;
-    if (SignalStrengthUnit === 'dbf') {
+    if (SignalStrengthUnitLowerCase === 'dbµv') {
         numericStrengthTop = parseFloat(strengthTop) - 10.875;
         numericStrength = parseFloat(strength) - 10.875;
-    } else if (SignalStrengthUnit === 'dbm') {
-        numericStrengthTop = parseFloat(strengthTop) + 108.75;
-        numericStrength = parseFloat(strength) + 108.75;
+    } else if (SignalStrengthUnitLowerCase === 'dbm') {
+        numericStrengthTop = parseFloat(strengthTop) - 108.75;
+        numericStrength = parseFloat(strength) - 108.75;
     } else {
         numericStrengthTop = parseFloat(strengthTop);
         numericStrength = parseFloat(strength);
@@ -2350,10 +2353,12 @@ function writeHTMLLogEntry(isFiltered) {
         date = utcDate;
     }
 
+  SignalStrengthUnitLowerCase = SignalStrengthUnit.toLowerCase();
+
 	let numericStrength;
-	if (SignalStrengthUnit === 'dbµv') {
+	if (SignalStrengthUnitLowerCase === 'dbµv') {
 		numericStrength = parseFloat(strength) - 10.875;
-	} else if (SignalStrengthUnit === 'dbm') {
+	} else if (SignalStrengthUnitLowerCase === 'dbm') {
 		numericStrength = parseFloat(strength) - 108.75;
 	} else {
 		numericStrength = parseFloat(strength);
