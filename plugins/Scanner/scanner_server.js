@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.6)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.6a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 21.04.25       ///
+///  by Highpoint               last update: 22.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -27,7 +27,6 @@ const defaultConfig = {
     StartAutoScan: 'off',                // Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off',                // Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 	OnlyScanHoldTime: 'off',			 // Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
-	SignalStrengthUnit: 'dBf',			 // Set to 'dBf', 'dBm' or 'dBµV' 
 
     defaultSensitivityValue: 30,         // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 5,              // Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
@@ -53,6 +52,7 @@ const defaultConfig = {
 	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
 	Log_Blacklist: false,        		 // Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	SignalStrengthUnit: 'dBf',			 // Set to 'dBf', 'dBm' or 'dBµV' 
 
     FMLIST_OM_ID: '',                    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
     FMLIST_Autolog: 'off',               // Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
@@ -143,7 +143,6 @@ const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
 const StartAutoScan = configPlugin.StartAutoScan;
 const AntennaSwitch = configPlugin.AntennaSwitch;
 const OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
-  let SignalStrengthUnit = configPlugin.SignalStrengthUnit;
 
 const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
@@ -169,6 +168,7 @@ const CSVcreate = configPlugin.CSVcreate
 const CSVcompletePS = configPlugin.CSVcompletePS
 const UTCtime = configPlugin.UTCtime;
   let Log_Blacklist = configPlugin.Log_Blacklist;
+  let SignalStrengthUnit = configPlugin.SignalStrengthUnit;
 
   let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
 const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
@@ -2282,7 +2282,7 @@ function getLogFilePathHTML(date, time, isFiltered) {
 				header += isFiltered ? `SCANNER LOG (FILTER MODE) ${date} ${time}<br><br>` : `SCANNER LOG ${date} ${time}<br><br>`; 
 			}
 		}
-
+		
         header += UTCtime 
             ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
             : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
@@ -2349,6 +2349,17 @@ function writeHTMLLogEntry(isFiltered) {
         time = utcTime;
         date = utcDate;
     }
+
+	let numericStrength;
+	if (SignalStrengthUnit === 'dbµv') {
+		numericStrength = parseFloat(strength) - 10.875;
+	} else if (SignalStrengthUnit === 'dbm') {
+		numericStrength = parseFloat(strength) - 108.75;
+	} else {
+		numericStrength = parseFloat(strength);
+	}
+	
+	const SNR = numericStrength.toFixed(1);
 	
     logFilePathHTML = getLogFilePathHTML(date, time, isFiltered);
 
@@ -2358,7 +2369,7 @@ function writeHTMLLogEntry(isFiltered) {
 
     let psWithUnderscores = ps.replace(/ /g, '_');
 
-    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${strength}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
 
     let logContent = '';
     if (fs.existsSync(logFilePathHTML)) {
