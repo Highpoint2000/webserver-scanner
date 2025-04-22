@@ -10,11 +10,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
 
 
-## v3.6
+## v3.6a
 
-- Add a special blacklist function for the Logfile entries (see instructions!)
-- Future spamming protection for the scanner plugin implemented (Thanks to AmateurAudioDude!)
-- Bandwidth information changed to Hz
+- The signal strength units are now correctly logged, different from dBf
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -121,6 +119,12 @@ After activating/deactivating the plugin or making changes to the scanner.json s
   <summary>History</summary>
  
 ## History
+
+### v3.6
+
+- Add a special blacklist function for the Logfile entries (see instructions!)
+- Future spamming protection for the scanner plugin implemented (Thanks to AmateurAudioDude!)
+- Bandwidth information changed to Hz
 
 ### v3.5
 
