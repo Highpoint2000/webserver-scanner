@@ -42,7 +42,6 @@ The following variables can be changed in the configPlugin.json:
     Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
     StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
-	SignalStrengthUnit: 'dBf',	// Set to 'dBf', 'dBm' or 'dBµV' 
 	
     defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
     defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
@@ -71,7 +70,8 @@ The following variables can be changed in the configPlugin.json:
 	CSVcreate: true,		// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
     CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
-	Log_Blacklist: false,		// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 	
+	Log_Blacklist: false,		// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+ 	SignalStrengthUnit: 'dBf',	// Set to 'dBf', 'dBm' or 'dBµV' 
 	
     /// FMLIST OPTIONS ////
  
