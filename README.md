@@ -84,12 +84,13 @@ The following variables can be changed in the configPlugin.json:
  
     BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
 
+After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
+
 ## Important notes: 
 
 - Auto Scan Mode with the options is only usable with ADMIN- oder TUNE-Athentification !!!
 - By briefly pressing the Auto Scan button you start/stop the automatic scanning process. Pressing the button longer opens or closes the scanner's setting options
 - The automatic antenna switching only works if more than 1 antenna is configured in the web server !!!
-- Add a white- or blacklist function: file ../plugins/Scanner/whitelist.txt or blacklist.txt must be created with the frequencies:  89.800 89.400 100.80 ... They can be written next to or below each other with space
 - For ESP32 receivers (e.g. TEF6686) the plugin can uses the newly integrated firmware scan and search function. However, the prerequisite is the installation of the latest PE5PVB firmware version. 
 - Auto scanner and logging preferences can be configured in the scanner.json under /plugin_configs
 - In the HTML file you can klick on the header fields to sort the column or you enter a term in the search field
@@ -105,10 +106,10 @@ The following variables can be changed in the configPlugin.json:
 - Whitelist entries are processed with 0.01 MHZ increments
 - URDS CSV Log protocol and Map Viewer Button can be activated with CSVcreate option in the configuration settings
 - for manual or automatic upload the URDS CSV log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
-- Add a special blacklist function for the FMLIST entries: File ../plugins/Scanner/blacklist_fmlist.txt You can enter frequencies 89.800 89.400 100.80 ... as well as PI codes D0DB D3C3 D3D5, or both in combination, separated by semicolons: 87.900;D3C3 Simply write the values ​​one below the other in the text file.
-- Add a special blacklist function for the Logfile entries: File ../plugins/Scanner/blacklist_log.txt You can enter frequencies 89.800 89.400 100.80 ... as well as PI codes D0DB D3C3 D3D5, or both in combination, separated by semicolons: 87.900;D3C3 Simply write the values ​​one below the other in the text file.
 
-After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
+### Blacklist & Whitelist Options
+
+The scanner plugin contains various blacklist options and a whitelist function. The necessary files with sample data are included in the plugin package. Frequencies (89.800, 89.400, 100.80) can be stored in whitelist.txt, which are scanned exclusively in the "whitelist" scan mode (frequencies: 89.800, 89.400, 100.80 can be separated by one another or by spaces). Likewise, frequencies that are not scanned in the "blacklist," "spectrumBL," and "differenceBL" scan modes can be defined in blacklist.txt. The blacklist_log.txt file is used to explicitly exclude frequencies and/or PI codes from being entered into the log files. Using blacklist_fmlist.txt, frequencies and/or PI codes can also be further excluded from FMLIST publication. The use of the blacklist or whitelist must be configured in the scanner.json configuration file.
 
 ## Known bugs:
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
