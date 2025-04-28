@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.6a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7)       ///
 ///                                                         ///
-///  by Highpoint               last update: 22.04.25       ///
+///  by Highpoint               last update: 28.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 	
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.6a'; // Plugin version
+    const plugin_version = '3.7'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -37,7 +37,7 @@
 
     let wsSendSocket;
     let clientIp = '';
-    let signalValue = 'dBf';
+    let signalValue = 'dBµV';
     let isTuneAuthenticated = false; // Initially set to false
     let scannerButtonsExecuted = false; // Tracks if ScannerButtons have been executed
     let Scan = 'off';
@@ -449,7 +449,6 @@ function sendToastWithCooldown(type, title, message, autoClose = true, closeOnCl
     if (currentTime - lastToastTime < 150) {
         return; // Ignore the toast if it's within 150ms of the last one
     }
-
     lastToastTime = currentTime; // Update the timestamp of the last toast
     sendToast(type, title, message, autoClose, closeOnClick); // Show the toast
 }
@@ -873,6 +872,9 @@ function toggleScan(isLongPressAction) {
             <input type="text" placeholder="Sensitivity" title="Scanner Sensitivity" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
                 <li data-value="1" class="option">1</li>
+				<li data-value="2" class="option">2</li>
+				<li data-value="3" class="option">3</li>
+				<li data-value="4" class="option">4</li>
                 <li data-value="5" class="option">5</li>
                 <li data-value="10" class="option">10</li>
                 <li data-value="15" class="option">15</li>
@@ -885,6 +887,10 @@ function toggleScan(isLongPressAction) {
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBf" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+                    <li data-value="1" class="option">1 dBf</li>
+					<li data-value="2" class="option">2 dBf</li>
+					<li data-value="3" class="option">3 dBf</li>
+					<li data-value="4" class="option">4 dBf</li>
                     <li data-value="5" class="option">5 dBf</li>
                     <li data-value="10" class="option">10 dBf</li>
                     <li data-value="15" class="option">15 dBf</li>
@@ -907,6 +913,11 @@ function toggleScan(isLongPressAction) {
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBµV" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+				    <li data-value="1" class="option">1 dBµV</li>
+					<li data-value="2" class="option">2 dBµV</li>
+					<li data-value="3" class="option">3 dBµV</li>
+					<li data-value="4" class="option">4 dBµV</li>
+                    <li data-value="5" class="option">5 dBµV</li>
                     <li data-value="5" class="option">5 dBµV</li>
                     <li data-value="10" class="option">10 dBµV</li>
                     <li data-value="15" class="option">15 dBµV</li>
@@ -929,6 +940,10 @@ function toggleScan(isLongPressAction) {
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBm" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
+				    <li data-value="-111" class="option">-111 dBm</li>
+				    <li data-value="-112" class="option">-112 dBm</li>
+				    <li data-value="-113" class="option">-113 dBm</li>
+				    <li data-value="-114" class="option">-114 dBm</li>
                     <li data-value="-115" class="option">-115 dBm</li>
                     <li data-value="-110" class="option">-110 dBm</li>
                     <li data-value="-105" class="option">-105 dBm</li>
@@ -953,7 +968,9 @@ function toggleScan(isLongPressAction) {
             <input type="text" placeholder="${ScanHoldTime} sec." title="Scanhold Time" readonly>
             <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
                 <li data-value="1" class="option">1 sec.</li>
+				<li data-value="2" class="option">2 sec.</li>
                 <li data-value="3" class="option">3 sec.</li>
+				<li data-value="4" class="option">4 sec.</li>
                 <li data-value="5" class="option">5 sec.</li>
                 <li data-value="7" class="option">7 sec.</li>
                 <li data-value="10" class="option">10 sec.</li>
@@ -1115,10 +1132,6 @@ window.initializeMapViewerButton = function() {
         }
       }, 500);
 
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        console.error("⏳ Timed out waiting for addIconToPluginPanel. Button not added.");
-      }, 10000);
     })
     .catch(error => {
       console.error("CSV file not found:", error);
