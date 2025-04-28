@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.6a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7)       ///
 ///                                                         ///
-///  by Highpoint               last update: 22.04.25       ///
+///  by Highpoint               last update: 28.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -28,8 +28,8 @@ const defaultConfig = {
     AntennaSwitch: 'off',                // Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 	OnlyScanHoldTime: 'off',			 // Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
 
-    defaultSensitivityValue: 30,         // Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    defaultScanHoldTime: 5,              // Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
+    defaultSensitivityValue: 30,         // Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+    defaultScanHoldTime: 5,              // Value in s: 1,2,3,4,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
     defaultScannerMode: 'normal',        // Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,               // Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
     scanBandwith: 0,                     // Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
@@ -46,8 +46,9 @@ const defaultConfig = {
     SpectrumLimiterValue: 100,            // default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
     SpectrumPlusMinusValue: 100,          // default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
-    RAWLog: false,                       // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
-    OnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+	HTMLlogOnlyID: true,					// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
+    HTMLlogRAW: false,                       // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
+    HTMLOnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
 	CSVcreate: true,					 // Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
 	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
@@ -162,8 +163,9 @@ const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
 const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
 const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
-const RAWLog = configPlugin.RAWLog;
-const OnlyFirstLog = configPlugin.OnlyFirstLog;
+const HTMLlogOnlyID = configPlugin.HTMLlogOnlyID;
+const HTMLlogRAW = configPlugin.HTMLlogRAW;
+const HTMLOnlyFirstLog = configPlugin.HTMLOnlyFirstLog;
 const CSVcreate = configPlugin.CSVcreate
 const CSVcompletePS = configPlugin.CSVcompletePS
 const UTCtime = configPlugin.UTCtime;
@@ -215,9 +217,6 @@ if (SpectrumPlusMinusValue === 0) {
 if (scanIntervalTime > 1000) {
 	scanIntervalTime = 1000;
 }
-
-
-
 
 SpectrumPlusMinusValue
 function checkAndInstallNewModules() {
@@ -974,7 +973,7 @@ async function DataPluginsWebSocket() {
 					}
 				
                 } catch (error) {
-                    logError("Failed to handle message:", error);
+                    //logError("Failed to handle message:", error);
                 }
             };
 
@@ -1853,7 +1852,7 @@ function checkWhitelist() {
 						isScanning = false; // Updates a flag indicating scanning status		
 					}
 
-							if (RAWLog && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
+							if (HTMLlogRAW && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
 									writeHTMLLogEntry(false); // activate non filtered log
 									Savepicode = picode;
 									Saveps = ps;
@@ -1873,7 +1872,7 @@ function checkWhitelist() {
 												writeCSVLogEntry(); // filtered log
 											}
 											
-											if (!RAWLog && stationid) {
+											if ((!HTMLlogRAW && stationid && HTMLlogOnlyID) || (!HTMLlogRAW && !HTMLlogOnlyID)) {
 												writeHTMLLogEntry(true); // filtered log
 											}
 											
@@ -1910,7 +1909,7 @@ function checkWhitelist() {
 										writeCSVLogEntry(); // filtered log
 										writeStatusCSV = false;
 									}
-									if (!RAWLog && stationid && writeStatusHTMLLog) {
+									if ((!HTMLlogRAW && stationid && HTMLlogOnlyID && writeStatusHTMLLog) || (!HTMLlogRAW && !HTMLlogOnlyID && writeStatusHTMLLog)){
 										writeHTMLLogEntry(true); // filtered log
 										writeStatusHTMLLog = false;
 									}
@@ -1954,7 +1953,7 @@ function checkWhitelist() {
             if (picode.length > 1) {
 
 							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {						
-								if (RAWLog) {
+								if (HTMLlogRAW) {
 									writeHTMLLogEntry(false); // activate non filtered log
 									Savepicode = picode;
 									Saveps = ps;
@@ -1969,7 +1968,7 @@ function checkWhitelist() {
 
 								if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 											writeCSVLogEntry(true); // filtered log
-											if (!RAWLog) {
+											if (!HTMLlogRAW) {
 												writeHTMLLogEntry(true); // filtered log
 											}
 											
@@ -1986,7 +1985,7 @@ function checkWhitelist() {
 								
 								if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
 									writeCSVLogEntry(true); // filtered log
-									if (!RAWLog) {
+									if (!HTMLlogRAW) {
 										writeHTMLLogEntry(true); // filtered log
 									}
 									
@@ -2272,7 +2271,7 @@ function getLogFilePathHTML(date, time, isFiltered) {
 
         header += `${ServerName}<br>${ServerDescription}<br>`;
         
-		if (OnlyFirstLog) {
+		if (HTMLOnlyFirstLog) {
 			if (UTCtime) {
 				header += isFiltered ? `SCANNER LOG (FILTER MODE - FIRST LOG) ${date} ${time} (UTC)<br><br>` : `SCANNER LOG (FIRST LOG) ${date} ${time} (UTC)<br><br>`; 
 			} else {
@@ -2386,7 +2385,7 @@ function writeHTMLLogEntry(isFiltered) {
         }
     }
 
-    if (OnlyFirstLog) {
+    if (HTMLOnlyFirstLog) {
         const entryExists = logContent.includes(`<td>${freq}</td>`) && logContent.includes(`<td>${picode}</td>`) && logContent.includes(`<td>${station}</td>`);
         if (entryExists) {
             return;
