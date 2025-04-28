@@ -10,9 +10,12 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
 
 
-## v3.6a
+## v3.7
 
-- The signal strength units are now correctly logged, different from dBf
+- Error message hidden
+- Additional values ​​for sensitivity and scan hold time added
+- Renamed variables for HTML logging
+- Added a new variable for HTML logging of unidentified transmitters
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -63,8 +66,9 @@ The following variables can be changed in the configPlugin.json:
 
     /// LOGGING OPTIONS ////
 	
-    RAWLog: false, 			// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
-    OnlyFirstLog: false, 		// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+    HTMLlogOnlyID: true,	// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
+    HTMLlogRAW: false,	// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
+    HTMLOnlyFirstLog: false,	// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
 	CSVcreate: true,		// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
     CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
@@ -120,6 +124,10 @@ The scanner plugin contains various blacklist options and a whitelist function. 
   <summary>History</summary>
  
 ## History
+
+### v3.6a
+
+- The signal strength units are now correctly logged, different from dBf
 
 ### v3.6
 
