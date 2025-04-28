@@ -67,8 +67,8 @@ The following variables can be changed in the configPlugin.json:
 
     /// LOGGING OPTIONS ////
 	
-    HTMLlogOnlyID: true,	// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
-    HTMLlogRAW: false,	// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
+    HTMLlogOnlyID: true,		// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
+    HTMLlogRAW: false,		// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
     HTMLOnlyFirstLog: false,	// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
 	CSVcreate: true,		// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
     CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
