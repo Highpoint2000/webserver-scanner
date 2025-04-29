@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 28.04.25       ///
+///  by Highpoint               last update: 29.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1373,13 +1373,6 @@ async function handleSocketMessage(messageData) {
 
 function initializeAntennas(Antennas) {
     try {
-        // Check if antennas are enabled
-        if (!Antennas.enabled || AntennaSwitch !== 'on') {
-            // No antennas enabled
-            enabledAntennas = [];
-            currentAntennaIndex = 0;
-            return;
-        }
 
         // Initialize the list of enabled antennas
         enabledAntennas = [];
@@ -1391,13 +1384,6 @@ function initializeAntennas(Antennas) {
                     name: antenna.name
                 });
             }
-        }
-
-        // Validate the number of enabled antennas
-        if (enabledAntennas.length < 2) {
-            enabledAntennas = [];
-            currentAntennaIndex = 0;
-            return;
         }
 
         // Set the current index to 0 if there are valid antennas
@@ -2286,7 +2272,7 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 		
         header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
             : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
 
         try {
@@ -2300,12 +2286,44 @@ function getLogFilePathHTML(date, time, isFiltered) {
     return filePath;
 }
 
+const CORS_PROXY_URL = 'https://cors-proxy.de:13128/';
+const FM_API_TOKEN   = '924924';
+
+/**
+ * Öffnet den Stream für die gegebene Station-ID
+ */
+function openStream(stationId) {
+  const endpoint = `https://api.fmlist.org/152/fmdxGetStreamById.php?id=${stationId}&token=${FM_API_TOKEN}`;
+  fetch(CORS_PROXY_URL + endpoint)
+    .then(resp => {
+      if (!resp.ok) throw new Error(`API-Error ${resp.status}`);
+      return resp.json();
+    })
+    .then(streams => {
+      if (!Array.isArray(streams) || streams.length === 0) {
+        console.warn('Keine Streams gefunden für ID', stationId);
+        return;
+      }
+      // Stream mit höchster Bitrate wählen
+      const best = streams.reduce((prev, curr) =>
+        parseInt(curr.bitrate, 10) > parseInt(prev.bitrate, 10) ? curr : prev
+      );
+      const win = window.open(best.linkname, 'streamWindow', 'width=800,height=160');
+      if (win) win.focus();
+    })
+    .catch(e => console.error('Fehler beim Laden des Streams:', e));
+}
+
 function writeHTMLLogEntry(isFiltered) {
 	
     if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'off' ) || (Scan === 'on' && (ScannerMode === 'blacklist' ||  ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }
-	
+
+	const antennaNumber = (+ant) + 1;
+	const match = enabledAntennas.find(a => a.number === antennaNumber);
+	const antennaName = match?.name ?? 'AntA';
+  	
 	// --- Blacklist check ---
 	if (Log_Blacklist) {
 		let Logblacklist = [];
@@ -2373,7 +2391,7 @@ function writeHTMLLogEntry(isFiltered) {
 
     let psWithUnderscores = ps.replace(/ /g, '_');
 
-    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
 
     let logContent = '';
     if (fs.existsSync(logFilePathHTML)) {
