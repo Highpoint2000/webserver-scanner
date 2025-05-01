@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 29.04.25       ///
+///  by Highpoint               last update: 30.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -2058,18 +2058,7 @@ function getLogFilePathCSV(date, time, filename) {
 let lastFrequencyInHz = null;
 
 function writeCSVLogEntry() {
-    if (
-        isInBlacklist(freq, blacklist) && 
-        EnableBlacklist && 
-        (
-            Scan === 'off' ||
-            (Scan === 'on' && (
-                ScannerMode === 'blacklist' || 
-                ScannerMode === 'spectrumBL' || 
-                ScannerMode === 'differenceBL'
-            ))
-        )
-    ) {
+    if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'on' && (ScannerMode === 'blacklist' || ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }
 	
@@ -2273,7 +2262,7 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		
         header += UTCtime 
             ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -2315,10 +2304,6 @@ function openStream(stationId) {
 }
 
 function writeHTMLLogEntry(isFiltered) {
-	
-    if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'off' ) || (Scan === 'on' && (ScannerMode === 'blacklist' ||  ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
-        return;
-    }
 
 	const antennaNumber = (+ant) + 1;
 	const match = enabledAntennas.find(a => a.number === antennaNumber);
