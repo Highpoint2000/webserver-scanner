@@ -11,9 +11,10 @@ This plugin provides scanning functions for the FM-DX web server.
 ![Spectrum_Scan_Options](https://github.com/user-attachments/assets/937c1198-303d-4e48-96cd-27af5097df6f)
 
 
-### v3.7a
+## v3.7b
 
-- Used antenna added to the HTML Log
+- Minor design work
+- Blacklist function tidied up Minor design work (see Blacklist & Whitelist Options)
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -111,7 +112,7 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 
 ### Blacklist & Whitelist Options
 
-The scanner plugin contains various blacklist options and a whitelist function. The necessary files with sample data are included in the plugin package. Frequencies (e.g. 89.800, 89.400, 100.80 can be separated by one another or by spaces) can be stored in whitelist.txt, which are scanned exclusively in the "whitelist" scan mode. Likewise, frequencies that are not scanned in the "blacklist," "spectrumBL," and "differenceBL" scan modes can be defined in blacklist.txt. The blacklist_log.txt file is used to explicitly exclude frequencies and/or PI codes from being entered into the log files. Using blacklist_fmlist.txt, frequencies and/or PI codes can also be further excluded from FMLIST publication. The use of the blacklist or whitelist must be configured in the scanner.json configuration file.
+The scanner plugin contains various blacklist options and a whitelist function. The necessary files with sample data are included in the plugin package. The whitelist.txt file can be used to store frequencies (e.g., 89.800, 89.400, 100.80, separated by spaces) that are scanned exclusively in the "Whitelist" scan mode. Likewise, the blacklist.txt file can be used to define frequencies that are not scanned (i.e., skipped and therefore not logged) in the "Blacklist," "SpectrumBL," and "DifferenceBL" scan modes. The blacklist_log.txt file is used to explicitly exclude frequencies and/or PI codes from being entered into the log files. This also applies to logs with the manual search (<< >>). Using blacklist_fmlist.txt, frequencies and/or PI codes can be additionally excluded from FMLIST publication. The use of the blacklist or whitelist must be configured in the scanner.json configuration file.
 
 ### Known bugs:
 - When you start the auto scanner in PE5PVB mode, the frequency freezes for a few seconds
@@ -122,6 +123,10 @@ The scanner plugin contains various blacklist options and a whitelist function. 
   <summary>History</summary>
  
 ## History
+
+### v3.7a
+
+- Used antenna added to the HTML Log
 
 ### v3.7
 
