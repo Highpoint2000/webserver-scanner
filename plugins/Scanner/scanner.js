@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 29.04.25       ///
+///  by Highpoint               last update: 30.04.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -14,7 +14,7 @@
 	
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.7a'; // Plugin version
+    const plugin_version = '3.7b'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -644,28 +644,79 @@ function BlinkAutoScan() {
         ScannerButton.classList.add('bg-color-3');
         }
         ScannerButton.title = `Plugin Version ${plugin_version}`;
+        ScannerButton.style.marginLeft = '1px';
+        ScannerButton.style.marginRight = '1px';
 
-        // Funktion zur Anpassung des Stils basierend auf der Bildschirmbreite
-        function updateButtonStyle() {
-            if (window.innerWidth < 769) {
-                ScannerButton.style.right = '8px';
-                ScannerButton.style.width = '100%';
-                ScannerButton.style.borderRadius = '15px';
-			} else if (window.innerWidth > 2000) {
-				ScannerButton.style.right = '1px';
-                ScannerButton.style.left = '0px';
-                ScannerButton.style.borderRadius = '0px';
-                ScannerButton.style.width = '98.0%';
-			} else {					
-                ScannerButton.style.right = '1px';
-                ScannerButton.style.left = '0px';
-                ScannerButton.style.borderRadius = '0px';
-                ScannerButton.style.width = '97.0%';
-            }
-        }
-
-        // Initiale Stil-Updates
-        updateButtonStyle();
+		if (window.innerWidth < 769) {
+			// Mobile layout: full-width auto sizing with rounded corners
+			ScannerButton.style.width       = '80px';
+			ScannerButton.style.borderRadius = '15px';		
+		} else if (window.innerWidth < 890) {
+			ScannerButton.style.borderRadius = '0px';
+			if (window.innerWidth % 2 !== 0) {
+				ScannerButton.style.width = '97.0%';
+			} else {
+				ScannerButton.style.width = '97.5%';
+			}
+		} else if (window.innerWidth < 990) {
+			ScannerButton.style.borderRadius = '0px';
+			if (window.innerWidth % 2 !== 0) {
+				ScannerButton.style.width = '97.4%';
+			} else {
+				ScannerButton.style.width = '97.7%';
+			}
+		} else if (window.innerWidth < 1180) {
+			ScannerButton.style.borderRadius = '0px';
+			if (window.innerWidth % 2 !== 0) {
+				ScannerButton.style.width = '98.0%';
+			} else {
+				ScannerButton.style.width = '98.5%';
+			}
+		} else {
+			ScannerButton.style.borderRadius = '0px';
+			if (window.innerWidth % 2 !== 0) {
+				ScannerButton.style.width = '98.0%';
+			} else {
+				ScannerButton.style.width = '98.5%';
+			}
+		}
+		
+		const el = document.getElementById('data-ant');
+		if (el) {
+			if (window.innerWidth < 769) {
+				// Mobile layout: full-width auto sizing with rounded corners
+				ScannerButton.style.width       = '80px';
+				ScannerButton.style.borderRadius = '15px';		
+			} else if (window.innerWidth < 890) {
+				ScannerButton.style.borderRadius = '0px';
+				if (window.innerWidth % 2 !== 0) {
+					ScannerButton.style.width = '96.5%';
+				} else {
+					ScannerButton.style.width = '95.0%';
+				}
+			} else if (window.innerWidth < 990) {
+				ScannerButton.style.borderRadius = '0px';
+				if (window.innerWidth % 2 !== 0) {
+					ScannerButton.style.width = '97.4%';
+				} else {
+					ScannerButton.style.width = '97.0%';
+				}
+			} else if (window.innerWidth < 1180) {
+				ScannerButton.style.borderRadius = '0px';
+				if (window.innerWidth % 2 !== 0) {
+					ScannerButton.style.width = '97.0%';
+				} else {
+					ScannerButton.style.width = '97.4%';
+				}
+			} else {
+				ScannerButton.style.borderRadius = '0px';
+				if (window.innerWidth % 2 !== 0) {
+					ScannerButton.style.width = '98.0%';
+				} else {
+					ScannerButton.style.width = '97.5%';
+				}
+			}
+		}
 
         // Event-Listener für Button-Klick
         ScannerButton.addEventListener('click', function() {
