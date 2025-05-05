@@ -1,20 +1,22 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 30.04.25       ///
+///  by Highpoint               last update: 05.05.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
+/////// compatible from webserver version 1.3.8 !!! ///////////
+
     const updateInfo = true; // Enable or disable version check
 	
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.7b'; // Plugin version
+    const plugin_version = '3.7c'; // Plugin version
 	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
 	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
 	const plugin_name = 'Scanner';
@@ -639,86 +641,79 @@ function BlinkAutoScan() {
         ScannerButton.style.borderRadius = '0px 0px 0px 0px';
         ScannerButton.style.position = 'relative';
         ScannerButton.style.top = '0px';
-        ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+
         if (Scan === 'off') { 
         ScannerButton.classList.add('bg-color-3');
         }
         ScannerButton.title = `Plugin Version ${plugin_version}`;
-        ScannerButton.style.marginLeft = '1px';
-        ScannerButton.style.marginRight = '1px';
-
-		if (window.innerWidth < 769) {
-			// Mobile layout: full-width auto sizing with rounded corners
-			ScannerButton.style.width       = '80px';
-			ScannerButton.style.borderRadius = '15px';		
-		} else if (window.innerWidth < 890) {
-			ScannerButton.style.borderRadius = '0px';
-			if (window.innerWidth % 2 !== 0) {
-				ScannerButton.style.width = '97.0%';
-			} else {
-				ScannerButton.style.width = '97.5%';
-			}
-		} else if (window.innerWidth < 990) {
-			ScannerButton.style.borderRadius = '0px';
-			if (window.innerWidth % 2 !== 0) {
-				ScannerButton.style.width = '97.4%';
-			} else {
-				ScannerButton.style.width = '97.7%';
-			}
-		} else if (window.innerWidth < 1180) {
-			ScannerButton.style.borderRadius = '0px';
-			if (window.innerWidth % 2 !== 0) {
-				ScannerButton.style.width = '98.0%';
-			} else {
-				ScannerButton.style.width = '98.5%';
-			}
-		} else {
-			ScannerButton.style.borderRadius = '0px';
-			if (window.innerWidth % 2 !== 0) {
-				ScannerButton.style.width = '98.0%';
-			} else {
-				ScannerButton.style.width = '98.5%';
-			}
-		}
 		
-		const el = document.getElementById('data-ant');
-		if (el) {
+		const spans = document.querySelectorAll('span.text-small.color-4');
+
+		let hasSDR = false;
+		spans.forEach(span => {
+		if (span.textContent.trim() === 'SDR') {
+			hasSDR = true;
+		}
+		});
+
+		if (hasSDR) {
+			ScannerButton.style.borderRadius = '15px';
+			ScannerButton.style.width = '300%';
+			ScannerButton.style.right = '100%';
+		} else {
+			ScannerButton.style.marginLeft = '1px';
+			ScannerButton.style.marginRight = '1px';
+			
 			if (window.innerWidth < 769) {
-				// Mobile layout: full-width auto sizing with rounded corners
-				ScannerButton.style.width       = '80px';
-				ScannerButton.style.borderRadius = '15px';		
+				ScannerButton.style.width = '100%';
+				ScannerButton.style.height = '48px';
+				ScannerButton.innerHTML = '<strong>Autoscan</strong>';
+				ScannerButton.style.borderRadius = '15px';
 			} else if (window.innerWidth < 890) {
+				ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
 				ScannerButton.style.borderRadius = '0px';
-				if (window.innerWidth % 2 !== 0) {
-					ScannerButton.style.width = '96.5%';
-				} else {
-					ScannerButton.style.width = '95.0%';
-				}
+				ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '97.0%' : '97.5%';
 			} else if (window.innerWidth < 990) {
+				ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
 				ScannerButton.style.borderRadius = '0px';
-				if (window.innerWidth % 2 !== 0) {
-					ScannerButton.style.width = '97.4%';
-				} else {
-					ScannerButton.style.width = '97.0%';
-				}
+				ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '97.4%' : '97.7%';
 			} else if (window.innerWidth < 1180) {
+				ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
 				ScannerButton.style.borderRadius = '0px';
-				if (window.innerWidth % 2 !== 0) {
-					ScannerButton.style.width = '97.0%';
-				} else {
-					ScannerButton.style.width = '97.4%';
-				}
+				ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '98.0%' : '98.5%';
 			} else {
+				ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
 				ScannerButton.style.borderRadius = '0px';
-				if (window.innerWidth % 2 !== 0) {
-					ScannerButton.style.width = '98.0%';
+				ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '98.0%' : '98.5%';
+			}
+
+			const el = document.getElementById('data-ant');
+			if (el) {
+				if (window.innerWidth < 769) {
+					ScannerButton.style.width = '100%';
+					ScannerButton.style.height = '48px';
+					ScannerButton.innerHTML = '<strong>Autoscan</strong>';
+					ScannerButton.style.borderRadius = '15px';
+				} else if (window.innerWidth < 890) {
+					ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+					ScannerButton.style.borderRadius = '0px';
+					ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '96.5%' : '95.0%';
+				} else if (window.innerWidth < 990) {
+					ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+					ScannerButton.style.borderRadius = '0px';
+					ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '97.4%' : '97.0%';
+				} else if (window.innerWidth < 1180) {
+					ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+					ScannerButton.style.borderRadius = '0px';
+					ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '97.0%' : '97.4%';
 				} else {
-					ScannerButton.style.width = '97.5%';
+					ScannerButton.innerHTML = '<strong>Auto<br>Scan</strong>';
+					ScannerButton.style.borderRadius = '0px';
+					ScannerButton.style.width = (window.innerWidth % 2 !== 0) ? '98.0%' : '97.5%';
 				}
 			}
 		}
 
-        // Event-Listener für Button-Klick
         ScannerButton.addEventListener('click', function() {
             const isActive = ScannerButton.getAttribute('data-scan-status') === 'on';
             if (!isLongPress) {
@@ -731,14 +726,57 @@ function BlinkAutoScan() {
 				}
 			}
         });
-        
-        // Button in den DOM einfügen
-        const buttonIms = document.querySelector('.button-ims');
-        const newDiv = document.createElement('div');
-        newDiv.className = 'panel-50 no-bg br-0 h-100 m-0';
-		newDiv.id = 'ScannerButton';
-        newDiv.appendChild(ScannerButton);
-        buttonIms.parentNode.insertBefore(newDiv, buttonIms);
+      
+		if (window.innerWidth < 769 && ScannerButton) {
+			const popupContent = document.querySelector('.popup-content');
+			if (popupContent) {
+				// Find all <p> with class
+				const allParagraphs = popupContent.querySelectorAll('p.flex-phone.flex-center');
+
+				// Determine target section
+				let targetP = null;
+
+				allParagraphs.forEach(p => {
+					const text = p.textContent.trim();
+					if (text === 'Bandwidth & Antennas' && !targetP) {
+						targetP = p;
+					} else if (text === 'Filters' && !targetP) {
+						// Only as a fallback if nothing has been found yet
+						targetP = p;
+					}
+				});
+
+				// Only insert if not already present
+				if (targetP && !document.getElementById('scanner-button-wrapper')) {
+					// New <p> with "Scanner"
+					const scannerLabel = document.createElement('p');
+					scannerLabel.className = 'flex-phone flex-center';
+					scannerLabel.textContent = 'Scanner';
+
+					// Container for the button
+					const scannerContainer = document.createElement('div');
+					scannerContainer.className = 'flex-container flex-phone flex-center';
+					scannerContainer.id = 'scanner-button-wrapper';
+					scannerContainer.style.marginBottom = '10px'; // Abstand nach unten
+
+					scannerContainer.appendChild(ScannerButton);
+
+					// Insert before target section (either Bandwidth or Filters)
+					popupContent.insertBefore(scannerLabel, targetP);
+					popupContent.insertBefore(scannerContainer, scannerLabel.nextSibling);
+				}
+			}
+		} else {
+			// Desktop behavior remains unchanged
+			const buttonIms = document.querySelector('.button-ims');
+			if (buttonIms && ScannerButton) {
+				const newDiv = document.createElement('div');
+				newDiv.className = 'panel-50 no-bg br-0 h-100 m-0';
+				newDiv.id = 'ScannerButtonWrapper';
+				newDiv.appendChild(ScannerButton);
+				buttonIms.parentNode.insertBefore(newDiv, buttonIms);
+			}
+		}	
 
         let pressTimer;
         let isLongPress = false;
