@@ -11,10 +11,10 @@ This plugin provides scanning functions for the FM-DX web server.
 ![Spectrum_Scan_Options](https://github.com/user-attachments/assets/937c1198-303d-4e48-96cd-27af5097df6f)
 
 
-## v3.7b
+## v3.7c (compatible from webserver version 1.3.8!!!)
 
-- Minor design work
-- Blacklist function tidied up Minor design work (see Blacklist & Whitelist Options)
+- Design adjustments for mobile view and control
+- Button design created for SDR receiver
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -123,6 +123,11 @@ The scanner plugin contains various blacklist options and a whitelist function. 
   <summary>History</summary>
  
 ## History
+
+### v3.7b
+
+- Minor design work
+- Blacklist function tidied up Minor design work (see Blacklist & Whitelist Options)
 
 ### v3.7a
 
