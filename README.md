@@ -13,7 +13,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## v3.7c (compatible from webserver version 1.3.8!!!)
 
-- Design adjustments for mobile view and control
+- Design adjustments for the new mobile layout
 - Button design created for SDR receiver
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
