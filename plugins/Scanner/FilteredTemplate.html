@@ -321,7 +321,7 @@ function filterTable() {
 
         // Filter based on distance
         if (display && distanceFilter !== null) {
-            let distValue = parseFloat(td[12].textContent) || 0; // Assume 'DIST' is in the 12th column (index 11)
+            let distValue = parseFloat(td[12].textContent) || 0; // Assume 'DIST' is in the 13th column (index 12)
             if (distValue < distanceFilter) {
                 display = false; // Hide row if distance is less than the filter value
             }
