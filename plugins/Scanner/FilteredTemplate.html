@@ -358,42 +358,46 @@ function filterTable() {
     }
 
     /* Generates a dynamic link based on visible table rows */
-    function generateDynamicLink() {
-        const table = document.querySelector("table");
-        const rows = table.getElementsByTagName("tr");
-        const uniqueIds = new Set();
+	function generateDynamicLink() {
+		const table = document.querySelector("table");
+		const rows = table.getElementsByTagName("tr");
+		const uniqueIds = new Set();
 
-        // Loop through table rows to collect IDs
-        for (let i = 1; i < rows.length; i++) {
-            if (rows[i].style.display !== "none") { // Only consider visible rows
-                const cells = rows[i].getElementsByTagName("td");
-                const idCell = cells[cells.length - 4]; // The ID cell (4rd last cell)
-                if (idCell) {
-                    const idValue = idCell.textContent.trim();
-                    if (idValue) {
-                        uniqueIds.add(idValue);
-                    }
-                }
-            }
-        }
+		for (let i = 1; i < rows.length; i++) {
+			if (rows[i].style.display !== "none") {
+				const cells = rows[i].getElementsByTagName("td");
+				const idCell = cells[cells.length - 4];
+				if (idCell && idCell.textContent.trim()) {
+					uniqueIds.add(idCell.textContent.trim());
+				}
+			}
+		}
 
-        // Check if IDs were found
-        if (uniqueIds.size > 0) {
-            const idsString = Array.from(uniqueIds).join(",");
-            const dynamicLink = baseUrl + idsString + "&findId=*"; // Use dynamic base URL
+		if (uniqueIds.size > 0) {
+			const idsString = Array.from(uniqueIds).join(",");
+			const dynamicLink = baseUrl + idsString + "&findId=*";
 
-            // Create or update link element
-            let dynamicLinkElement = document.getElementById("dynamicLink");
-            if (!dynamicLinkElement) {
-                dynamicLinkElement = document.createElement("a");
-                dynamicLinkElement.id = "dynamicLink";
-                dynamicLinkElement.target = "_blank";
-                document.body.appendChild(document.createElement("pre")).appendChild(dynamicLinkElement);
-            }
-            dynamicLinkElement.href = dynamicLink;
-            dynamicLinkElement.textContent = "MAP ALL";
-        }
-    }
+			let container = document.getElementById("dynamicLinkContainer");
+			if (!container) {
+				container = document.createElement("div");
+				container.id = "dynamicLinkContainer";
+				// Container vor der Tabelle einfügen
+				table.parentNode.insertBefore(container, table);
+			}
+			// Inhalt zurücksetzen
+			container.innerHTML = "";
+
+			// Link erstellen
+			const link = document.createElement("a");
+			link.target = "_blank";
+			link.href = dynamicLink;
+			link.textContent = "MAP ALL";
+			container.appendChild(link);
+
+			// Abstand zum Table
+			container.style.marginBottom = "1em";  // <-- hier den Abstand einstellen
+		}
+	}
 
     /* Initializes controls and auto-refresh on DOMContentLoaded */
     document.addEventListener('DOMContentLoaded', () => {
