@@ -321,7 +321,7 @@ function filterTable() {
 
         // Filter based on distance
         if (display && distanceFilter !== null) {
-            let distValue = parseFloat(td[11].textContent) || 0; // Assume 'DIST' is in the 12th column (index 11)
+            let distValue = parseFloat(td[12].textContent) || 0; // Assume 'DIST' is in the 12th column (index 11)
             if (distValue < distanceFilter) {
                 display = false; // Hide row if distance is less than the filter value
             }
@@ -430,9 +430,9 @@ function filterTable() {
             <input type="number" id="freeDistanceInput" placeholder="" min="0" oninput="filterTable()">
             <span class="distance-label">km</span>
 
-	    <!-- New Input Field for PI Codes -->
-	    <label for="piCodesInput" style="margin-top: 3px; display: block;">Exclude PI Codes (comma separated):</label>
-	    <input type="text" id="piCodesInput" placeholder="e.g. 6201,6202,6203" oninput="filterTable()">
+			<!-- New Input Field for PI Codes -->
+			<label for="piCodesInput" style="margin-top: 3px; display: block;">Exclude PI Codes (comma separated):</label>
+			<input type="text" id="piCodesInput" placeholder="e.g. 6201,6202,6203" oninput="filterTable()">
         `;
 
         searchContainer.appendChild(filterContainer);
