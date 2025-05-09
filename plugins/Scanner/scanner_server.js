@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7d)      ///
 ///                                                         ///
-///  by Highpoint               last update: 05.05.25       ///
+///  by Highpoint               last update: 09.05.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -2263,8 +2263,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 		
         header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>AUTOLOG</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>AUTOLOG</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -2377,8 +2377,13 @@ function writeHTMLLogEntry(isFiltered) {
 	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
     let psWithUnderscores = ps.replace(/ /g, '_');
+	let scanmode = 'no'
+	
+	if (Scan === 'on') {
+		scanmode = 'yes'
+	}	
 
-    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${scanmode}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
 
     let logContent = '';
     if (fs.existsSync(logFilePathHTML)) {
