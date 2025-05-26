@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7d)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7e)      ///
 ///                                                         ///
-///  by Highpoint               last update: 09.05.25       ///
+///  by Highpoint               last update: 26.05.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -966,9 +966,15 @@ async function DataPluginsWebSocket() {
 						//console.log(gpsData);
 						const { status, time, lat, lon, alt, mode } = gpsData;
 
-							LAT = lat;
-							LON = lon;
-							ALT = alt;
+							if (lat !== '') {
+								LAT = lat;
+							};
+							if (lon !== '') {
+								LON = lon;
+							};
+							if (alt !== '') {
+								ALT = alt;
+							};
 							gpsmode = mode;
 							gpstime = time;
 							
@@ -1823,9 +1829,38 @@ function checkWhitelist() {
 			let ScanHoldTimeValue = ScanHoldTime * 10;
 
             if (stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {
+				
+				// Overwrite the actual signal strength in the corresponding array for all four modes
+				if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' ) {
+					
+					// Choose the correct array based on the mode
+					const arr = (ScannerMode === 'difference' || ScannerMode === 'differenceBL')
+						? sigArrayDifference
+						: sigArraySpectrum;
 
-                if (strength > Sensitivity || picode.length > 1 || !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {					
+					// Round frequency to two decimal places for consistent comparison
+					const freqRounded = Math.round(parseFloat(freq) * 100) / 100;
+
+					// Find the matching entry index
+					const idx = arr.findIndex(item =>
+						Math.round(parseFloat(item.freq) * 100) / 100 === freqRounded
+					);
+
+					if (idx !== -1) {
+						// Update existing entry
+						arr[idx].sig = strength.toString();
+					} else {
+						// Add a new entry if not found
+						arr.push({
+							freq: freqRounded.toFixed(2),
+							sig:  strength.toString()
+						});
+					}
+				}			
+
+                if (strength > Sensitivity || picode.length > 1 || strength > Sensitivity && !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {					
 					//console.log(strength, Sensitivity);
+					
 
                     if (picode.length > 1 && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
                         ScanHoldTimeValue += 50;
@@ -2263,8 +2298,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 		
         header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>AUTOLOG</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>AUTOLOG</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>MODE</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>MODE</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -2377,11 +2412,13 @@ function writeHTMLLogEntry(isFiltered) {
 	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
     let psWithUnderscores = ps.replace(/ /g, '_');
-	let scanmode = 'no'
+	let scanmode;
 	
 	if (Scan === 'on') {
-		scanmode = 'yes'
-	}	
+		scanmode = 'A';
+	} else {
+		scanmode = 'M';
+	}
 
     let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${scanmode}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
 
