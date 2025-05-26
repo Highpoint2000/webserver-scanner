@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7d)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.7e)      ///
 ///                                                         ///
-///  by Highpoint               last update: 05.05.25       ///
+///  by Highpoint               last update: 26.05.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -12,15 +12,15 @@
 
 /////// compatible from webserver version 1.3.8 !!! ///////////
 
-    const updateInfo = true; // Enable or disable version check
+    const pluginSetupOnlyNotify = true;
+	const CHECK_FOR_UPDATES = true;
 	
 ///////////////////////////////////////////////////////////////
 
-    const plugin_version = '3.7d'; // Plugin version
-	const plugin_path = 'https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/';
-	const plugin_JSfile = 'refs/heads/main/plugins/Scanner/scanner.js'
-	const plugin_name = 'Scanner';
-	const PluginUpdateKey = `${plugin_name}_lastUpdateNotification`; // Unique key for localStorage
+	const pluginVersion = '3.7e';
+	const pluginName = "Scanner";
+	const pluginHomepageUrl = "https://github.com/Highpoint2000/webserver-scanner/releases";
+	const pluginUpdateUrl = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 	
 	const EnableBlacklist = true; // This value is automatically updated via the config file
 	const EnableWhitelist = true; // This value is automatically updated via the config file
@@ -64,83 +64,93 @@
         };
     }
 	
-	// Function to check if the notification was shown today
-  function shouldShowNotification() {
-    const lastNotificationDate = localStorage.getItem(PluginUpdateKey);
-    const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+// Function for update notification in /setup
+function checkUpdate(setupOnly, pluginName, urlUpdateLink, urlFetchLink) {
+    if (setupOnly && window.location.pathname !== '/setup') return;
 
-    if (lastNotificationDate === today) {
-      return false; // Notification already shown today
-    }
-    // Update the date in localStorage to today
-    localStorage.setItem(PluginUpdateKey, today);
-    return true;
-  }
+    let pluginVersionCheck = typeof pluginVersion !== 'undefined' ? pluginVersion : typeof plugin_version !== 'undefined' ? plugin_version : typeof PLUGIN_VERSION !== 'undefined' ? PLUGIN_VERSION : 'Unknown';
 
-  // Function to check plugin version
-  function checkplugin_version() {
-    // Fetch and evaluate the plugin script
-    fetch(`${plugin_path}${plugin_JSfile}`)
-      .then(response => response.text())
-      .then(script => {
-        // Search for plugin_version in the external script
-        const plugin_versionMatch = script.match(/const plugin_version = '([\d.]+[a-z]*)?';/);
-        if (!plugin_versionMatch) {
-          console.error(`${plugin_name}: Plugin version could not be found`);
-          return;
-        }
+    // Function to check for updates
+    async function fetchFirstLine() {
+        const urlCheckForUpdate = urlFetchLink;
 
-        const externalplugin_version = plugin_versionMatch[1];
-
-        // Function to compare versions
-		function compareVersions(local, remote) {
-			const parseVersion = (version) =>
-				version.split(/(\d+|[a-z]+)/i).filter(Boolean).map((part) => (isNaN(part) ? part : parseInt(part, 10)));
-
-			const localParts = parseVersion(local);
-			const remoteParts = parseVersion(remote);
-
-			for (let i = 0; i < Math.max(localParts.length, remoteParts.length); i++) {
-				const localPart = localParts[i] || 0; // Default to 0 if part is missing
-				const remotePart = remoteParts[i] || 0;
-
-				if (typeof localPart === 'number' && typeof remotePart === 'number') {
-					if (localPart > remotePart) return 1;
-					if (localPart < remotePart) return -1;
-				} else if (typeof localPart === 'string' && typeof remotePart === 'string') {
-					// Lexicographical comparison for strings
-					if (localPart > remotePart) return 1;
-					if (localPart < remotePart) return -1;
-				} else {
-					// Numeric parts are "less than" string parts (e.g., `3.5` < `3.5a`)
-					return typeof localPart === 'number' ? -1 : 1;
-				}
-			}
-
-			return 0; // Versions are equal
-		}
-
-
-        // Check version and show notification if needed
-        const comparisonResult = compareVersions(plugin_version, externalplugin_version);
-        if (comparisonResult === 1) {
-          // Local version is newer than the external version
-          console.log(`${plugin_name}: The local version is newer than the plugin version.`);
-        } else if (comparisonResult === -1) {
-          // External version is newer and notification should be shown
-          if (shouldShowNotification()) {
-            console.log(`${plugin_name}: Plugin update available: ${plugin_version} -> ${externalplugin_version}`);
-			sendToast('warning important', `${plugin_name}`, `Update available:<br>${plugin_version} -> ${externalplugin_version}`, false, false);
+        try {
+            const response = await fetch(urlCheckForUpdate);
+            if (!response.ok) {
+                throw new Error(`[${pluginName}] update check HTTP error! status: ${response.status}`);
             }
-        } else {
-          // Versions are the same
-          console.log(`${plugin_name}: The local version matches the plugin version.`);
+
+            const text = await response.text();
+            const lines = text.split('\n');
+
+            let version;
+
+            if (lines.length > 2) {
+                const versionLine = lines.find(line => line.includes("const pluginVersion =") || line.includes("const plugin_version =") || line.includes("const PLUGIN_VERSION ="));
+                if (versionLine) {
+                    const match = versionLine.match(/const\s+(?:pluginVersion|plugin_version|PLUGIN_VERSION)\s*=\s*['"]([^'"]+)['"]/);
+                    if (match) {
+                        version = match[1];
+                    }
+                }
+            }
+
+            if (!version) {
+                const firstLine = lines[0].trim();
+                version = /^\d/.test(firstLine) ? firstLine : "Unknown"; // Check if first character is a number
+            }
+
+            return version;
+        } catch (error) {
+            console.error(`[${pluginName}] error fetching file:`, error);
+            return null;
         }
-      })
-      .catch(error => {
-        console.error(`${plugin_name}: Error fetching the plugin script:`, error);
-      });
-	}
+    }
+
+    // Check for updates
+    fetchFirstLine().then(newVersion => {
+        if (newVersion) {
+            if (newVersion !== pluginVersionCheck) {
+                let updateConsoleText = "There is a new version of this plugin available";
+                // Any custom code here
+                
+                console.log(`[${pluginName}] ${updateConsoleText}`);
+                setupNotify(pluginVersionCheck, newVersion, pluginName, urlUpdateLink);
+            }
+        }
+    });
+
+    function setupNotify(pluginVersionCheck, newVersion, pluginName, urlUpdateLink) {
+        if (window.location.pathname === '/setup') {
+          const pluginSettings = document.getElementById('plugin-settings');
+          if (pluginSettings) {
+            const currentText = pluginSettings.textContent.trim();
+            const newText = `<a href="${urlUpdateLink}" target="_blank">[${pluginName}] Update available: ${pluginVersionCheck} --> ${newVersion}</a><br>`;
+
+            if (currentText === 'No plugin settings are available.') {
+              pluginSettings.innerHTML = newText;
+            } else {
+              pluginSettings.innerHTML += ' ' + newText;
+            }
+          }
+
+          const updateIcon = document.querySelector('.wrapper-outer #navigation .sidenav-content .fa-puzzle-piece') || document.querySelector('.wrapper-outer .sidenav-content') || document.querySelector('.sidenav-content');
+
+          const redDot = document.createElement('span');
+          redDot.style.display = 'block';
+          redDot.style.width = '12px';
+          redDot.style.height = '12px';
+          redDot.style.borderRadius = '50%';
+          redDot.style.backgroundColor = '#FE0830' || 'var(--color-main-bright)'; // Theme colour set here as placeholder only
+          redDot.style.marginLeft = '82px';
+          redDot.style.marginTop = '-12px';
+
+          updateIcon.appendChild(redDot);
+        }
+    }
+}
+
+if (CHECK_FOR_UPDATES) checkUpdate(pluginSetupOnlyNotify, pluginName, pluginHomepageUrl, pluginUpdateUrl);
 
     // Send an initial message when the WebSocket is connected
     async function sendInitialWebSocketMessage() {
@@ -645,7 +655,7 @@ function BlinkAutoScan() {
         if (Scan === 'off') { 
         ScannerButton.classList.add('bg-color-3');
         }
-        ScannerButton.title = `Plugin Version ${plugin_version}`;
+        ScannerButton.title = `Plugin Version ${pluginVersion}`;
 		
 		const spans = document.querySelectorAll('span.text-small.color-4');
 
@@ -1232,19 +1242,10 @@ if (!window.matchMedia("(pointer: coarse)").matches) {
   initializeMapViewerButton();
 }
 
-
-
     document.addEventListener('DOMContentLoaded', () => {	
         BlinkAutoScan();
         checkAdminMode();
         setupSendSocket();
     });
 	
-	  	setTimeout(() => {
-
-	// Execute the plugin version check if updateInfo is true and admin ist logged on
-	if (updateInfo && isTuneAuthenticated) {
-		checkplugin_version();
-		}
-	}, 200);	
 })();
