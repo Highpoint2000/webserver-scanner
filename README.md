@@ -43,12 +43,16 @@ The following variables can be changed in the configPlugin.json:
     Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
     StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
     AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
-	
-    defaultSensitivityValue: 30, 	// Value in dBf/dBµV: 5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    defaultScanHoldTime: 7, 	// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
-    defaultScannerMode: 'normal', 	// Set the startmode: 'normal', 'blacklist', 'whitelist', 'spectrum', 'difference', 'spectrumBL' or 'differenceBL' / Only valid for PE5PVB_Mode = false 
-    scanIntervalTime: 500,		// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,          	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    OnlyScanHoldTime: 'off',	// Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
+
+ 
+    defaultSensitivityValue: 30,        	// Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+						// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values ​​are 1-10 dBf/dBµV/dBm
+    SensitivityCalibrationFrequenz: '',	// Value in MHz e.g. '87.3' / If the field is left blank (default setting), the scanner will not perform automatic noise signal calibration
+    defaultScanHoldTime: 7, 		// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
+    defaultScannerMode: 'normal', 		// Set the startmode: 'normal', 'blacklist', 'whitelist', 'spectrum', 'difference', 'spectrumBL' or 'differenceBL' / Only valid for PE5PVB_Mode = false 
+    scanIntervalTime: 500,			// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
+    scanBandwith: 0,          		// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
     EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
     EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder  
@@ -110,6 +114,7 @@ After activating/deactivating the plugin or making changes to the scanner.json s
 - Whitelist entries are processed with 0.01 MHZ increments
 - URDS CSV Log protocol and Map Viewer Button can be activated with CSVcreate option in the configuration settings
 - for manual or automatic upload the URDS CSV log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
+- Attention! To use dynamic sensitivity calibration, the reference frequency entered must be within the web server's approved frequency range. For example, 87.1 is within the range 87.0 - 108.0 MHz. The range to be scanned must be defined using the variables tuningLowerLimit and tuningUpperLimit in the scanner.json file and must also be within the web server's approved frequency range.
 
 ### Blacklist & Whitelist Options
 
