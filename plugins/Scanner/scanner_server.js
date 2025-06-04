@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.7e)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8)      ///
 ///                                                         ///
-///  by Highpoint               last update: 26.05.25       ///
+///  by Highpoint               last update: 04.06.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -23,51 +23,55 @@ const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.
 
 // Default values for the configuration file
 const defaultConfig = {
-    Scanmode: 1,                         // 0 - offline mode or 1 - online mode
-    Autoscan_PE5PVB_Mode: false,         // Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
-    Search_PE5PVB_Mode: false,           // Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
-    StartAutoScan: 'off',                // Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
-    AntennaSwitch: 'off',                // Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
-	OnlyScanHoldTime: 'off',			 // Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
+    Scanmode: 1,                         	// 0 - offline mode or 1 - online mode
+    Autoscan_PE5PVB_Mode: false,        	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
+    Search_PE5PVB_Mode: false,           	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
+    StartAutoScan: 'off',                	// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
+    AntennaSwitch: 'off',               	// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
+	OnlyScanHoldTime: 'off',			 	// Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
 
-    defaultSensitivityValue: 30,         // Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-    defaultScanHoldTime: 5,              // Value in s: 1,2,3,4,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
-    defaultScannerMode: 'normal',        // Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
-    scanIntervalTime: 500,               // Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,                     // Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    defaultSensitivityValue: 30,        	// Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
+											// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values ​​are 1-10 dBf/dBµV/dBm
+	SensitivityCalibrationFrequenz: '',		// Value in MHz e.g. '87.3' / If the field is left blank (default setting), the scanner will not perform automatic noise signal calibration
+    defaultScanHoldTime: 5,              	// Value in s: 1,2,3,4,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
+    defaultScannerMode: 'normal',        	// Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+    scanIntervalTime: 500,               	// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
+    scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
-    EnableBlacklist: false,              // Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
-    EnableWhitelist: false,              // Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
+    EnableBlacklist: false,              	// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
+    EnableWhitelist: false,              	// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
 	
-	tuningLowerLimit: '',	             // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
-	tuningUpperLimit: '',				 // Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
+	tuningLowerLimit: '',	             	// Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
+	tuningUpperLimit: '',				 	// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
 
-    EnableSpectrumScan: false,           // Enable Spectrum, set it 'true' or 'false'
-    EnableDifferenceScan: false,         // Enable Spectrum, set it 'true' or 'false'
-    SpectrumChangeValue: 0,              // default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 100,            // default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
-    SpectrumPlusMinusValue: 100,          // default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
+    EnableSpectrumScan: false,           	// Enable Spectrum, set it 'true' or 'false'
+    EnableDifferenceScan: false,         	// Enable Spectrum, set it 'true' or 'false'
+    SpectrumChangeValue: 0,              	// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
+    SpectrumLimiterValue: 100,            	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
+    SpectrumPlusMinusValue: 100,          	// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
 	HTMLlogOnlyID: true,					// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
-    HTMLlogRAW: false,                       // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
-    HTMLOnlyFirstLog: false,                 // For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
-	CSVcreate: true,					 // Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
-	CSVcompletePS: true,				 // Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
-    UTCtime: true,                       // Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
-	Log_Blacklist: false,        		 // Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
-	SignalStrengthUnit: 'dBf',			 // Set to 'dBf', 'dBm' or 'dBµV' 
+    HTMLlogRAW: false,                      // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
+    HTMLOnlyFirstLog: false,                // For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
+	CSVcreate: true,					 	// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
+	CSVcompletePS: true,				 	// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
+    UTCtime: true,                       	// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
+	Log_Blacklist: false,        		 	// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	SignalStrengthUnit: 'dBf',			 	// Set to 'dBf', 'dBm' or 'dBµV' 
 
-    FMLIST_OM_ID: '',                    // To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-    FMLIST_Autolog: 'off',               // Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
-    FMLIST_MinDistance: 200,             // set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
-    FMLIST_MaxDistance: 2000,            // set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 200)
-    FMLIST_LogInterval: 3600,            // Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
-    FMLIST_CanLogServer: '',             // Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
-	FMLIST_ShortServerName: '',		     // set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-	FMLIST_Blacklist: false,             // Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+    FMLIST_OM_ID: '',                    	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
+    FMLIST_Autolog: 'off',               	// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_MinDistance: 200,             	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
+    FMLIST_MaxDistance: 2000,            	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 200)
+    FMLIST_LogInterval: 3600,            	// Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
+    FMLIST_CanLogServer: '',             	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
+	FMLIST_ShortServerName: '',		     	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
+	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
+
+
 
 
 // Function to merge default config with existing config and remove undefined values
@@ -147,7 +151,8 @@ const StartAutoScan = configPlugin.StartAutoScan;
 const AntennaSwitch = configPlugin.AntennaSwitch;
 const OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
 
-const defaultSensitivityValue = configPlugin.defaultSensitivityValue;
+let defaultSensitivityValue = configPlugin.defaultSensitivityValue;
+let SensitivityCalibrationFrequenz = configPlugin.SensitivityCalibrationFrequenz;
 const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
 const defaultScannerMode = configPlugin.defaultScannerMode;
   let scanIntervalTime = configPlugin.scanIntervalTime;
@@ -218,6 +223,11 @@ if (SpectrumPlusMinusValue === 0) {
 
 if (scanIntervalTime > 1000) {
 	scanIntervalTime = 1000;
+}
+
+
+if ((SensitivityCalibrationFrequenz !== null || SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
+  defaultSensitivityValue = 10;
 }
 
 SpectrumPlusMinusValue
@@ -552,22 +562,30 @@ async function TextWebSocket(messageData) {
                 if (ScanPE5PVB) {
                     sendCommandToClient(`I${defaultSensitivityValue}`);
                     sendCommandToClient(`K${defaultScanHoldTime}`);
-	                logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" scanholdtime "${defaultScanHoldTime}" (PE5PVB mode)`);
+	                logInfo(`Scanner set auto-scan "${StartAutoScan}" defaultSensitivityValue: "${defaultSensitivityValue}" Scanholdtime: "${defaultScanHoldTime}" (PE5PVB mode)`);
 					if (StartAutoScan === 'on' && Autoscan_PE5PVB_Mode) {
 						sendCommandToClient('J1');
-						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}" (PE5PVB mode)`);
+						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | defaultSensitivityValue: "${defaultSensitivityValue}" | Scanholdtime: "${ScanHoldTime}" (PE5PVB mode)`);
 					}
                 } else {
-                    logInfo(`Scanner set auto-scan "${StartAutoScan}" sensitivity "${defaultSensitivityValue}" mode "${defaultScannerMode}" scanholdtime "${defaultScanHoldTime}"`);
+                    logInfo(`Scanner set auto-scan "${StartAutoScan}" defaultSensitivityValue: "${defaultSensitivityValue}" mode "${defaultScannerMode}" Scanholdtime: "${defaultScanHoldTime}"`);
 					if (StartAutoScan === 'on') {
-						if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
-							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
-						} else {
-							logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+						if (SensitivityCalibrationFrequenz !== null || SensitivityCalibrationFrequenz !== '') {
+							if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
+								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "Auto" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+							} else {
+								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "Auto" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+							}
+						} else {				
+							if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
+								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+							} else {
+								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+							}
 						}
 						setTimeout(() => {
-						   Scan = 'on';
-						   AutoScan();
+							Scan = 'on';
+							AutoScan();
 						}, 2000);
 					}
                 }
@@ -820,10 +838,6 @@ async function DataPluginsWebSocket() {
 									if (blacklist.length > 0) {
 										ScannerMode = message.value.ScannerMode;
 										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
-									} else {
-										logInfo(`Scanner mode "${message.value.ScannerMode}" not available! [IP: ${message.source}]`);
-										ScannerMode = 'normal';			
-										
 										responseMessage = createMessage(
 											'response',
 											message.source,
@@ -835,9 +849,23 @@ async function DataPluginsWebSocket() {
 											SpectrumLimiterValue,
 											FMLIST_Autolog
 										);
-								
-										DataPluginsSocket.send(JSON.stringify(responseMessage));
+									DataPluginsSocket.send(JSON.stringify(responseMessage));
+									} else {
+										logInfo(`Scanner mode "${message.value.ScannerMode}" not available! [IP: ${message.source}]`);
+										ScannerMode = 'normal';				
 									}
+									responseMessage = createMessage(
+											'response',
+											message.source,
+											Scan,
+											'',
+											Sensitivity,
+											ScannerMode,
+											ScanHoldTime,
+											SpectrumLimiterValue,
+											FMLIST_Autolog
+									);
+									DataPluginsSocket.send(JSON.stringify(responseMessage));
 								}
 								if (message.value.ScannerMode !== undefined && message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
 									if (whitelist.length > 0) {
@@ -845,9 +873,9 @@ async function DataPluginsWebSocket() {
 										logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
 									} else {
 										logInfo(`Scanner mode "${message.value.ScannerMode}" not available! [IP: ${message.source}]`);
-										ScannerMode = 'normal';			
-										
-										responseMessage = createMessage(
+										ScannerMode = 'normal';												
+									}
+									responseMessage = createMessage(
 											'response',
 											message.source,
 											Scan,
@@ -857,10 +885,8 @@ async function DataPluginsWebSocket() {
 											ScanHoldTime,
 											SpectrumLimiterValue,
 											FMLIST_Autolog
-										);
-								
-										DataPluginsSocket.send(JSON.stringify(responseMessage));
-									}
+									);
+									DataPluginsSocket.send(JSON.stringify(responseMessage));
 								}
 								if (message.value.ScannerMode !== undefined && (message.value.ScannerMode === 'spectrum' && EnableSpectrumScan || message.value.ScannerMode === 'spectrumBL' && EnableSpectrumScan && EnableBlacklist || message.value.ScannerMode === 'difference' && EnableDifferenceScan || message.value.ScannerMode === 'differenceBL' && EnableDifferenceScan && EnableBlacklist)) {
 										ScannerMode = message.value.ScannerMode;
@@ -895,6 +921,18 @@ async function DataPluginsWebSocket() {
 									} else {
 										logInfo(`Scanner set scanholdtime "${ScanHoldTime}" [IP: ${message.source}]`);
 									}
+									responseMessage = createMessage(
+											'response',
+											message.source,
+											Scan,
+											'',
+											Sensitivity,
+											ScannerMode,
+											ScanHoldTime,
+											SpectrumLimiterValue,
+											FMLIST_Autolog
+									);
+									DataPluginsSocket.send(JSON.stringify(responseMessage));
                                 }
                                 if (message.value.Search === 'down') {
 									if (SearchPE5PVB) {
@@ -1417,15 +1455,36 @@ function sendNextAntennaCommand() {
     }
 
     const ant = enabledAntennas[currentAntennaIndex];
-    logInfo(`Scanner switched to antenna ${ant.number - 1}: ${ant.name}`);
+    // logInfo(`Scanner switched to antenna ${ant.number - 1}: ${ant.name}`);
     sendCommandToClient(`Z${ant.number - 1}`); // Z0 to Z3 for ant1 to ant4
 
     // Move to the next index
     currentAntennaIndex = (currentAntennaIndex + 1) % enabledAntennas.length;
 }
 
+async function SensitivityValueCalibration() {
+	clearInterval(scanInterval);
+    currentFrequency = SensitivityCalibrationFrequenz;
+    currentFrequency = Math.round(currentFrequency * 100) / 100;
+    sendDataToClient(currentFrequency);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    Sensitivity = Math.round(strength) + Math.round(defaultSensitivityValue);
+	// logInfo(`Scanner set Sensitivity Value on ${currentFrequency} MHz to ${Sensitivity} [${Math.round(strength)} + ${defaultSensitivityValue}]`);			
+	// Create and send a broadcast message to stop the scan
+    const Message = createMessage(
+         'broadcast',
+         '255.255.255.255',
+         Scan,
+         '',
+         Sensitivity,
+         ScannerMode,
+         ScanHoldTime,
+		 FMLIST_Autolog
+    );
+    DataPluginsSocket.send(JSON.stringify(Message));
+}
 
-function AutoScan() {
+async function AutoScan() {
     if (!isScanning) {
 		if (scanBandwith === '0' || scanBandwith === 0) {
 			if (bandwith !== '0' && bandwith !== 0) {
@@ -1440,6 +1499,10 @@ function AutoScan() {
 		}
 		scanBandwithSave = bandwith;
 		textSocket.send(`W${scanBandwith}\n`);
+		if (SensitivityCalibrationFrequenz) {
+           await SensitivityValueCalibration();
+		   currentFrequency = tuningLowerLimit;
+        }
         startScan('up');		// Start scanning once
 	}
 }
@@ -1503,16 +1566,16 @@ async function startSpectrumAnalyse() {
     }
 }
 
-function startScan(direction) {
+async function startScan(direction) {
     clearInterval(scanInterval); // Stops any active scan interval from the previous scan
     
     // If the current frequency is invalid (NaN) or zero, set it to the lower tuning limit
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
         currentFrequency = tuningLowerLimit;
     }
-
+	
     // Function to update the frequency during the scan
-    function updateFrequency() {
+    async function updateFrequency() {
 		
         if (!isScanning) {
             //logInfo('Scanning has been stopped.'); // Log that scanning was stopped
@@ -1545,10 +1608,15 @@ function startScan(direction) {
                     }
                 }
                 if (ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
-					currentFrequency = tuningLowerLimit; // Reset to the lower limit
-				}
+                    if (SensitivityCalibrationFrequenz) {
+                        await SensitivityValueCalibration();
+						currentFrequency = tuningLowerLimit;
+                    } else {
+                        currentFrequency = tuningLowerLimit;
+                    }
+                }
             }
-        } 
+        }
 		
         // If scanning downwards
         else if (direction === 'down') {
@@ -1624,6 +1692,10 @@ function startScan(direction) {
 					// Check if current frequency is smaller than the previous frequency
 					if (currentFrequency < tempPreviousFrequency) {
 						sendNextAntennaCommand(); // Send the next antenna command
+						if (SensitivityCalibrationFrequenz) {
+							await SensitivityValueCalibration();
+							currentFrequency = tuningLowerLimit;
+						}				
 					}			
 					
 				}
@@ -1682,9 +1754,7 @@ function startScan(direction) {
 										fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav')
 											.pipe(new Speaker());
 									}, 500);
-								}
-								
-								sendDataToClient(currentFrequency); // Send the updated frequency to the client
+								}					
 								sigArray = [];
 
 								function performSpectrumAnalysis() {
@@ -1698,6 +1768,12 @@ function startScan(direction) {
 
 								performSpectrumAnalysis();
 								let intervalId = setInterval(performSpectrumAnalysis, 5000);
+								
+								if (SensitivityCalibrationFrequenz) {
+									await SensitivityValueCalibration();					
+									currentFrequency = tuningLowerLimit;
+								}
+								sendDataToClient(currentFrequency); // Send the updated frequency to the client
 								return; // Exit further processing in this cycle
                             }
                         } else if (direction === 'down') {

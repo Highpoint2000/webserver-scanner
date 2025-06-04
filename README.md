@@ -11,11 +11,11 @@ This plugin provides scanning functions for the FM-DX web server.
 ![Spectrum_Scan_Options](https://github.com/user-attachments/assets/937c1198-303d-4e48-96cd-27af5097df6f)
 
 
-## v3.7e (compatible from webserver version 1.3.8!!!)
+## v3.8 (compatible from webserver version 1.3.8!!!)
 
-- Skipping frequencies with signal levels below the signal value stored in the spectrum analysis
-- Updating the signal level in the spectrum analysis with conductance values
-- Update display is now in the web server settings under Plugins (Thanks to AmateurAudioDude for the Code)
+- New variable to define a reference frequency to dynamically scan the current noise level (please refer to the comments under important notes for setup!)
+- Information about antenna switching hidden in the console
+- Display of the sensitivity value and spectrum limiter value in the spectrum updated
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -129,6 +129,12 @@ The scanner plugin contains various blacklist options and a whitelist function. 
   <summary>History</summary>
  
 ## History
+
+### v3.7e (compatible from webserver version 1.3.8!!!)
+
+- Skipping frequencies with signal levels below the signal value stored in the spectrum analysis
+- Updating the signal level in the spectrum analysis with conductance values
+- Update display is now in the web server settings under Plugins (Thanks to AmateurAudioDude for the Code)
 
 ### v3.7d (compatible from webserver version 1.3.8!!!)
 
