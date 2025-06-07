@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 05.06.25       ///
+///  by Highpoint               last update: 08.06.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1510,7 +1510,11 @@ async function startScan(direction) {
 								startSpectrumAnalyse(); // Trigger spectrum analysis nach 1 Sekunde
 							}, 1000);
 						}
+					} else { 
+				      currentFrequency = tuningLowerLimit;
 					}
+				} else {
+				  currentFrequency = tuningLowerLimit;
 				}
             }
         }
