@@ -1242,10 +1242,13 @@ if (!window.matchMedia("(pointer: coarse)").matches) {
   initializeMapViewerButton();
 }
 
-    document.addEventListener('DOMContentLoaded', () => {	
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
         BlinkAutoScan();
         checkAdminMode();
         setupSendSocket();
-    });
+    }, 1000);
+});
+
 	
 })();
