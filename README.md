@@ -8,7 +8,8 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ![image](https://github.com/user-attachments/assets/853859b9-b472-4560-99c1-84a12950bd88)
 
-![Spectrum_Scan_Options](https://github.com/user-attachments/assets/937c1198-303d-4e48-96cd-27af5097df6f)
+![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
+
 
 
 ## v3.8b (compatible from webserver version 1.3.8!!!)
