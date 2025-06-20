@@ -33,63 +33,9 @@ For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwa
 
 ## Configuration options:
 
-The following variables can be changed in the configPlugin.json:
+To create or modify the scanner configuration file (scanner.json) please use the [Scanner Wizard](https://tef.noobish.eu/logos/scanner_wizard.html). All options are stored and described there.
 
-    /// SCANNER OPTIONS ////
-
-    Scanmode: 1, 			// 0 - offline mode or 1 - online mode (1- default)
-    Autoscan_PE5PVB_Mode: false,	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
-    Search_PE5PVB_Mode: false, 	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
-    StartAutoScan: 'off', 		// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
-    AntennaSwitch: 'off', 		// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
-    OnlyScanHoldTime: 'off',	// Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
-
- 
-    defaultSensitivityValue: 30,        	// Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-						// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values ​​are 1-10 dBf/dBµV/dBm
-    SensitivityCalibrationFrequenz: '',	// Value in MHz e.g. '87.3' / If the field is left blank (default setting), the scanner will not perform automatic noise signal calibration
-    defaultScanHoldTime: 7, 		// Value in s: 1,3,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false 
-    defaultScannerMode: 'normal', 		// Set the startmode: 'normal', 'blacklist', 'whitelist', 'spectrum', 'difference', 'spectrumBL' or 'differenceBL' / Only valid for PE5PVB_Mode = false 
-    scanIntervalTime: 500,			// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,          		// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
-
-    EnableBlacklist: false,		// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
-    EnableWhitelist: false,		// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder  
-
-    tuningLowerLimit: '',	        // Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
-    tuningUpperLimit: '',		// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
-    
-    /// SPECTRUM OPTIONS ///
-    
-    EnableSpectrumScan: false,	// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
-    EnableDifferenceScan: false,	// Enable Spectrum, set it 'true' or 'false' / for 'true' spectrum graph plugin must be installed!
-    SpectrumChangeValue: 0,		// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
-    SpectrumPlusMinusValue: 50,	// default is 50 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
-
-    /// LOGGING OPTIONS ////
-	
-    HTMLlogOnlyID: true,		// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
-    HTMLlogRAW: false,		// Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
-    HTMLOnlyFirstLog: false,	// For only first seen logging, set each station found to 'true' or 'false', default is false (only valid for HTML File!)
-	CSVcreate: true,		// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
-    CSVcompletePS: true,		// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
-    UTCtime: true, 			// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
-	Log_Blacklist: false,		// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
- 	SignalStrengthUnit: 'dBf',	// Set to 'dBf', 'dBm' or 'dBµV' 
-	
-    /// FMLIST OPTIONS ////
- 
-    FMLIST_OM_ID: '', 		// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-    FMLIST_Autolog: 'off',		// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
-    FMLIST_MinDistance: 200,	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
-    FMLIST_MaxDistance: 2000,  	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 201)
-    FMLIST_LogInterval: 3600,    	// Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
-    FMLIST_CanLogServer: '',	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')
-	FMLIST_ShortServerName: '',	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-	FMLIST_Blacklist: false,	// Enable Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
- 
-    BEEP_CONTROL: false		// Acoustic control function for scanning operation (true or false)
+![image](https://github.com/user-attachments/assets/355003fc-843d-4732-a15d-bad069814742)
 
 After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
 
