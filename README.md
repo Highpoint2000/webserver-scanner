@@ -37,7 +37,7 @@ To create or modify the scanner configuration file (scanner.json) please use the
 
 ![image](https://github.com/user-attachments/assets/355003fc-843d-4732-a15d-bad069814742)
 
-After activating/deactivating the plugin or making changes to the scanner.json script, the server must be restarted!!!
+After making changes to the scanner.json script, the server must be restarted!!!
 
 ## Important notes: 
 
