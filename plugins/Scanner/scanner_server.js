@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 08.06.25       ///
+///  by Highpoint               last update: 20.06.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -10,6 +10,8 @@
 ///////////////////////////////////////////////////////////////
 
 /////// compatible from webserver version 1.3.8 !!! ///////////
+
+/// Use Scanner wizard: https://tef.noobish.eu/logos/scanner_wizard.html for configuration the Plugin !!!
 
 const https = require('https');
 const path = require('path');
@@ -46,9 +48,9 @@ const defaultConfig = {
 
     EnableSpectrumScan: false,           	// Enable Spectrum, set it 'true' or 'false'
     EnableDifferenceScan: false,         	// Enable Spectrum, set it 'true' or 'false'
-    SpectrumChangeValue: 0,              	// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
-    SpectrumLimiterValue: 100,            	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
-    SpectrumPlusMinusValue: 100,          	// default is 70 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
+    SpectrumChangeValue: 3,              	// default is 0 (off) / Deviation value in dBf/dBµV eg. 1,2,3,4,5,... so that the frequency is scanned by deviations
+    SpectrumLimiterValue: 50,            	// default is 50 / Value in dBf/dBµV ... at what signal strength should stations (locals) be filtered out
+    SpectrumPlusMinusValue: 60,          	// default is 60 / Value in dBf/dBµV ... at what signal strength should the direct neighboring channels (+/- 0.1 MHz of locals) be filtered out
 
 	HTMLlogOnlyID: true,					// Set to 'true' or 'false' for only logging identified stations, default is true (only valid for HTML File!)
     HTMLlogRAW: false,                      // Set to 'true' or 'false' for RAW data logging, default is false (only valid for HTML File!)
@@ -63,16 +65,13 @@ const defaultConfig = {
     FMLIST_Autolog: 'off',               	// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,             	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
     FMLIST_MaxDistance: 2000,            	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 200)
-    FMLIST_LogInterval: 3600,            	// Specify here in minutes when a log entry can be sent again (default: 3600, minimum 3600)
+    FMLIST_LogInterval: 60,            		// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',             	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 	FMLIST_ShortServerName: '',		     	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
 	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
 };
-
-
-
 
 // Function to merge default config with existing config and remove undefined values
 function mergeConfig(defaultConfig, existingConfig) {
@@ -410,6 +409,7 @@ let writeStatusCSV = true;
 writeStatusCSVps = false;
 let writeStatusHTMLLog = true;
 let writeStatusLogFMLIST = true;
+let logSnapshot;
 
 let tuningLimit = config.webserver.tuningLimit;
 
@@ -1227,11 +1227,6 @@ async function handleSocketMessage(messageData) {
 		erp = '';
 		
 	}
-	
-	//Filter for PIcode 0000
-	if (picode.includes('0000')) {
-		picode = '?';
-	}
 		
 	if (bandwith === "-1") {
 		bandwith = "0";
@@ -1879,7 +1874,21 @@ function checkWhitelist() {
 											}
 											
 											if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid ) {
-												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
+												logSnapshot = {
+													stationid,
+													station,
+													itu,
+													city,
+													distance,
+													freq,
+													picode,
+													ps,
+													strength,
+													tp,
+													ta,
+													af
+												};
+												writeLogFMLIST(logSnapshot);	
 											}
 												
 										}
@@ -1916,7 +1925,21 @@ function checkWhitelist() {
 										writeStatusHTMLLog = false;
 									}
 									if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid && writeStatusLogFMLIST) {
-										writeLogFMLIST(stationid, station, itu, city, distance, freq); 
+										logSnapshot = {
+											stationid,
+											station,
+											itu,
+											city,
+											distance,
+											freq,
+											picode,
+											ps,
+											strength,
+											tp,
+											ta,
+											af
+										};
+										writeLogFMLIST(logSnapshot);	
 										writeStatusLogFMLIST = false;
 									}
 									Savefreq = freq;
@@ -1975,7 +1998,21 @@ function checkWhitelist() {
 											}
 											
 											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
-												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
+												logSnapshot = {
+													stationid,
+													station,
+													itu,
+													city,
+													distance,
+													freq,
+													picode,
+													ps,
+													strength,
+													tp,
+													ta,
+													af
+												};
+												writeLogFMLIST(logSnapshot);	
 											}
 											
 											Savefreq = freq;	
@@ -1992,8 +2029,22 @@ function checkWhitelist() {
 									}
 									
 									if (FMLIST_Autolog === 'on') {
-												writeLogFMLIST(stationid, station, itu, city, distance, freq); 
-										}
+										logSnapshot = {
+											stationid,
+											station,
+											itu,
+											city,
+											distance,
+											freq,
+											picode,
+											ps,
+											strength,
+											tp,
+											ta,
+											af
+										};
+										writeLogFMLIST(logSnapshot);	
+									}
 									
 									Savefreq = freq;
 								}
@@ -2554,8 +2605,8 @@ const logHistory = {};
 
 function canLog(stationid, station, itu, city, distance, freq) {
     const now = Date.now();
-    if (FMLIST_LogInterval < 3600 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
-        FMLIST_LogInterval = 3600;
+    if (FMLIST_LogInterval < 60 || FMLIST_LogInterval === '' || FMLIST_LogInterval === undefined) {
+        FMLIST_LogInterval = 60;
     }
     const logMinutes = 60 * FMLIST_LogInterval * 1000; // 60 minutes in milliseconds
     if (logHistory[stationid] && (now - logHistory[stationid]) < logMinutes) {
@@ -2583,7 +2634,20 @@ function canLog(stationid, station, itu, city, distance, freq) {
 }
 
 // Function to log to FMLIST
-async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
+async function writeLogFMLIST({
+  stationid,
+  station,
+  itu,
+  city,
+  distance,
+  freq,
+  picode,
+  ps,
+  strength,
+  tp,
+  ta,
+  af
+}) {
 	
 	// Convert freq to a number
 	freq = parseFloat(freq);
@@ -2705,7 +2769,13 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 	// Determine the type based on distance
 	const type = distance < 900 ? 'tropo' : 'sporadice';
 	
-    // Prepare the data to be sent in the POST request
+    // Check UUID and abort if null
+	if (config.identification.token == null) {
+		logError("UUID is null. Cannot log FMLIST data.");
+		return; // Stop here so we never send without a valid UUID
+	}
+
+	// Prepare the data to be sent in the POST request
 	const postData = JSON.stringify({
 		station: {
 			freq: freq,
@@ -2722,15 +2792,14 @@ async function writeLogFMLIST(stationid, station, itu, city, distance, freq) {
 			latitude: config.identification.lat,
 			longitude: config.identification.lon,
 			address: config.identification.proxyIp.length > 1
-			? config.identification.proxyIp
-			: ('Matches request IP with port ' + config.webserver.port),
+				? config.identification.proxyIp
+				: ('Matches request IP with port ' + config.webserver.port),
 			webserver_name: config.identification.tunerName.replace(/'/g, "\\'"),
 			omid: FMLIST_OM_ID
 		},
 		type: type,  // Use the computed value for type
 		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue} dBµV ${loggedAntenna}`
 	});
-	
 
     // Define the options for the HTTPS request
     const options = {
