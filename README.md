@@ -40,7 +40,8 @@ For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwa
 
 To create or modify the scanner configuration file (scanner.json) please use the [Scanner Wizard](https://tef.noobish.eu/logos/scanner_wizard.html). All options are stored and described there.
 
-![image](https://github.com/user-attachments/assets/355003fc-843d-4732-a15d-bad069814742)
+![image](https://github.com/user-attachments/assets/244a2036-6279-4066-9c90-193a9c47319a)
+
 
 After making changes to the scanner.json script, the server must be restarted!!!
 
