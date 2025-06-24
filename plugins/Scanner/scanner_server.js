@@ -229,6 +229,23 @@ if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
   defaultSensitivityValue = 10;
 }
 
+// defaultSensitivity conversion 
+if (SensitivityCalibrationFrequenz === '') {
+	const ssu = (SignalStrengthUnit || '').toLowerCase();
+	let resultdefaultSensitivityValue;
+	if (ssu === 'dbµv' || ssu === 'dbμv') {
+		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 10.875;
+	} else if (ssu === 'dbm') {
+		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 119.75;
+	} else if (ssu === 'dbf') {
+		// No change for dBf!
+		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue);
+	} else {
+		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue);
+	}
+	defaultSensitivityValue = Math.round(resultdefaultSensitivityValue);		
+}
+
 SpectrumPlusMinusValue
 function checkAndInstallNewModules() {
     NewModules.forEach(module => {
@@ -563,15 +580,15 @@ async function TextWebSocket(messageData) {
                 if (ScanPE5PVB) {
                     sendCommandToClient(`I${defaultSensitivityValue}`);
                     sendCommandToClient(`K${defaultScanHoldTime}`);
-	                logInfo(`Scanner set auto-scan "${StartAutoScan}" defaultSensitivityValue: "${defaultSensitivityValue}" Scanholdtime: "${defaultScanHoldTime}" (PE5PVB mode)`);
+	                logInfo(`Scanner set auto-scan "${StartAutoScan}" defaultSensitivityValue: "${defaultSensitivityValue} dBf" Scanholdtime: "${defaultScanHoldTime}" (PE5PVB mode)`);
 					if (StartAutoScan === 'on' && Autoscan_PE5PVB_Mode) {
 						sendCommandToClient('J1');
-						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | defaultSensitivityValue: "${defaultSensitivityValue}" | Scanholdtime: "${ScanHoldTime}" (PE5PVB mode)`);
+						logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | defaultSensitivityValue: "${defaultSensitivityValue} dBf" | Scanholdtime: "${ScanHoldTime}" (PE5PVB mode)`);
 					}
                 } else {
-                    logInfo(`Scanner set auto-scan "${StartAutoScan}" defaultSensitivityValue: "${defaultSensitivityValue}" mode "${defaultScannerMode}" Scanholdtime: "${defaultScanHoldTime}"`);
+                    logInfo(`Scanner set auto-scan "${StartAutoScan}" defaultSensitivityValue: "${defaultSensitivityValue} dBf" mode "${defaultScannerMode}" Scanholdtime: "${defaultScanHoldTime}"`);
 					if (StartAutoScan === 'on') {
-						if (SensitivityCalibrationFrequenz !== null || SensitivityCalibrationFrequenz !== '') {
+						if (SensitivityCalibrationFrequenz !== '') {
 							if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
 								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "Auto" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 							} else {
@@ -579,9 +596,9 @@ async function TextWebSocket(messageData) {
 							}
 						} else {				
 							if (ScannerMode === 'spectrum' || ScannerMode === 'difference') {
-								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity} dBf" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 							} else {
-								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
+								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity} dBf" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 							}
 						}
 						if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
@@ -805,9 +822,9 @@ async function DataPluginsWebSocket() {
               Sensitivity = message.value.Sensitivity;
               if (ScanPE5PVB) {
                 sendCommandToClient(`I${Sensitivity}`);
-                logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity}" [IP: ${message.source}]`);
+                logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${message.source}]`);
               } else {
-                logInfo(`Scanner set sensitivity "${Sensitivity}" [IP: ${message.source}]`);
+                logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${message.source}]`);
 				SendResponseMessage(message.source);
               }
             }
@@ -2208,20 +2225,12 @@ function writeCSVLogEntry() {
     const frequencyInHz = Math.round(numericFrequency * 1_000_000);
     const rdson = rds ? 1 : 0;   
     
-    SignalStrengthUnitLowerCase = SignalStrengthUnit.toLowerCase();
+    SignalStrengthUnitLowerCase = 'dbµv';
     
     let numericStrengthTop;
     let numericStrength;
-    if (SignalStrengthUnitLowerCase === 'dbµv') {
-        numericStrengthTop = parseFloat(strengthTop) - 10.875;
-        numericStrength = parseFloat(strength) - 10.875;
-    } else if (SignalStrengthUnitLowerCase === 'dbm') {
-        numericStrengthTop = parseFloat(strengthTop) - 108.75;
-        numericStrength = parseFloat(strength) - 108.75;
-    } else {
-        numericStrengthTop = parseFloat(strengthTop);
-        numericStrength = parseFloat(strength);
-    }
+    numericStrengthTop = parseFloat(strengthTop) - 10.875;
+    numericStrength = parseFloat(strength) - 10.875;
     
     const SNRMIN = numericStrength.toFixed(2);
     const SNRMAX = numericStrengthTop.toFixed(2);
@@ -2416,7 +2425,7 @@ function writeHTMLLogEntry(isFiltered) {
 	if (SignalStrengthUnitLowerCase === 'dbµv') {
 		numericStrength = parseFloat(strength) - 10.875;
 	} else if (SignalStrengthUnitLowerCase === 'dbm') {
-		numericStrength = parseFloat(strength) - 108.75;
+		numericStrength = parseFloat(strength) - 119.75;
 	} else {
 		numericStrength = parseFloat(strength);
 	}

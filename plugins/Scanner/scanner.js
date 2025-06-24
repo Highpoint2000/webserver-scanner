@@ -49,6 +49,7 @@
 
     // Create a status message object
     function createMessage(status, Scan = '', Search = '', Sensitivity = '', ScannerMode = '', ScanHoldTime = '') {
+
         return {
             type: 'Scanner',
             value: {
@@ -207,9 +208,23 @@ if (CHECK_FOR_UPDATES) checkUpdate(pluginSetupOnlyNotify, pluginName, pluginHome
 
     // Send values for sensitivity, scanner mode, and scan hold time
     async function SendValue(Sensitivity, ScannerMode, ScanHoldTime) {
+		
+	// Sensitivity conversion 
+	const ssu = (SignalStrengthUnit || '').toLowerCase();
+	let resultSensitivity;
+	if (ssu === 'dbµv' || ssu === 'dbμv') {
+		resultSensitivity = Math.round(parseFloat(Sensitivity) + 10.875);
+	} else if (ssu === 'dbm') {
+		resultSensitivity = Math.round(parseFloat(Sensitivity) + 119.75);
+	} else if (ssu === 'dbf') {
+		// No change for dBf!
+		resultSensitivity = Math.round(parseFloat(Sensitivity));
+	} else {
+		resultSensitivity = Math.round(parseFloat(Sensitivity));
+	}
 
         try {
-            const valueMessage = createMessage('command', '', '', Sensitivity, ScannerMode, ScanHoldTime);
+            const valueMessage = createMessage('command', '', '', resultSensitivity, ScannerMode, ScanHoldTime);
             if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
                 wsSendSocket.send(JSON.stringify(valueMessage));
                 console.log("Value message sent:", valueMessage);
@@ -248,6 +263,26 @@ if (CHECK_FOR_UPDATES) checkUpdate(pluginSetupOnlyNotify, pluginName, pluginHome
             }
         }
     }
+	
+	
+	
+// Sensitivity conversion should only happen in ONE place!
+function normalizeSensitivity(Sensitivity, SignalStrengthUnit) {
+    const ssu = (SignalStrengthUnit || '').toLowerCase();
+    let result;
+    if (ssu === 'dbµv' || ssu === 'dbμv') {
+        result = parseFloat(Sensitivity) - 10.875;
+    } else if (ssu === 'dbm') {
+        result = parseFloat(Sensitivity) - 119.75;
+    } else if (ssu === 'dbf') {
+        // No change for dBf!
+        result = parseFloat(Sensitivity);
+    } else {
+        result = parseFloat(Sensitivity);
+    }
+    return Math.round(result); // Always round to the nearest whole number
+}
+
 
 let lastToastTime = 0; // Variable to store the timestamp of the last toast
 
@@ -316,8 +351,8 @@ function handleWebSocketMessage(event) {
                         }
                     }
                 }
-
-                updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
+				let normalizedSensitivity = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+                updateDropdownValues(normalizedSensitivity, ScannerMode, ScanHoldTime);
             } else if (
                 status === 'broadcast' &&
                 InfoFMLIST !== '' &&
@@ -335,7 +370,8 @@ function handleWebSocketMessage(event) {
                 sendToastWithCooldown('error important', 'Scanner', `${InfoFMLIST}`, false, false);
                 sendInitialWebSocketMessage(); // Restore Spectrum Graph ctx after FMLIST autolog
             } else if (status === 'broadcast' || status === 'send') {
-                updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime);
+                let normalizedSensitivity = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+                updateDropdownValues(normalizedSensitivity, ScannerMode, ScanHoldTime);
             }
 
             // Handle Scan button state
@@ -808,7 +844,8 @@ function toggleScan(isLongPressAction) {
                 volumeSliderParent.style.display = 'block';
                 setCookie('scannerControlsStatus', 'off', 7); // Remember the status
             } else {
-                createScannerControls(Sensitivity, ScannerMode, ScanHoldTime);
+                let normalizedSensitivity = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+			    createScannerControls(normalizedSensitivity, ScannerMode, ScanHoldTime);
                 setCookie('scannerControlsStatus', 'on', 7); // Remember the status
             }
 
@@ -864,7 +901,8 @@ function toggleScan(isLongPressAction) {
         // Initialize scannerControls
         const scannerControlsStatus = getCookie('scannerControlsStatus');
         if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
-            createScannerControls(Sensitivity, ScannerMode, ScanHoldTime);
+			let normalizedSensitivity = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+			createScannerControls(normalizedSensitivity, ScannerMode, ScanHoldTime);
         } else {
             const scannerControls = document.getElementById('scanner-controls');
             if (scannerControls) {

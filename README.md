@@ -15,9 +15,10 @@ This plugin provides scanning functions for the FM-DX web server.
 ## v3.8d (compatible from webserver version 1.3.8!!!)
 
 - Fixed a bug that caused the scan to stop at the upper band limit when the SensitivityCalibrationFrequency was not used
-- Fixed incorrect display of signal strength unit in dropdown menu
+- Fixed incorrect display of signal strength unit in dropdown menu and console
+- dBµV is now fixed Unit for CSV File 
 
-For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
+For URDS uploads, the uploader version from 1.0g (Version with dBµV Flag) upwards must be used!
 
 ## Installation notes:
 
