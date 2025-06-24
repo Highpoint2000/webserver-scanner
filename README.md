@@ -12,14 +12,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 
 
-## v3.8c (compatible from webserver version 1.3.8!!!)
+## v3.8d (compatible from webserver version 1.3.8!!!)
 
-- Added UUID check - Token required for publishing logs to FMLIST
-- Default FMLIST_LogInterval set to 60 minutes
-- Fixed error in log interval conversion
-- Fixed FMLIST publishing without PI & PS
-- PI codes with 0000 are now logged
-- Column sorting in HTML template corrected
+- Fixed a bug that caused the scan to stop at the upper band limit when the SensitivityCalibrationFrequency was not used
+- Fixed incorrect display of signal strength unit in dropdown menu
 
 For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
@@ -80,6 +76,17 @@ The scanner plugin contains various blacklist options and a whitelist function. 
   <summary>History</summary>
  
 ## History
+
+### v3.8c (compatible from webserver version 1.3.8!!!)
+
+- Added UUID check - Token required for publishing logs to FMLIST
+- Default FMLIST_LogInterval set to 60 minutes
+- Fixed error in log interval conversion
+- Fixed FMLIST publishing without PI & PS
+- PI codes with 0000 are now logged
+- Column sorting in HTML template corrected
+
+For URDS uploads, the uploader version from 1.0g (Version witht dBµV Flag) upwards must be used!
 
 ### v3.8b (compatible from webserver version 1.3.8!!!)
 

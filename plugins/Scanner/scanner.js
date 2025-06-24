@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.8c)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.8d)      ///
 ///                                                         ///
-///  by Highpoint               last update: 20.06.25       ///
+///  by Highpoint               last update: 24.06.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -17,7 +17,7 @@
 	
 ///////////////////////////////////////////////////////////////
 
-	const pluginVersion = '3.8c';
+	const pluginVersion = '3.8d';
 	const pluginName = "Scanner";
 	const pluginHomepageUrl = "https://github.com/Highpoint2000/webserver-scanner/releases";
 	const pluginUpdateUrl = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -28,6 +28,7 @@
 	const EnableSpectrumScanBL = true; // This value is automatically updated via the config file
 	const EnableDifferenceScan = true; // This value is automatically updated via the config file
 	const EnableDifferenceScanBL = true; // This value is automatically updated via the config file
+	const SignalStrengthUnit = 'dBµV'; // This value is automatically updated via the config file
     const currentURL = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
     const WebserverPath = currentURL.pathname.replace(/setup/g, '');
@@ -39,7 +40,6 @@
 
     let wsSendSocket;
     let clientIp = '';
-    let signalValue = 'dBµV';
     let isTuneAuthenticated = false; // Initially set to false
     let scannerButtonsExecuted = false; // Tracks if ScannerButtons have been executed
     let Scan = 'off';
@@ -476,7 +476,7 @@ function sendToastWithCooldown(type, title, message, autoClose = true, closeOnCl
 				if (ScanPE5PVBstatus) {
 					sensitivityInput.value = `${Sensitivity}`;
 				} else {
-					sensitivityInput.value = `${Sensitivity} dBf`;
+					sensitivityInput.value = `${Sensitivity} ${SignalStrengthUnit}`;
 				}
                 sensitivityInput.setAttribute('data-value', Sensitivity);
             }
@@ -874,18 +874,6 @@ function toggleScan(isLongPressAction) {
 
     }
 
-    // Function to check and update the signal unit values
-    function checkSignalUnits() {
-        const signalElement = document.querySelector('span.signal-units.text-medium');
-        if (signalElement) {
-            signalValue = signalElement.textContent.trim();
-        } else {
-            console.warn('The signalValue element was not found.');
-        }
-    }
-
-    setInterval(checkSignalUnits, 1000);
-
     // Create the scanner controls interface
     function createScannerControls(Sensitivity, ScannerMode, ScanHoldTime) {
         const scannerControls = document.createElement('div');
@@ -982,7 +970,7 @@ function toggleScan(isLongPressAction) {
                 <li data-value="30" class="option">30</li>
             </ul>
         `;
-    } else if (signalValue === 'dBf') {        
+    } else if (SignalStrengthUnit === 'dBf') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBf" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -1008,7 +996,7 @@ function toggleScan(isLongPressAction) {
                     <li data-value="80" class="option">80 dBf</li>
                 </ul>
             `;
-        } else if (signalValue === 'dBµV') {        
+        } else if (SignalStrengthUnit === 'dBµV') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBµV" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -1035,7 +1023,7 @@ function toggleScan(isLongPressAction) {
                     <li data-value="80" class="option">90 dBµV</li>
                 </ul>
             `;
-        } else if (signalValue === 'dBm') {        
+        } else if (SignalStrengthUnit === 'dBm') {        
             sensitivityContainer.innerHTML = `
                 <input type="text" placeholder="${Sensitivity} dBm" title="Scanner Sensitivity" readonly>
                 <ul class="options open-top" style="position: absolute; display: none; bottom: 100%; margin-bottom: 5px;">
@@ -1119,7 +1107,7 @@ function toggleScan(isLongPressAction) {
                 if (commandPrefix === 'I') {
                     SendValue(value, ScannerMode, ScanHoldTime);
 					if (value >= SpectrumLimiterValueStatus && (ScannerModeStatus === 'spectrum' || ScannerModeStatus === 'spectrumBL' || ScannerModeStatus === 'difference' || ScannerModeStatus === 'differenceBL')) {
-						sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${SpectrumLimiterValueStatus} ${signalValue})!`, false, false);
+						sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${SpectrumLimiterValueStatus} ${SignalStrengthUnit})!`, false, false);
 					}
                 }
                 if (commandPrefix === 'M') {

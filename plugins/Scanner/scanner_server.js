@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8d)      ///
 ///                                                         ///
-///  by Highpoint               last update: 20.06.25       ///
+///  by Highpoint               last update: 24.06.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -225,7 +225,7 @@ if (scanIntervalTime > 1000) {
 }
 
 
-if ((SensitivityCalibrationFrequenz !== null || SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
+if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
   defaultSensitivityValue = 10;
 }
 
@@ -254,7 +254,6 @@ if (BEEP_CONTROL) {
 // Path to the target JavaScript file
 const ScannerClientFile = path.join(__dirname, 'scanner.js');
 
-// Function to start the process
 function updateSettings() {
   // Read the target file
   fs.readFile(ScannerClientFile, 'utf8', (err, targetData) => {
@@ -262,14 +261,15 @@ function updateSettings() {
       logError('Error reading the scanner.js file:', err);
       return;
     }
-	
-    // Check if the variables EnableBlacklist and EnableWhitelist already exist
-    let hasEnableBlacklist = /const EnableBlacklist = .+;/.test(targetData);
-    let hasEnableWhitelist = /const EnableWhitelist = .+;/.test(targetData);
-	let hasEnableSpectrumScan = /const EnableSpectrumScan = .+;/.test(targetData);
-	let hasEnableSpectrumScanBL = /const EnableSpectrumScanBL = .+;/.test(targetData);
-	let hasEnableDifferenceScan = /const EnableDifferenceScan = .+;/.test(targetData);
-	let hasEnableDifferenceScanBL = /const EnableDifferenceScanBL = .+;/.test(targetData);
+
+    // Check if the variables already exist
+    let hasEnableBlacklist      = /const EnableBlacklist = .+;/.test(targetData);
+    let hasEnableWhitelist      = /const EnableWhitelist = .+;/.test(targetData);
+    let hasEnableSpectrumScan   = /const EnableSpectrumScan = .+;/.test(targetData);
+    let hasEnableSpectrumScanBL = /const EnableSpectrumScanBL = .+;/.test(targetData);
+    let hasEnableDifferenceScan = /const EnableDifferenceScan = .+;/.test(targetData);
+    let hasEnableDifferenceScanBL = /const EnableDifferenceScanBL = .+;/.test(targetData);
+    let hasSignalStrengthUnit   = /const SignalStrengthUnit = .+;/.test(targetData);
 
     // Replace or add the definitions
     let updatedData = targetData;
@@ -277,43 +277,43 @@ function updateSettings() {
     if (hasEnableBlacklist) {
       updatedData = updatedData.replace(/const EnableBlacklist = .*;/, `const EnableBlacklist = ${EnableBlacklist};`);
     } else {
-      // If EnableBlacklist does not exist, add it at the beginning
       updatedData = `const EnableBlacklist = ${EnableBlacklist};\n` + updatedData;
     }
 
     if (hasEnableWhitelist) {
       updatedData = updatedData.replace(/const EnableWhitelist = .*;/, `const EnableWhitelist = ${EnableWhitelist};`);
     } else {
-      // If EnableWhitelist does not exist, add it at the beginning
       updatedData = `const EnableWhitelist = ${EnableWhitelist};\n` + updatedData;
     }
-	
-	if (hasEnableSpectrumScan) {
+
+    if (hasEnableSpectrumScan) {
       updatedData = updatedData.replace(/const EnableSpectrumScan = .*;/, `const EnableSpectrumScan = ${EnableSpectrumScan};`);
     } else {
-      // If hasEnableSpectrumScan does not exist, add it at the beginning
       updatedData = `const EnableSpectrumScan = ${EnableSpectrumScan};\n` + updatedData;
     }
-	
-	if (hasEnableSpectrumScanBL) {
+
+    if (hasEnableSpectrumScanBL) {
       updatedData = updatedData.replace(/const EnableSpectrumScanBL = .*;/, `const EnableSpectrumScanBL = ${EnableSpectrumScanBL};`);
     } else {
-      // If hasEnableSpectrumScanBL does not exist, add it at the beginning
       updatedData = `const EnableSpectrumScanBL = ${EnableSpectrumScanBL};\n` + updatedData;
     }
-	
-	if (hasEnableDifferenceScan) {
+
+    if (hasEnableDifferenceScan) {
       updatedData = updatedData.replace(/const EnableDifferenceScan = .*;/, `const EnableDifferenceScan = ${EnableDifferenceScan};`);
     } else {
-      // If hasEnableDifferenceScan does not exist, add it at the beginning
       updatedData = `const EnableDifferenceScan = ${EnableDifferenceScan};\n` + updatedData;
     }
-	
-	if (hasEnableDifferenceScanBL) {
+
+    if (hasEnableDifferenceScanBL) {
       updatedData = updatedData.replace(/const EnableDifferenceScanBL = .*;/, `const EnableDifferenceScanBL = ${EnableDifferenceScanBL};`);
     } else {
-      // If hasEnableDifferenceScanBL does not exist, add it at the beginning
       updatedData = `const EnableDifferenceScanBL = ${EnableDifferenceScanBL};\n` + updatedData;
+    }
+
+	if (hasSignalStrengthUnit) {
+	  updatedData = updatedData.replace(/const SignalStrengthUnit = .*;/, `const SignalStrengthUnit = '${SignalStrengthUnit}';`);
+	} else {
+      updatedData = `const SignalStrengthUnit = '${SignalStrengthUnit}';\n` + updatedData;
     }
 
     // Update/write the target file
@@ -329,6 +329,7 @@ function updateSettings() {
 
 // Start the process
 updateSettings();
+
 
 ////////////////////////////////////////////////////////////////
 
@@ -583,10 +584,20 @@ async function TextWebSocket(messageData) {
 								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 							}
 						}
-						setTimeout(() => {
-							Scan = 'on';
-							AutoScan();
-						}, 2000);
+						if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
+							currentFrequency = tuningLowerLimit;
+							sendDataToClient(currentFrequency);
+							setTimeout(() => {
+								startSpectrumAnalyse(); 
+								Scan = 'on';
+								AutoScan();
+							}, 2000); 
+						} else {
+							setTimeout(() => {
+								Scan = 'on';
+								AutoScan();
+							}, 2000);
+						}	
 					}
                 }
 
@@ -797,6 +808,7 @@ async function DataPluginsWebSocket() {
                 logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity}" [IP: ${message.source}]`);
               } else {
                 logInfo(`Scanner set sensitivity "${Sensitivity}" [IP: ${message.source}]`);
+				SendResponseMessage(message.source);
               }
             }
 
@@ -1506,10 +1518,14 @@ async function startScan(direction) {
 							}, 1000);
 						}
 					} else { 
-				      currentFrequency = tuningLowerLimit;
+				      if ( ScannerMode === 'normal' || ScannerMode === 'blacklist' || ScannerMode === 'whitelist' ) {
+						  currentFrequency = tuningLowerLimit;
+					  }
 					}
 				} else {
-				  currentFrequency = tuningLowerLimit;
+				    if (Scan !== 'on') {
+				       currentFrequency = tuningLowerLimit;
+					}
 				}
             }
         }
@@ -2340,34 +2356,6 @@ function getLogFilePathHTML(date, time, isFiltered) {
     }
 
     return filePath;
-}
-
-const CORS_PROXY_URL = 'https://cors-proxy.de:13128/';
-const FM_API_TOKEN   = '924924';
-
-/**
- * Öffnet den Stream für die gegebene Station-ID
- */
-function openStream(stationId) {
-  const endpoint = `https://api.fmlist.org/152/fmdxGetStreamById.php?id=${stationId}&token=${FM_API_TOKEN}`;
-  fetch(CORS_PROXY_URL + endpoint)
-    .then(resp => {
-      if (!resp.ok) throw new Error(`API-Error ${resp.status}`);
-      return resp.json();
-    })
-    .then(streams => {
-      if (!Array.isArray(streams) || streams.length === 0) {
-        console.warn('Keine Streams gefunden für ID', stationId);
-        return;
-      }
-      // Stream mit höchster Bitrate wählen
-      const best = streams.reduce((prev, curr) =>
-        parseInt(curr.bitrate, 10) > parseInt(prev.bitrate, 10) ? curr : prev
-      );
-      const win = window.open(best.linkname, 'streamWindow', 'width=800,height=160');
-      if (win) win.focus();
-    })
-    .catch(e => console.error('Fehler beim Laden des Streams:', e));
 }
 
 function writeHTMLLogEntry(isFiltered) {
