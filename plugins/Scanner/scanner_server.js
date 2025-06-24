@@ -166,8 +166,8 @@ let tuningUpperLimit = configPlugin.tuningUpperLimit;
 const EnableSpectrumScan = configPlugin.EnableSpectrumScan;
 const EnableDifferenceScan = configPlugin.EnableDifferenceScan;
 const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
-const SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
-const SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
+  let SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
+  let SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
 const HTMLlogOnlyID = configPlugin.HTMLlogOnlyID;
 const HTMLlogRAW = configPlugin.HTMLlogRAW;
@@ -229,9 +229,9 @@ if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
   defaultSensitivityValue = 10;
 }
 
+const ssu = (SignalStrengthUnit || '').toLowerCase();
 // defaultSensitivity conversion 
 if (SensitivityCalibrationFrequenz === '') {
-	const ssu = (SignalStrengthUnit || '').toLowerCase();
 	let resultdefaultSensitivityValue;
 	if (ssu === 'dbµv' || ssu === 'dbμv') {
 		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 10.875;
@@ -245,6 +245,32 @@ if (SensitivityCalibrationFrequenz === '') {
 	}
 	defaultSensitivityValue = Math.round(resultdefaultSensitivityValue);		
 }
+
+	let resultSpectrumLimiterValue;
+	if (ssu === 'dbµv' || ssu === 'dbμv') {
+		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue) + 10.875;
+	} else if (ssu === 'dbm') {
+		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue) + 119.75;
+	} else if (ssu === 'dbf') {
+		// No change for dBf!
+		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue);
+	} else {
+		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue);
+	}
+	SpectrumLimiterValue = Math.round(resultSpectrumLimiterValue);
+	
+	let resultSpectrumPlusMinusValue;
+	if (ssu === 'dbµv' || ssu === 'dbμv') {
+		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue) + 10.875;
+	} else if (ssu === 'dbm') {
+		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue) + 119.75;
+	} else if (ssu === 'dbf') {
+		// No change for dBf!
+		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue);
+	} else {
+		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue);
+	}
+	SpectrumPlusMinusValue = Math.round(resultSpectrumPlusMinusValue);
 
 SpectrumPlusMinusValue
 function checkAndInstallNewModules() {

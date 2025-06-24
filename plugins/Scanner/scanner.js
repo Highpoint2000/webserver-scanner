@@ -1043,7 +1043,6 @@ function toggleScan(isLongPressAction) {
 					<li data-value="3" class="option">3 dBµV</li>
 					<li data-value="4" class="option">4 dBµV</li>
                     <li data-value="5" class="option">5 dBµV</li>
-                    <li data-value="5" class="option">5 dBµV</li>
                     <li data-value="10" class="option">10 dBµV</li>
                     <li data-value="15" class="option">15 dBµV</li>
                     <li data-value="20" class="option">20 dBµV</li>
