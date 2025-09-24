@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.8d)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.8e)      ///
 ///                                                         ///
-///  by Highpoint               last update: 24.06.25       ///
+///  by Highpoint               last update: 24.09.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -35,7 +35,6 @@
     const WebserverPORT = currentURL.port || (currentURL.protocol === 'https:' ? '443' : '80');
     const protocol = currentURL.protocol === 'https:' ? 'wss:' : 'ws:';
     const WEBSOCKET_URL = `${protocol}//${WebserverURL}:${WebserverPORT}${WebserverPath}data_plugins`;
-    const ipApiUrl = 'https://api.ipify.org?format=json';
     const target = '127.0.0.1';
 
     let wsSendSocket;
@@ -153,24 +152,32 @@ function checkUpdate(setupOnly, pluginName, urlUpdateLink, urlFetchLink) {
 
 if (CHECK_FOR_UPDATES) checkUpdate(pluginSetupOnlyNotify, pluginName, pluginHomepageUrl, pluginUpdateUrl);
 
-    // Send an initial message when the WebSocket is connected
-    async function sendInitialWebSocketMessage() {
-        try {
-            const response = await fetch(ipApiUrl);
-            const data = await response.json();
-            clientIp = data.ip; // Assign client IP
-            const initialMessage = createMessage('request');
-            if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
-                wsSendSocket.send(JSON.stringify(initialMessage));
-                console.log("Scanner sent initial message sent:", initialMessage);
-            } else {
-                console.error("Scanner Error! WebSocket is not open. Cannot send initial message.");
-				sendToast('error important', 'Scanner', 'WebSocket is not open. Cannot send initial message.', false, false);
-            }
-        } catch (error) {
-            console.error(error);
+// Send an initial message when the WebSocket is connected
+async function sendInitialWebSocketMessage() {
+    try {
+        // Hole die öffentliche IP-Adresse von icanhazip.com
+        const response = await fetch('https://icanhazip.com');
+        const clientIp = await response.text();  // Extrahiert die IP-Adresse als Text
+
+        // Gib die öffentliche IP-Adresse in der Konsole aus
+        console.log("Öffentliche IP-Adresse:", clientIp);
+
+        const initialMessage = createMessage('request');  // Erstelle die Nachricht für den WebSocket
+
+        // Überprüfe, ob der WebSocket offen ist, bevor die Nachricht gesendet wird
+        if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
+            wsSendSocket.send(JSON.stringify(initialMessage)); // Sende die Nachricht
+            console.log("Scanner sent initial message:", initialMessage);
+        } else {
+            console.error("Scanner Error! WebSocket is not open. Cannot send initial message.");
+            sendToast('error important', 'Scanner', 'WebSocket is not open. Cannot send initial message.', false, false);
         }
+    } catch (error) {
+        console.error("Fehler beim Abrufen der öffentlichen IP-Adresse:", error);
+        sendToast('error important', 'Scanner', 'Fehler beim Abrufen der öffentlichen IP-Adresse.', false, false);
     }
+}
+
 
     // Send a search request
     async function sendSearch(SearchFunction) {
