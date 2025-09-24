@@ -17,7 +17,7 @@
 	
 ///////////////////////////////////////////////////////////////
 
-	const pluginVersion = '3.8d';
+	const pluginVersion = '3.8e';
 	const pluginName = "Scanner";
 	const pluginHomepageUrl = "https://github.com/Highpoint2000/webserver-scanner/releases";
 	const pluginUpdateUrl = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
