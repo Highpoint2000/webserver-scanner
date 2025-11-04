@@ -11,10 +11,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
+## v3.8f (compatible from webserver version 1.3.8!!!)
 
-## v3.8e (compatible from webserver version 1.3.8!!!)
-
-- Scanner interface also works with strict tracking protection at Edge
+- Extended URDS CSV protocol implemented (storage of station data for faster evaluation e.g. in the map viewer)
 
 For URDS uploads, the uploader version from 1.0g (Version with dBµV Flag) upwards must be used!
 
@@ -75,6 +74,12 @@ The scanner plugin contains various blacklist options and a whitelist function. 
   <summary>History</summary>
  
 ## History
+
+### v3.8e (compatible from webserver version 1.3.8!!!)
+
+- Scanner interface also works with strict tracking protection at Edge
+
+For URDS uploads, the uploader version from 1.0g (Version with dBµV Flag) upwards must be used!
 
 ### v3.8d (compatible from webserver version 1.3.8!!!)
 

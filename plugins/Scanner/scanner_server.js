@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8e)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8f)      ///
 ///                                                         ///
-///  by Highpoint               last update: 24.09.25       ///
+///  by Highpoint               last update: 04.11.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -2183,46 +2183,33 @@ function getLogFilePathCSV(date, time, filename) {
 
 let lastFrequencyInHz = null;
 
-function writeCSVLogEntry() {
+async function writeCSVLogEntry() {
     if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'on' && (ScannerMode === 'blacklist' || ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }
-	
-	// --- Blacklist check ---
-	if (Log_Blacklist) {
-		let Logblacklist = [];
-		try {
-			const raw = fs.readFileSync(path.join(__dirname, 'blacklist_log.txt'), 'utf8');
-			Logblacklist = raw
-				.split(/\r?\n/)               // split into lines
-				.map(line => line.trim())     // trim whitespace
-				.filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
-		} catch (err) {
-			logError('Scanner could not load blacklist_log.txt:', err);
-		}
+    
+    // --- Blacklist check ---
+    if (Log_Blacklist) {
+        let Logblacklist = [];
+        try {
+            const raw = fs.readFileSync(path.join(__dirname, 'blacklist_log.txt'), 'utf8');
+            Logblacklist = raw
+                .split(/\r?\n/)               // split into lines
+                .map(line => line.trim())     // trim whitespace
+                .filter(line => line && !line.startsWith('#')); // ignore empty lines and comments
+        } catch (err) {
+            logError && logError('Scanner could not load blacklist_log.txt:', err);
+        }
 
-		// Build keys: "freq,picode", "freq" only, and "picode" only
-		const freqKey  = parseFloat(freq).toFixed(3);
-		const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
-		const comboKey = `${freqKey};${piKey}`;
+        const freqKey  = parseFloat(freq).toFixed(3);
+        const piKey    = typeof picode !== 'undefined' ? picode.toString() : '';
+        const comboKey = `${freqKey};${piKey}`;
 
-		if (Logblacklist.includes(comboKey)) {  // exact freq+PI match
-			//logInfo(`${comboKey} was found in blacklist_log.txt`);
-			return;
-		}
-		
-		if (Logblacklist.includes(freqKey)) {  // frequency-only match
-			//logInfo(`${freqKey} was found in blacklist_log.txt`);
-			return;
-		}
-		
-		if (Logblacklist.includes(piKey)) {  // PI-only match
-			//logInfo(`${piKey} was found in blacklist_log.txt`);
-			return;
-		}	
-		
-	}
-	// --- End blacklist check ---	
+        if (Logblacklist.includes(comboKey) || Logblacklist.includes(freqKey) || Logblacklist.includes(piKey)) {
+            return;
+        }
+    }
+    // --- End blacklist check ---    
     
     const now = new Date();
     let date = now.toISOString().split('T')[0];  // YYYY-MM-DD
@@ -2233,13 +2220,12 @@ function writeCSVLogEntry() {
     date = utcDate;
 
     if (!fs.existsSync(logFilePathCSV)) {
-        // Falls Datei nicht existiert, neuen Pfad holen
         logFilePathCSV = getLogFilePathCSV();
     }
     
     // Datenaufbereitung für FMLIST
-    const [seconds, nanoseconds] = process.hrtime(); // Gibt [seconds, nanoseconds] zurück
-    const nanoString = nanoseconds.toString().padStart(9, '0'); // Auf 9 Stellen auffüllen
+    const [seconds, nanoseconds] = process.hrtime();
+    const nanoString = nanoseconds.toString().padStart(9, '0');
     const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`;
     
     const dateTimeString = `${date}T${time}`;
@@ -2253,10 +2239,8 @@ function writeCSVLogEntry() {
     
     SignalStrengthUnitLowerCase = 'dbµv';
     
-    let numericStrengthTop;
-    let numericStrength;
-    numericStrengthTop = parseFloat(strengthTop) - 10.875;
-    numericStrength = parseFloat(strength) - 10.875;
+    const numericStrengthTop = parseFloat(strengthTop) - 10.875;
+    const numericStrength = parseFloat(strength) - 10.875;
     
     const SNRMIN = numericStrength.toFixed(2);
     const SNRMAX = numericStrengthTop.toFixed(2);
@@ -2285,44 +2269,118 @@ function writeCSVLogEntry() {
     const AF = `"${af}"`;
     const RT = `"${rt}"`;
 
+    // --- TX information (neu anhängen) ---
+    const safe = v => (typeof v === 'undefined' || v === null) ? '' : String(v).trim().replace(/"/g, '');
+    const TX_STATION = `"${safe(station)}"`;
+    const TX_CITY    = `"${safe(city)}"`;
+    const TX_ITU     = `"${safe(itu)}"`;
+    const TX_ERP     = `${safe(erp)}`;
+    const TX_POL     = `${safe(pol)}`;
+    const TX_DIST    = `${safe(distance)}`;
+    const TX_AZ      = `${safe(azimuth)}`;
+
+    // By default keep TX lat/lon empty (per your request)
+    let TX_LAT = '';
+    let TX_LON = '';
+
+    // Only fetch coordinates if numeric stationid present and not "0"
+    if (typeof stationid !== 'undefined' && stationid !== null) {
+        const stationIdStr = String(stationid).trim();
+        if (stationIdStr !== '' && stationIdStr !== '0') {
+            // Helper: fetch API using native https and return parsed JSON (with timeout)
+            const https = require('https');
+            function fetchJsonUrl(url, timeoutMs = 5000) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        const req = https.get(url, (res) => {
+                            let data = '';
+                            res.on('data', (chunk) => data += chunk);
+                            res.on('end', () => {
+                                if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                                    try {
+                                        const json = JSON.parse(data);
+                                        resolve(json);
+                                    } catch (e) {
+                                        reject(new Error('Invalid JSON from maps.fmdx.org: ' + e.message));
+                                    }
+                                } else {
+                                    reject(new Error(`maps.fmdx.org returned status ${res.statusCode}`));
+                                }
+                            });
+                        });
+                        req.on('error', (err) => reject(err));
+                        req.setTimeout(timeoutMs, () => {
+                            req.destroy(new Error('timeout'));
+                        });
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+
+            const directUrl = `https://maps.fmdx.org/api/?id=${encodeURIComponent(stationIdStr)}`;
+            try {
+                const json = await fetchJsonUrl(directUrl, 5000);
+                if (json && json.locations) {
+                    const locKeys = Object.keys(json.locations);
+                    if (locKeys.length > 0) {
+                        const firstLoc = json.locations[locKeys[0]];
+                        if (firstLoc && typeof firstLoc.lat !== 'undefined' && typeof firstLoc.lon !== 'undefined') {
+                            // set TX coordinates only if valid numbers present
+                            const latVal = firstLoc.lat;
+                            const lonVal = firstLoc.lon;
+                            if (latVal !== null && latVal !== '' && lonVal !== null && lonVal !== '') {
+                                TX_LAT = String(latVal);
+                                TX_LON = String(lonVal);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                // on error keep TX_LAT/TX_LON empty
+                // optionally log via logError if desired:
+                logError && logError('Could not fetch TX coordinates from maps.fmdx.org:', err.message || err);
+            }
+        }
+    }
+
+    const TX_LAT_CSV = `${(TX_LAT || '').replace(/"/g, '')}`;
+    const TX_LON_CSV = `${(TX_LON || '').replace(/"/g, '')}`;
+    // --- Ende TX information ---
+
     // Erzeuge die Log-Zeile als String
-    const newLine = `${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT}\n`;
+    // "30," vor die erste Spalte setzen
+    let newLine = `30,${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT},,,,`;
+
+    // Anhängen der TX Felder am Ende (in der gleichen CSV-Reihenfolge wie prefilledData)
+    newLine += `${TX_STATION},${TX_CITY},${TX_ITU},${TX_ERP},${TX_POL},${TX_DIST},${TX_AZ},${TX_LAT_CSV},${TX_LON_CSV}\n`;
 
     try {
-		if (CSVcreate) {
-			if (!CSVcompletePS) {
-				// Wenn CSVcompletePS false ist, dann:
-				if (lastFrequencyInHz !== null && lastFrequencyInHz === frequencyInHz) {
-					// Falls der Frequenzwert unverändert ist,
-					// Aktualisiere die letzte Zeile der CSV-Datei.
-					const fileContent = fs.readFileSync(logFilePathCSV, 'utf8');
-					const lines = fileContent.split('\n');
-					// Entferne ggf. ein leeres Element am Ende
-					if (lines[lines.length - 1] === '') {
-						lines.pop();
-					}
-					// Ersetze die letzte Zeile durch newLine (ohne zusätzliches \n, da wir es später hinzufügen)
-
-					lines[lines.length - 1] = newLine.trim();						
-					fs.writeFileSync(logFilePathCSV, lines.join('\n') + '\n');
-				
-				} else {
-					// Frequenz hat sich geändert – schreibe eine neue Zeile an
-					fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
-					lastFrequencyInHz = frequencyInHz;
-				}
-			} else {
-				// Falls CSVcompletePS true ist, verhalte dich wie bisher: immer neue Zeile anhängen
-				fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
-			}
-		}
+        if (CSVcreate) {
+            if (!CSVcompletePS) {
+                if (lastFrequencyInHz !== null && lastFrequencyInHz === frequencyInHz) {
+                    const fileContent = fs.readFileSync(logFilePathCSV, 'utf8');
+                    const lines = fileContent.split('\n');
+                    if (lines[lines.length - 1] === '') {
+                        lines.pop();
+                    }
+                    lines[lines.length - 1] = newLine.trim();                        
+                    fs.writeFileSync(logFilePathCSV, lines.join('\n') + '\n');
+                } else {
+                    fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
+                    lastFrequencyInHz = frequencyInHz;
+                }
+            } else {
+                fs.appendFileSync(logFilePathCSV, newLine, { flag: 'a' });
+            }
+        }
         
         if (BEEP_CONTROL && Scan === 'on') {
             fs.createReadStream('./plugins/Scanner/sounds/beep_short.wav')
               .pipe(new Speaker());
         }
     } catch (error) {
-        logError("Failed to write log entry:", error.message);
+        logError && logError("Failed to write log entry:", error.message || error);
     }
 }
 
