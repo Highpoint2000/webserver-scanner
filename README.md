@@ -77,10 +77,8 @@ If you have any questions, would like to report problems, or have suggestions fo
 <a href="https://www.buymeacoffee.com/Highpoint" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 <details>
-  <summary>History</summary>
+<summary>History</summary>
  
-## History
-
 ### v3.8e (compatible from webserver version 1.3.8!!!)
 
 - Scanner interface also works with strict tracking protection at Edge
