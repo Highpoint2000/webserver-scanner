@@ -70,6 +70,12 @@ The scanner plugin contains various blacklist options and a whitelist function. 
 - If the server is locked, the scanner will no longer work
 - With newer node.js libraries there may be problems installing the speaker module. If acoustic signaling is desired, the node.js version must be downgraded!
 
+## Contact
+
+If you have any questions, would like to report problems, or have suggestions for improvement, please feel free to contact me! You can reach me by email at highpoint2000@googlemail.com. I look forward to hearing from you!
+
+<a href="https://www.buymeacoffee.com/Highpoint" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
 <details>
   <summary>History</summary>
  
