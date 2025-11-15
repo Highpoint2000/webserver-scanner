@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.8f)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9)       ///
 ///                                                         ///
-///  by Highpoint               last update: 04.11.25       ///
+///  by Highpoint               last update: 15.11.2025     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -16,6 +16,7 @@
 const https = require('https');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto'); // Import crypto module
 const { logInfo, logError, logWarn } = require('./../../server/console');
 const apiData = require('./../../server/datahandler');
 
@@ -70,7 +71,7 @@ const defaultConfig = {
 	FMLIST_ShortServerName: '',		     	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
 	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
-    BEEP_CONTROL: false,                 // Acoustic control function for scanning operation (true or false)
+    BEEP_CONTROL: false,                 	// Acoustic control function for scanning operation (true or false)
 };
 
 // Function to merge default config with existing config and remove undefined values
@@ -109,40 +110,48 @@ function migrateOldConfig(oldFilePath, newFilePath) {
 function loadConfig(filePath) {
     let existingConfig = {};
 
-    // Ensure the directory exists
+    // 1) Ensure the target directory exists
     const dirPath = path.dirname(filePath);
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
         logInfo(`Directory created: ${dirPath}`);
     }
 
-    // Try to migrate the old config if it exists
+    // 2) Migrate old config if it exists, otherwise read the current one
     const migratedConfig = migrateOldConfig(oldConfigFilePath, filePath);
     if (migratedConfig) {
         existingConfig = migratedConfig;
     } else {
-        // Check if the new configuration file exists
         if (fs.existsSync(filePath)) {
-            // Read the existing configuration file
-            existingConfig = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            try {
+                existingConfig = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            } catch (e) {
+                logError(`Failed to parse ${filePath}: ${e.message}`);
+                existingConfig = {};
+            }
         } else {
             logInfo('Scanner configuration not found. Creating scanner.json.');
         }
     }
 
-    // Merge the default config with the existing one, adding missing fields and removing undefined
+    // 3) Merge defaults with existing config
     const finalConfig = mergeConfig(defaultConfig, existingConfig);
 
-    // Write the updated configuration back to the file (if changes were made)
-    fs.writeFileSync(filePath, JSON.stringify(finalConfig, null, 2), 'utf-8');
+    // 4) Write the updated config back
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(finalConfig, null, 2), 'utf-8');
+    } catch (e) {
+        logError(`Failed to write ${filePath}: ${e.message}`);
+    }
 
     return finalConfig;
 }
 
+
 // Load or create the configuration file
 const configPlugin = loadConfig(newConfigFilePath);
 
-// Zugriff auf die Variablen wie bisher
+// Access variables as before
 const Scanmode = configPlugin.Scanmode;
 const Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
 const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
@@ -379,6 +388,8 @@ updateSettings();
 const WebSocket = require('ws');
 const config = require('./../../config.json');
 
+const adminPass = config.password.adminPass; // Use admin password from main config
+
 const ServerName = config.identification.tunerName; 
 const ServerDescription = config.identification.tunerDesc; 
 const DefaultFreq = config.defaultFreq;
@@ -454,6 +465,11 @@ writeStatusCSVps = false;
 let writeStatusHTMLLog = true;
 let writeStatusLogFMLIST = true;
 let logSnapshot;
+
+// ---- START: Session-based Auth State ----
+const authorizedClients = new WeakSet(); // Store authorized WebSocket clients
+const activeChallenges = new Map();     // Store challenges per client
+// ---- END: Session-based Auth State ----
 
 let tuningLimit = config.webserver.tuningLimit;
 
@@ -723,6 +739,18 @@ async function DataPluginsWebSocket() {
     try {
       DataPluginsSocket = new WebSocket(externalWsUrl + '/data_plugins');
 
+      // Add a reference to the WebSocket object for auth state tracking
+      DataPluginsSocket.on('message', (data) => {
+        handleDataPluginsMessage(data, DataPluginsSocket);
+      });
+      
+      DataPluginsSocket.on('close', () => {
+        logInfo("Scanner WebSocket closed.");
+        authorizedClients.delete(DataPluginsSocket); // Clean up auth state
+        activeChallenges.delete(DataPluginsSocket); // Clean up challenges
+        setTimeout(DataPluginsWebSocket, 1000); // Reconnect
+      });
+
       DataPluginsSocket.onopen = () => {
         logInfo(`Scanner connected to ${externalWsUrl}/data_plugins`);
       };
@@ -731,41 +759,91 @@ async function DataPluginsWebSocket() {
         logError("WebSocket error:", error);
       };
 
-      DataPluginsSocket.onclose = () => {
-        logInfo("Scanner WebSocket closed.");
-        // Attempt reconnection after 1 second
-        setTimeout(DataPluginsWebSocket, 1000);
-      };
+    } catch (error) {
+      logError("Failed to set up WebSocket:", error);
+      setTimeout(DataPluginsWebSocket, 1000);
+    }
+  }
+}
 
-      DataPluginsSocket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          const currentTime = Date.now();
+async function handleDataPluginsMessage(eventData, ws) {
+    try {
+        const message = JSON.parse(eventData);
 
-          // Debounce: ignore messages that arrive within 50ms of the last one
-          if (currentTime - lastMessageTimestamp < 50) {
+        if (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS') {
             return;
-          }
-          lastMessageTimestamp = currentTime;
+        }
+        
+        const clientSource = message.source;
 
-          //
-          // 1) Handle a “status request” from another Scanner client
-          //
-          if (message.type === 'Scanner' && message.source !== source) {
-            if (message.value.status === 'request') {
-              // Immediately send a “response” back to the requester
-              SendResponseMessage(message.source);
+        // --- SESSION AUTHENTICATION & SEARCH COMMANDS (UNRESTRICTED) ---
+        if (message.type === 'Scanner') {
+            // Handle unrestricted Search commands immediately
+            if (message.value.status === 'command' && message.value.Search) {
+                if (message.value.Search === 'down') {
+                    if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
+                }
+                if (message.value.Search === 'up') {
+                    if (SearchPE5PVB) { sendCommandToClient('C2'); } else { startSearch('up'); }
+                }
+                return; // Search commands are handled, exit
             }
-          }
 
-          //
-          // 2) Handle incoming sigArray data for spectrum/difference scans
-          //
-          if (message.type === 'sigArray' && message.isScanning) {
-            sigArray = message.value; // Save the raw signal array
+            // Handle NEW Authentication Flow (direct password check)
+            if (message.value.status === 'auth_request') {
+                if (adminPass) {
+                    // Password is configured on server, check the one from client
+                    if (message.value.password === adminPass) {
+                        logInfo(`Scanner client authentication successful for ${clientSource}.`);
+                        authorizedClients.add(ws); // Authorize this client session
+                        
+                        const authSuccessMsg = {
+                            type: 'Scanner', value: { status: 'auth_success' }, source: source, target: clientSource
+                        };
+                        ws.send(JSON.stringify(authSuccessMsg));
+                        SendResponseMessage(clientSource); // Also send current scanner state
+                    } else {
+                        logWarn(`Scanner client authentication failed for ${clientSource}. Invalid password.`);
+                        const authFailedMsg = {
+                            type: 'Scanner', value: { status: 'auth_failed' }, source: source, target: clientSource
+                        };
+                        ws.send(JSON.stringify(authFailedMsg));
+                    }
+                } else {
+                    // No admin password configured on server, grant access immediately.
+                    logInfo(`Scanner client authorized for ${clientSource} (no admin password configured).`);
+                    authorizedClients.add(ws);
+                    const authSuccessMsg = {
+                        type: 'Scanner', value: { status: 'auth_success' }, source: source, target: clientSource
+                    };
+                    ws.send(JSON.stringify(authSuccessMsg));
+                    SendResponseMessage(clientSource);
+                }
+                return;
+            }
 
-            // Find “primary” frequencies: those whose signal > SpectrumLimiterValue
-            // and whose second decimal place is zero (e.g., 98.00, 100.00, etc.)
+             // Handle status requests from already authorized clients, or if no password is set
+            if (message.value.status === 'request') {
+                if (!adminPass || authorizedClients.has(ws)) {
+                    SendResponseMessage(clientSource);
+                }
+                return;
+            }
+        }
+        
+        // For all subsequent restricted commands, check if the client is authorized
+        if (adminPass && !authorizedClients.has(ws)) {
+            if (message.value && message.value.status === 'command') {
+                logWarn(`Ignoring restricted command from unauthorized client ${clientSource}.`);
+            }
+            return;
+        }
+        // --- END OF AUTHENTICATION / UNRESTRICTED LOGIC ---
+
+        // Handle other messages from authorized clients
+        if (message.type === 'sigArray' && message.isScanning) {
+            sigArray = message.value; 
+
             const primaryFrequencies = sigArray.filter(entry => {
               const hasSecondDecimalZero = Math.round(entry.freq * 100) % 10 === 0;
               return entry.sig > SpectrumLimiterValue && hasSecondDecimalZero;
@@ -773,8 +851,6 @@ async function DataPluginsWebSocket() {
 
             let extendedFrequencies = [];
 
-            // For each primary frequency, if its signal ≥ SpectrumPlusMinusValue,
-            // include all frequencies within ±0.1 MHz of that primary
             primaryFrequencies.forEach(primary => {
               const freqNum = parseFloat(primary.freq);
               if (isNaN(freqNum)) return;
@@ -791,38 +867,23 @@ async function DataPluginsWebSocket() {
               }
             });
 
-            // Remove duplicate entries in extendedFrequencies
             extendedFrequencies = Array.from(
               new Map(extendedFrequencies.map(item => [item.freq, item])).values()
             );
 
-            // sigArraySpectrum = all entries not in primaryFrequencies or extendedFrequencies
             sigArraySpectrum = sigArray.filter(entry => {
               const isInExtended = extendedFrequencies.some(ext => ext.freq === entry.freq);
               const isPrimary = primaryFrequencies.some(pr => pr.freq === entry.freq);
               return !isInExtended && !isPrimary;
             });
 
-            // sigArrayDifference starts as a copy of sigArraySpectrum
             sigArrayDifference = sigArraySpectrum;
 
-            // Build freqMap2 of previous sigArraySave for the current antenna index
-            if (currentAntennaIndex === 0) {
-              freqMap2 = new Map(sigArraySave0.map(item => [parseFloat(item.freq), parseFloat(item.sig)]));
-            }
-            if (currentAntennaIndex === 1) {
-              freqMap2 = new Map(sigArraySave1.map(item => [parseFloat(item.freq), parseFloat(item.sig)]));
-            }
-            if (currentAntennaIndex === 2) {
-              freqMap2 = new Map(sigArraySave2.map(item => [parseFloat(item.freq), parseFloat(item.sig)]));
-            }
-            if (currentAntennaIndex === 3) {
-              freqMap2 = new Map(sigArraySave3.map(item => [parseFloat(item.freq), parseFloat(item.sig)]));
-            }
+            if (currentAntennaIndex === 0) { freqMap2 = new Map(sigArraySave0.map(item => [parseFloat(item.freq), parseFloat(item.sig)])); }
+            if (currentAntennaIndex === 1) { freqMap2 = new Map(sigArraySave1.map(item => [parseFloat(item.freq), parseFloat(item.sig)])); }
+            if (currentAntennaIndex === 2) { freqMap2 = new Map(sigArraySave2.map(item => [parseFloat(item.freq), parseFloat(item.sig)])); }
+            if (currentAntennaIndex === 3) { freqMap2 = new Map(sigArraySave3.map(item => [parseFloat(item.freq), parseFloat(item.sig)])); }
 
-            // In sigArrayDifference, keep only entries that:
-            //  • have sig ≥ Sensitivity,
-            //  • and either did not exist in freqMap2 before, or their sig changed by > SpectrumChangeValue
             sigArrayDifference = sigArrayDifference.filter(item => {
               const freqNum = parseFloat(item.freq);
               const sigNum = parseFloat(item.sig);
@@ -832,61 +893,53 @@ async function DataPluginsWebSocket() {
               return Math.abs(sigNum - prevSig) > SpectrumChangeValue;
             });
 
-            // Finally, update sigArraySave for the current antenna
             if (currentAntennaIndex === 0) sigArraySave0 = Array.from(sigArray);
             if (currentAntennaIndex === 1) sigArraySave1 = Array.from(sigArray);
             if (currentAntennaIndex === 2) sigArraySave2 = Array.from(sigArray);
             if (currentAntennaIndex === 3) sigArraySave3 = Array.from(sigArray);
-          }
+        }
 
-          //
-          // 3) Handle “command” messages: change Sensitivity, ScannerMode, ScanHoldTime, Search, or Scan on/off
-          //
-          if (message.type === 'Scanner' && message.value.status === 'command') {
-            // Change Sensitivity if provided
+        if (message.type === 'Scanner' && message.value.status === 'command') {
+            // These commands require authorization
             if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
               Sensitivity = message.value.Sensitivity;
               if (ScanPE5PVB) {
                 sendCommandToClient(`I${Sensitivity}`);
-                logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${message.source}]`);
+                logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
               } else {
-                logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${message.source}]`);
-				SendResponseMessage(message.source);
+                logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
+                SendResponseMessage(clientSource);
               }
             }
 
-            // Set ScannerMode = “normal”
             if (message.value.ScannerMode === 'normal') {
               ScannerMode = 'normal';
-              logInfo(`Scanner set mode "normal" [IP: ${message.source}]`);
-              SendResponseMessage(message.source);
+              logInfo(`Scanner set mode "normal" [IP: ${clientSource}]`);
+              SendResponseMessage(clientSource);
             }
 
-            // Set ScannerMode = “blacklist” (only if Blacklist is enabled)
             if (message.value.ScannerMode === 'blacklist' && EnableBlacklist) {
               if (blacklist.length > 0) {
                 ScannerMode = 'blacklist';
-                logInfo(`Scanner set mode "blacklist" [IP: ${message.source}]`);
+                logInfo(`Scanner set mode "blacklist" [IP: ${clientSource}]`);
               } else {
-                logInfo(`Scanner mode "blacklist" not available! [IP: ${message.source}]`);
+                logInfo(`Scanner mode "blacklist" not available! [IP: ${clientSource}]`);
                 ScannerMode = 'normal';
               }
-              SendResponseMessage(message.source);
+              SendResponseMessage(clientSource);
             }
 
-            // Set ScannerMode = “whitelist” (only if Whitelist is enabled)
             if (message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
               if (whitelist.length > 0) {
                 ScannerMode = 'whitelist';
-                logInfo(`Scanner set mode "whitelist" [IP: ${message.source}]`);
+                logInfo(`Scanner set mode "whitelist" [IP: ${clientSource}]`);
               } else {
-                logInfo(`Scanner mode "whitelist" not available! [IP: ${message.source}]`);
+                logInfo(`Scanner mode "whitelist" not available! [IP: ${clientSource}]`);
                 ScannerMode = 'normal';
               }
-              SendResponseMessage(message.source);
+              SendResponseMessage(clientSource);
             }
 
-            // Set ScannerMode to spectrum / spectrumBL / difference / differenceBL if allowed
             if (
               (message.value.ScannerMode === 'spectrum' && EnableSpectrumScan) ||
               (message.value.ScannerMode === 'spectrumBL' && EnableSpectrumScan && EnableBlacklist) ||
@@ -894,91 +947,53 @@ async function DataPluginsWebSocket() {
               (message.value.ScannerMode === 'differenceBL' && EnableDifferenceScan && EnableBlacklist)
             ) {
               ScannerMode = message.value.ScannerMode;
-              logInfo(`Scanner set mode "${ScannerMode}" [IP: ${message.source}]`);
-              SendResponseMessage(message.source);
+              logInfo(`Scanner set mode "${ScannerMode}" [IP: ${clientSource}]`);
+              SendResponseMessage(clientSource);
 
-              // If we have no sigArray yet, start first pass of spectrum analysis:
               if (sigArray.length === 0) {
                 currentFrequency = tuningLowerLimit;
                 sendDataToClient(currentFrequency);
-                // Delay 1 s before calling startSpectrumAnalyse()
-                setTimeout(() => {
-                  startSpectrumAnalyse();
-                }, 1000);
+                setTimeout(() => { startSpectrumAnalyse(); }, 1000);
               }
             }
 
-            // Change ScanHoldTime if provided
             if (message.value.ScanHoldTime !== undefined && message.value.ScanHoldTime !== '') {
               ScanHoldTime = message.value.ScanHoldTime;
               if (ScanPE5PVB) {
                 sendCommandToClient(`K${ScanHoldTime}`);
-                logInfo(`Scanner (PE5PVB mode) set scanholdtime "${ScanHoldTime}" [IP: ${message.source}]`);
+                logInfo(`Scanner (PE5PVB mode) set scanholdtime "${ScanHoldTime}" [IP: ${clientSource}]`);
               } else {
-                logInfo(`Scanner set scanholdtime "${ScanHoldTime}" [IP: ${message.source}]`);
+                logInfo(`Scanner set scanholdtime "${ScanHoldTime}" [IP: ${clientSource}]`);
               }
-              SendResponseMessage(message.source);
+              SendResponseMessage(clientSource);
             }
-
-            // Trigger a single-step search down
-            if (message.value.Search === 'down') {
-              if (SearchPE5PVB) {
-                sendCommandToClient('C1');
-              } else {
-                startSearch('down');
-              }
-            }
-
-            // Trigger a single-step search up
-            if (message.value.Search === 'up') {
-              if (SearchPE5PVB) {
-                sendCommandToClient('C2');
-              } else {
-                startSearch('up');
-              }
-            }
-
-            // Start auto-scan if requested (Scan was “off” → “on”)
+            
             if (message.value.Scan === 'on' && Scan === 'off') {
               Scan = 'on';
-              logInfo(`Scanner starts auto-scan [IP: ${message.source}]`);
-              SendResponseMessage(message.source);
+              logInfo(`Scanner starts auto-scan [IP: ${clientSource}]`);
+              SendResponseMessage(clientSource);
               AutoScan();
             }
-
-            // Stop auto-scan if requested (Scan was “on” → “off”)
             if (message.value.Scan === 'off' && Scan === 'on') {
               Scan = 'off';
-              logInfo(`Scanner stops auto-scan [IP: ${message.source}]`);
-              SendResponseMessage(message.source);
+              logInfo(`Scanner stops auto-scan [IP: ${clientSource}]`);
+              SendResponseMessage(clientSource);
               stopAutoScan();
             }
-          }
+        }
 
-          //
-          // 4) If the message contains GPS data, update LAT/LON/ALT, etc.
-          //
-          if (message.type === 'GPS') {
+        if (message.type === 'GPS') {
             const { lat, lon, alt, mode, time } = message.value;
             if (lat !== '') LAT = lat;
             if (lon !== '') LON = lon;
             if (alt !== '') ALT = alt;
             gpsmode = mode;
             gpstime = time;
-          }
-        } catch (error) {
-          // Silently ignore JSON parsing or handler errors
-          // logError("Failed to handle message:", error);
         }
-      };
     } catch (error) {
-      logError("Failed to set up WebSocket:", error);
-      // Retry connection after 1 second
-      setTimeout(DataPluginsWebSocket, 1000);
+        logError("Failed to handle message:", error);
     }
-  }
 }
-
 
 
 function InitialMessage() {
@@ -2184,6 +2199,7 @@ function getLogFilePathCSV(date, time, filename) {
 let lastFrequencyInHz = null;
 
 async function writeCSVLogEntry() {
+	
     if (isInBlacklist(freq, blacklist) && EnableBlacklist && ((Scan === 'on' && (ScannerMode === 'blacklist' || ScannerMode === 'spectrumBL' || ScannerMode === 'differenceBL')))) {
         return;
     }

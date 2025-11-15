@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.8f)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.9)      ///
 ///                                                         ///
-///  by Highpoint               last update: 04.11.25       ///
+///  by Highpoint               last update: 15.11.25       ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -17,7 +17,7 @@
 	
 ///////////////////////////////////////////////////////////////
 
-	const pluginVersion = '3.8f';
+	const pluginVersion = '3.9';
 	const pluginName = "Scanner";
 	const pluginHomepageUrl = "https://github.com/Highpoint2000/webserver-scanner/releases";
 	const pluginUpdateUrl = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -157,12 +157,15 @@ async function sendInitialWebSocketMessage() {
     try {
         // Hole die öffentliche IP-Adresse von icanhazip.com
         const response = await fetch('https://icanhazip.com');
-        const clientIp = await response.text();  // Extrahiert die IP-Adresse als Text
+        
+        // KORREKTUR: 'const' entfernt, um die globale Variable zu aktualisieren
+        clientIp = (await response.text()).trim(); 
 
         // Gib die öffentliche IP-Adresse in der Konsole aus
         console.log("Öffentliche IP-Adresse:", clientIp);
 
-        const initialMessage = createMessage('request');  // Erstelle die Nachricht für den WebSocket
+        // 'createMessage' kann jetzt auf die korrekte globale IP zugreifen
+        const initialMessage = createMessage('request');  
 
         // Überprüfe, ob der WebSocket offen ist, bevor die Nachricht gesendet wird
         if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
@@ -323,7 +326,7 @@ function handleWebSocketMessage(event) {
                 ScanPE5PVBstatus = ScanPE5PVB;
             }
 
-            if (status === 'response' && eventData.target === clientIp) {
+            if (status === 'response') {
                 if (!scannerButtonsExecuted) {
                     ScannerButtons(Sensitivity, ScannerMode, ScanHoldTime);
                     SearchButtons();

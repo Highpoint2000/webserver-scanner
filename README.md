@@ -11,11 +11,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
-## v3.8f (compatible from webserver version 1.3.8!!!)
+## v3.9 (FMDX Connector compatible Version)
 
-- Extended URDS CSV protocol implemented (storage of station data for faster evaluation e.g. in the map viewer)
-
-For URDS uploads, the uploader version from 1.0g (Version with dBµV Flag) upwards must be used!
+- Control options for the TEF Logger App (v3.4) and FMDX Connector (v1.0) have been implemented
 
 ## Installation notes:
 
@@ -78,6 +76,12 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v3.8f (compatible from webserver version 1.3.8!!!)
+
+- Extended URDS CSV protocol implemented (storage of station data for faster evaluation e.g. in the map viewer)
+
+For URDS uploads, the uploader version from 1.0g (Version with dBµV Flag) upwards must be used!
  
 ### v3.8e (compatible from webserver version 1.3.8!!!)
 
