@@ -13,7 +13,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## v3.9 (FMDX Connector compatible Version)
 
-- Control options for the TEF Logger App (v3.4) and FMDX Connector (v1.0) have been implemented
+- Control options for the [TEF Logger App](https://github.com/Highpoint2000/TEFLoggerApp) (v3.4) and [FMDX Connector](https://github.com/Highpoint2000/FMDXConnector) (v1.0) have been implemented
 
 ## Installation notes:
 
