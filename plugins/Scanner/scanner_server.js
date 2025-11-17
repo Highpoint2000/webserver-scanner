@@ -823,12 +823,17 @@ async function handleDataPluginsMessage(eventData, ws) {
             }
 
              // Handle status requests from already authorized clients, or if no password is set
-            if (message.value.status === 'request') {
-                if (!adminPass || authorizedClients.has(ws)) {
-                    SendResponseMessage(clientSource);
-                }
-                return;
-            }
+			if (message.value.status === 'request') {
+			// Wenn kein Passwort gesetzt ODER bereits autorisiert ODER alte Clients (kein password-Feld jemals gesehen)
+				if (!adminPass || authorizedClients.has(ws)) {
+					SendResponseMessage(clientSource);
+				} else {
+					// Optional: Log für Legacy-Client ohne Auth
+					logWarn(`Legacy Scanner client ${clientSource} sent status=request without auth; responding anyway.`);
+					SendResponseMessage(clientSource);
+				}
+				return;
+			}
         }
         
         // For all subsequent restricted commands, check if the client is authorized
