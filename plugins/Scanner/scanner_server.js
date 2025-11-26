@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 15.11.2025     ///
+///  by Highpoint               last update: 26.11.2025     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -281,7 +281,6 @@ if (SensitivityCalibrationFrequenz === '') {
 	}
 	SpectrumPlusMinusValue = Math.round(resultSpectrumPlusMinusValue);
 
-SpectrumPlusMinusValue
 function checkAndInstallNewModules() {
     NewModules.forEach(module => {
         const modulePath = path.join(__dirname, './../../node_modules', module);
@@ -770,15 +769,25 @@ async function handleDataPluginsMessage(eventData, ws) {
     try {
         const message = JSON.parse(eventData);
 
-        if (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS') {
+        if (!message || (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS')) {
             return;
         }
         
-        const clientSource = message.source;
+        const clientSource = message.source || 'unknown';
+
+        // ---------------------------------------------------
+        // TEF Logger vs. Legacy Scanner:
+        //  - TEF Logger: source enthält "tef"  → Auth-Pflicht
+        //  - Legacy Scanner: alles andere     → Vollzugriff
+        // ---------------------------------------------------
+        const isTefLoggerClient =
+            typeof clientSource === 'string' &&
+            clientSource.toLowerCase().includes('tef');
 
         // --- SESSION AUTHENTICATION & SEARCH COMMANDS (UNRESTRICTED) ---
         if (message.type === 'Scanner') {
-            // Handle unrestricted Search commands immediately
+
+            // Handle unrestricted Search commands immediately (für alle Clients)
             if (message.value.status === 'command' && message.value.Search) {
                 if (message.value.Search === 'down') {
                     if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
@@ -789,8 +798,11 @@ async function handleDataPluginsMessage(eventData, ws) {
                 return; // Search commands are handled, exit
             }
 
-            // Handle NEW Authentication Flow (direct password check)
-            if (message.value.status === 'auth_request') {
+            // ---------------------------------------------------
+            // AUTH: Nur TEF Logger muss sich authentifizieren
+            // Legacy-Scanner: ignoriert auth_request, hat eh Vollzugriff
+            // ---------------------------------------------------
+            if (isTefLoggerClient && message.value.status === 'auth_request') {
                 if (adminPass) {
                     // Password is configured on server, check the one from client
                     if (message.value.password === adminPass) {
@@ -798,14 +810,20 @@ async function handleDataPluginsMessage(eventData, ws) {
                         authorizedClients.add(ws); // Authorize this client session
                         
                         const authSuccessMsg = {
-                            type: 'Scanner', value: { status: 'auth_success' }, source: source, target: clientSource
+                            type: 'Scanner',
+                            value: { status: 'auth_success' },
+                            source: source,
+                            target: clientSource
                         };
                         ws.send(JSON.stringify(authSuccessMsg));
                         SendResponseMessage(clientSource); // Also send current scanner state
                     } else {
                         logWarn(`Scanner client authentication failed for ${clientSource}. Invalid password.`);
                         const authFailedMsg = {
-                            type: 'Scanner', value: { status: 'auth_failed' }, source: source, target: clientSource
+                            type: 'Scanner',
+                            value: { status: 'auth_failed' },
+                            source: source,
+                            target: clientSource
                         };
                         ws.send(JSON.stringify(authFailedMsg));
                     }
@@ -814,7 +832,10 @@ async function handleDataPluginsMessage(eventData, ws) {
                     logInfo(`Scanner client authorized for ${clientSource} (no admin password configured).`);
                     authorizedClients.add(ws);
                     const authSuccessMsg = {
-                        type: 'Scanner', value: { status: 'auth_success' }, source: source, target: clientSource
+                        type: 'Scanner',
+                        value: { status: 'auth_success' },
+                        source: source,
+                        target: clientSource
                     };
                     ws.send(JSON.stringify(authSuccessMsg));
                     SendResponseMessage(clientSource);
@@ -822,64 +843,74 @@ async function handleDataPluginsMessage(eventData, ws) {
                 return;
             }
 
-             // Handle status requests from already authorized clients, or if no password is set
-			if (message.value.status === 'request') {
-			// Wenn kein Passwort gesetzt ODER bereits autorisiert ODER alte Clients (kein password-Feld jemals gesehen)
-				if (!adminPass || authorizedClients.has(ws)) {
-					SendResponseMessage(clientSource);
-				} else {
-					// Optional: Log für Legacy-Client ohne Auth
-					logWarn(`Legacy Scanner client ${clientSource} sent status=request without auth; responding anyway.`);
-					SendResponseMessage(clientSource);
-				}
-				return;
-			}
+            // Handle status requests
+            if (message.value.status === 'request') {
+                if (!isTefLoggerClient) {
+                    // Legacy Scanner: immer Vollzugriff, unabhängig von adminPass
+                    SendResponseMessage(clientSource);
+                } else {
+                    // TEF Logger: nur nach erfolgreicher Auth, wenn adminPass gesetzt
+                    if (!adminPass || authorizedClients.has(ws)) {
+                        SendResponseMessage(clientSource);
+                    } else {
+                        logWarn(`TEF Logger client ${clientSource} sent status=request without auth; ignoring.`);
+                    }
+                }
+                return;
+            }
         }
         
-        // For all subsequent restricted commands, check if the client is authorized
-        if (adminPass && !authorizedClients.has(ws)) {
+        // ---------------------------------------------------
+        // RESTRICTED COMMANDS:
+        //  - TEF Logger + adminPass → Auth nötig
+        //  - Legacy Scanner         → NIE Auth nötig (Vollzugriff)
+        // ---------------------------------------------------
+        const requiresAuth = isTefLoggerClient && !!adminPass;
+
+        if (requiresAuth && !authorizedClients.has(ws)) {
             if (message.value && message.value.status === 'command') {
-                logWarn(`Ignoring restricted command from unauthorized client ${clientSource}.`);
+                logWarn(`Ignoring restricted command from unauthorized TEF Logger client ${clientSource}.`);
             }
             return;
         }
         // --- END OF AUTHENTICATION / UNRESTRICTED LOGIC ---
 
-        // Handle other messages from authorized clients
+        // Handle other messages from clients (Legacy immer erlaubt, TEF Logger nur nach Auth)
+
         if (message.type === 'sigArray' && message.isScanning) {
             sigArray = message.value; 
 
             const primaryFrequencies = sigArray.filter(entry => {
-              const hasSecondDecimalZero = Math.round(entry.freq * 100) % 10 === 0;
-              return entry.sig > SpectrumLimiterValue && hasSecondDecimalZero;
+                const hasSecondDecimalZero = Math.round(entry.freq * 100) % 10 === 0;
+                return entry.sig > SpectrumLimiterValue && hasSecondDecimalZero;
             });
 
             let extendedFrequencies = [];
 
             primaryFrequencies.forEach(primary => {
-              const freqNum = parseFloat(primary.freq);
-              if (isNaN(freqNum)) return;
+                const freqNum = parseFloat(primary.freq);
+                if (isNaN(freqNum)) return;
 
-              const lowerBound = parseFloat((freqNum - 0.1).toFixed(2));
-              const upperBound = parseFloat((freqNum + 0.1).toFixed(2));
+                const lowerBound = parseFloat((freqNum - 0.1).toFixed(2));
+                const upperBound = parseFloat((freqNum + 0.1).toFixed(2));
 
-              if (primary.sig >= SpectrumPlusMinusValue) {
-                const inRange = sigArray.filter(entry => {
-                  const entryFreq = parseFloat(entry.freq);
-                  return entryFreq >= lowerBound && entryFreq <= upperBound;
-                });
-                extendedFrequencies.push(...inRange);
-              }
+                if (primary.sig >= SpectrumPlusMinusValue) {
+                    const inRange = sigArray.filter(entry => {
+                        const entryFreq = parseFloat(entry.freq);
+                        return entryFreq >= lowerBound && entryFreq <= upperBound;
+                    });
+                    extendedFrequencies.push(...inRange);
+                }
             });
 
             extendedFrequencies = Array.from(
-              new Map(extendedFrequencies.map(item => [item.freq, item])).values()
+                new Map(extendedFrequencies.map(item => [item.freq, item])).values()
             );
 
             sigArraySpectrum = sigArray.filter(entry => {
-              const isInExtended = extendedFrequencies.some(ext => ext.freq === entry.freq);
-              const isPrimary = primaryFrequencies.some(pr => pr.freq === entry.freq);
-              return !isInExtended && !isPrimary;
+                const isInExtended = extendedFrequencies.some(ext => ext.freq === entry.freq);
+                const isPrimary = primaryFrequencies.some(pr => pr.freq === entry.freq);
+                return !isInExtended && !isPrimary;
             });
 
             sigArrayDifference = sigArraySpectrum;
@@ -890,12 +921,12 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (currentAntennaIndex === 3) { freqMap2 = new Map(sigArraySave3.map(item => [parseFloat(item.freq), parseFloat(item.sig)])); }
 
             sigArrayDifference = sigArrayDifference.filter(item => {
-              const freqNum = parseFloat(item.freq);
-              const sigNum = parseFloat(item.sig);
-              if (sigNum < Sensitivity) return false;
-              if (!freqMap2.has(freqNum)) return true;
-              const prevSig = freqMap2.get(freqNum);
-              return Math.abs(sigNum - prevSig) > SpectrumChangeValue;
+                const freqNum = parseFloat(item.freq);
+                const sigNum = parseFloat(item.sig);
+                if (sigNum < Sensitivity) return false;
+                if (!freqMap2.has(freqNum)) return true;
+                const prevSig = freqMap2.get(freqNum);
+                return Math.abs(sigNum - prevSig) > SpectrumChangeValue;
             });
 
             if (currentAntennaIndex === 0) sigArraySave0 = Array.from(sigArray);
@@ -905,89 +936,92 @@ async function handleDataPluginsMessage(eventData, ws) {
         }
 
         if (message.type === 'Scanner' && message.value.status === 'command') {
-            // These commands require authorization
+            // These commands require authorization ONLY for TEF Logger (legacy immer frei)
+
             if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
-              Sensitivity = message.value.Sensitivity;
-              if (ScanPE5PVB) {
-                sendCommandToClient(`I${Sensitivity}`);
-                logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
-              } else {
-                logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
-                SendResponseMessage(clientSource);
-              }
+                Sensitivity = message.value.Sensitivity;
+                if (ScanPE5PVB) {
+                    sendCommandToClient(`I${Sensitivity}`);
+                    logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
+                } else {
+                    logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
+                    SendResponseMessage(clientSource);
+                }
             }
 
             if (message.value.ScannerMode === 'normal') {
-              ScannerMode = 'normal';
-              logInfo(`Scanner set mode "normal" [IP: ${clientSource}]`);
-              SendResponseMessage(clientSource);
+                ScannerMode = 'normal';
+                logInfo(`Scanner set mode "normal" [IP: ${clientSource}]`);
+                SendResponseMessage(clientSource);
             }
 
             if (message.value.ScannerMode === 'blacklist' && EnableBlacklist) {
-              if (blacklist.length > 0) {
-                ScannerMode = 'blacklist';
-                logInfo(`Scanner set mode "blacklist" [IP: ${clientSource}]`);
-              } else {
-                logInfo(`Scanner mode "blacklist" not available! [IP: ${clientSource}]`);
-                ScannerMode = 'normal';
-              }
-              SendResponseMessage(clientSource);
+                if (blacklist.length > 0) {
+                    ScannerMode = 'blacklist';
+                    logInfo(`Scanner set mode "blacklist" [IP: ${clientSource}]`);
+                } else {
+                    logInfo(`Scanner mode "blacklist" not available! [IP: ${clientSource}]`);
+                    ScannerMode = 'normal';
+                }
+                SendResponseMessage(clientSource);
             }
 
             if (message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
-              if (whitelist.length > 0) {
-                ScannerMode = 'whitelist';
-                logInfo(`Scanner set mode "whitelist" [IP: ${clientSource}]`);
-              } else {
-                logInfo(`Scanner mode "whitelist" not available! [IP: ${clientSource}]`);
-                ScannerMode = 'normal';
-              }
-              SendResponseMessage(clientSource);
+                if (whitelist.length > 0) {
+                    ScannerMode = 'whitelist';
+                    logInfo(`Scanner set mode "whitelist" [IP: ${clientSource}]`);
+                } else {
+                    logInfo(`Scanner mode "whitelist" not available! [IP: ${clientSource}]`);
+                    ScannerMode = 'normal';
+                }
+                SendResponseMessage(clientSource);
             }
 
             if (
-              (message.value.ScannerMode === 'spectrum' && EnableSpectrumScan) ||
-              (message.value.ScannerMode === 'spectrumBL' && EnableSpectrumScan && EnableBlacklist) ||
-              (message.value.ScannerMode === 'difference' && EnableDifferenceScan) ||
-              (message.value.ScannerMode === 'differenceBL' && EnableDifferenceScan && EnableBlacklist)
+                (message.value.ScannerMode === 'spectrum'   && EnableSpectrumScan) ||
+                (message.value.ScannerMode === 'spectrumBL' && EnableSpectrumScan && EnableBlacklist) ||
+                (message.value.ScannerMode === 'difference' && EnableDifferenceScan) ||
+                (message.value.ScannerMode === 'differenceBL' && EnableDifferenceScan && EnableBlacklist)
             ) {
-              ScannerMode = message.value.ScannerMode;
-              logInfo(`Scanner set mode "${ScannerMode}" [IP: ${clientSource}]`);
-              SendResponseMessage(clientSource);
+                ScannerMode = message.value.ScannerMode;
+                logInfo(`Scanner set mode "${ScannerMode}" [IP: ${clientSource}]`);
+                SendResponseMessage(clientSource);
 
-              if (sigArray.length === 0) {
-                currentFrequency = tuningLowerLimit;
-                sendDataToClient(currentFrequency);
-                setTimeout(() => { startSpectrumAnalyse(); }, 1000);
-              }
+                if (sigArray.length === 0) {
+                    currentFrequency = tuningLowerLimit;
+                    sendDataToClient(currentFrequency);
+                    setTimeout(() => { startSpectrumAnalyse(); }, 1000);
+                }
             }
 
             if (message.value.ScanHoldTime !== undefined && message.value.ScanHoldTime !== '') {
-              ScanHoldTime = message.value.ScanHoldTime;
-              if (ScanPE5PVB) {
-                sendCommandToClient(`K${ScanHoldTime}`);
-                logInfo(`Scanner (PE5PVB mode) set scanholdtime "${ScanHoldTime}" [IP: ${clientSource}]`);
-              } else {
-                logInfo(`Scanner set scanholdtime "${ScanHoldTime}" [IP: ${clientSource}]`);
-              }
-              SendResponseMessage(clientSource);
+                ScanHoldTime = message.value.ScanHoldTime;
+                if (ScanPE5PVB) {
+                    sendCommandToClient(`K${ScanHoldTime}`);
+                    logInfo(`Scanner (PE5PVB mode) set scanholdtime "${ScanHoldTime}" [IP: ${clientSource}]`);
+                } else {
+                    logInfo(`Scanner set scanholdtime "${ScanHoldTime}" [IP: ${clientSource}]`);
+                }
+                SendResponseMessage(clientSource);
             }
             
             if (message.value.Scan === 'on' && Scan === 'off') {
-              Scan = 'on';
-              logInfo(`Scanner starts auto-scan [IP: ${clientSource}]`);
-              SendResponseMessage(clientSource);
-              AutoScan();
+                Scan = 'on';
+                logInfo(`Scanner starts auto-scan [IP: ${clientSource}]`);
+                SendResponseMessage(clientSource);
+                AutoScan();
             }
             if (message.value.Scan === 'off' && Scan === 'on') {
-              Scan = 'off';
-              logInfo(`Scanner stops auto-scan [IP: ${clientSource}]`);
-              SendResponseMessage(clientSource);
-              stopAutoScan();
+                Scan = 'off';
+                logInfo(`Scanner stops auto-scan [IP: ${clientSource}]`);
+                SendResponseMessage(clientSource);
+                stopAutoScan();
             }
         }
 
         if (message.type === 'GPS') {
+            // GPS Updates: für Legacy und TEF Logger erlaubt,
+            // aber TEF Logger nur nach Auth (wegen requiresAuth oben)
             const { lat, lon, alt, mode, time } = message.value;
             if (lat !== '') LAT = lat;
             if (lon !== '') LON = lon;
