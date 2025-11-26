@@ -17,7 +17,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion      = '3.9a';
+    const pluginVersion = '3.9a';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -96,45 +96,43 @@
             typeof PLUGIN_VERSION    !== 'undefined' ? PLUGIN_VERSION :
             'Unknown';
 
-        async function fetchFirstLine() {
-            const urlCheckForUpdate = urlFetchLink;
+async function fetchFirstLine() {
+    const urlCheckForUpdate = urlFetchLink;
 
-            try {
-                const response = await fetch(urlCheckForUpdate);
-                if (!response.ok) {
-                    throw new Error(`[${pluginName}] update check HTTP error! status: ${response.status}`);
-                }
+    try {
+        const response = await fetch(urlCheckForUpdate);
+        if (!response.ok) {
+            throw new Error(`[${pluginName}] update check HTTP error! status: ${response.status}`);
+        }
 
-                const text  = await response.text();
-                const lines = text.split('\n');
+        const text  = await response.text();
+        const lines = text.split('\n');
 
-                let version;
+        let version;
 
-                if (lines.length > 2) {
-                    const versionLine = lines.find(line =>
-                        line.includes("const pluginVersion =") ||
-                        line.includes("const plugin_version =") ||
-                        line.includes("const PLUGIN_VERSION =")
-                    );
-                    if (versionLine) {
-                        const match = versionLine.match(/const\s+(?:pluginVersion|plugin_version|PLUGIN_VERSION)\s*=\s*['"]([^'"]+)['"]/);
-                        if (match) {
-                            version = match[1];
-                        }
-                    }
-                }
+        // Robuster: RegEx mit \s* statt exaktem " ="
+        const versionRegex = /const\s+(?:pluginVersion|plugin_version|PLUGIN_VERSION)\s*=\s*['"]([^'"]+)['"]/;
 
-                if (!version) {
-                    const firstLine = lines[0].trim();
-                    version = /^\d/.test(firstLine) ? firstLine : "Unknown";
-                }
-
-                return version;
-            } catch (error) {
-                console.error(`[${pluginName}] error fetching file:`, error);
-                return null;
+        const versionLine = lines.find(line => versionRegex.test(line));
+        if (versionLine) {
+            const match = versionLine.match(versionRegex);
+            if (match) {
+                version = match[1];
             }
         }
+
+        if (!version) {
+            const firstLine = lines[0].trim();
+            version = /^\d/.test(firstLine) ? firstLine : "Unknown";
+        }
+
+        return version;
+    } catch (error) {
+        console.error(`[${pluginName}] error fetching file:`, error);
+        return null;
+    }
+}
+
 
         fetchFirstLine().then(newVersion => {
             if (newVersion && newVersion !== pluginVersionCheck) {
