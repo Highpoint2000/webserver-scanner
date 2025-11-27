@@ -17,20 +17,20 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '3.9a';
+    const pluginVersion      = '3.9a';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 
-    const EnableBlacklist      = true; // auto from config
-    const EnableWhitelist      = true; // auto from config
-    const EnableSpectrumScan   = true; // auto from config
+    const EnableBlacklist = true; // auto from config
+    const EnableWhitelist = true; // auto from config
+    const EnableSpectrumScan = true; // auto from config
     const EnableSpectrumScanBL = true; // auto from config
     const EnableDifferenceScan = true; // auto from config
     const EnableDifferenceScanBL = true; // auto from config
 
     // IMPORTANT: now dynamic, NOT const
-    let SignalStrengthUnit   = 'dBµV'; // initial, will be updated from UI
+    let SignalStrengthUnit = 'dBµV'; // initial, will be updated from UI
 
     const currentURL   = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;

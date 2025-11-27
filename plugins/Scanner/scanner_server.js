@@ -2,7 +2,7 @@
 ///                                                         ///
 ///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 26.11.2025     ///
+///  by Highpoint               last update: 27.11.2025     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -320,7 +320,7 @@ function updateSettings() {
     let hasEnableSpectrumScanBL = /const EnableSpectrumScanBL = .+;/.test(targetData);
     let hasEnableDifferenceScan = /const EnableDifferenceScan = .+;/.test(targetData);
     let hasEnableDifferenceScanBL = /const EnableDifferenceScanBL = .+;/.test(targetData);
-    let hasSignalStrengthUnit   = /const SignalStrengthUnit = .+;/.test(targetData);
+    let hasSignalStrengthUnit   = /let SignalStrengthUnit = .+;/.test(targetData);
 
     // Replace or add the definitions
     let updatedData = targetData;
@@ -464,6 +464,7 @@ writeStatusCSVps = false;
 let writeStatusHTMLLog = true;
 let writeStatusLogFMLIST = true;
 let logSnapshot;
+let hasSensitivityCalibrationRun = false;
 
 // ---- START: Session-based Auth State ----
 const authorizedClients = new WeakSet(); // Store authorized WebSocket clients
@@ -951,6 +952,7 @@ async function handleDataPluginsMessage(eventData, ws) {
 
             if (message.value.ScannerMode === 'normal') {
                 ScannerMode = 'normal';
+                hasSensitivityCalibrationRun = false;   // Nach Mode-Wechsel: nächster AutoScan startet wieder "von vorne"
                 logInfo(`Scanner set mode "normal" [IP: ${clientSource}]`);
                 SendResponseMessage(clientSource);
             }
@@ -958,10 +960,12 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (message.value.ScannerMode === 'blacklist' && EnableBlacklist) {
                 if (blacklist.length > 0) {
                     ScannerMode = 'blacklist';
+                    hasSensitivityCalibrationRun = false;   // Neue Session für diesen Modus
                     logInfo(`Scanner set mode "blacklist" [IP: ${clientSource}]`);
                 } else {
                     logInfo(`Scanner mode "blacklist" not available! [IP: ${clientSource}]`);
                     ScannerMode = 'normal';
+                    hasSensitivityCalibrationRun = false;
                 }
                 SendResponseMessage(clientSource);
             }
@@ -969,10 +973,12 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
                 if (whitelist.length > 0) {
                     ScannerMode = 'whitelist';
+                    hasSensitivityCalibrationRun = false;   // Neue Session für diesen Modus
                     logInfo(`Scanner set mode "whitelist" [IP: ${clientSource}]`);
                 } else {
                     logInfo(`Scanner mode "whitelist" not available! [IP: ${clientSource}]`);
                     ScannerMode = 'normal';
+                    hasSensitivityCalibrationRun = false;
                 }
                 SendResponseMessage(clientSource);
             }
@@ -1463,49 +1469,109 @@ function sendNextAntennaCommand() {
 }
 
 async function SensitivityValueCalibration() {
-	clearInterval(scanInterval);
+    clearInterval(scanInterval);
     currentFrequency = SensitivityCalibrationFrequenz;
     currentFrequency = Math.round(currentFrequency * 100) / 100;
     sendDataToClient(currentFrequency);
     await new Promise(resolve => setTimeout(resolve, 1000));
     Sensitivity = Math.round(strength) + Math.round(defaultSensitivityValue);
-	// logInfo(`Scanner set Sensitivity Value on ${currentFrequency} MHz to ${Sensitivity} [${Math.round(strength)} + ${defaultSensitivityValue}]`);			
-	// Create and send a broadcast message to stop the scan
+    // logInfo(`Scanner set Sensitivity Value on ${currentFrequency} MHz to ${Sensitivity} [${Math.round(strength)} + ${defaultSensitivityValue}]`);			
+
+    // Create and send a broadcast message to stop the scan
     const Message = createMessage(
-         'broadcast',
-         '255.255.255.255',
-         Scan,
-         '',
-         Sensitivity,
-         ScannerMode,
-         ScanHoldTime,
-		 FMLIST_Autolog
+        'broadcast',
+        '255.255.255.255',
+        Scan,
+        '',
+        Sensitivity,
+        ScannerMode,
+        ScanHoldTime,
+        FMLIST_Autolog
     );
     DataPluginsSocket.send(JSON.stringify(Message));
 }
 
+
 async function AutoScan() {
     if (!isScanning) {
-		if (scanBandwith === '0' || scanBandwith === 0) {
-			if (bandwith !== '0' && bandwith !== 0) {
-				logInfo('Scanner set bandwith from:', bandwith, 'Hz to: auto mode');
-			}
-		} else {
-			if (bandwith === '0' || bandwith === 0) {
-				logInfo('Scanner set bandwith from: auto mode to:', scanBandwith,  'Hz');
-			} else {
-				logInfo('Scanner set bandwith from:', bandwith, 'Hz to:', scanBandwith,  'Hz');
-			}
-		}
-		scanBandwithSave = bandwith;
-		textSocket.send(`W${scanBandwith}\n`);
-		if (SensitivityCalibrationFrequenz) {
-           await SensitivityValueCalibration();
+        // Bandwidth handling when starting auto-scan
+        if (scanBandwith === '0' || scanBandwith === 0) {
+            if (bandwith !== '0' && bandwith !== 0) {
+                logInfo('Scanner set bandwith from:', bandwith, 'Hz to: auto mode');
+            }
         } else {
-			currentFrequency = tuningLowerLimit;
-		}
-        startScan('up');		// Start scanning once
-	}
+            if (bandwith === '0' || bandwith === 0) {
+                logInfo('Scanner set bandwith from: auto mode to:', scanBandwith, 'Hz');
+            } else {
+                logInfo('Scanner set bandwith from:', bandwith, 'Hz to:', scanBandwith, 'Hz');
+            }
+        }
+
+        scanBandwithSave = bandwith;
+        textSocket.send(`W${scanBandwith}\n`);
+
+        // Only these modes get the "continue at next frequency" behaviour
+        const isStandardMode =
+            ScannerMode === 'normal' ||
+            (ScannerMode === 'blacklist' && EnableBlacklist) ||
+            (ScannerMode === 'whitelist' && EnableWhitelist);
+
+        if (isStandardMode) {
+            // In normal/blacklist/whitelist unterscheiden wir:
+            //  - erster Start nach Mode-Wechsel  -> Calibration-Frequenz oder untere Bandgrenze
+            //  - Restart nach Auto-Stop          -> an der nächsten Frequenz weiter
+
+            if (!hasSensitivityCalibrationRun) {
+                // Erster Start in diesem Modus
+                if (SensitivityCalibrationFrequenz) {
+                    // Start über Calibration-Frequenz
+                    await SensitivityValueCalibration();
+                } else {
+                    // Keine Calibration-Frequenz gesetzt -> von unterer Bandgrenze starten
+                    currentFrequency = tuningLowerLimit;
+                }
+                hasSensitivityCalibrationRun = true;
+            } else {
+                // Restart nach Auto-Stop → nicht zurück zur Calibration / Bandgrenze,
+                // sondern mit der nächsten Frequenz weitermachen
+                let lastFreq = parseFloat(freq);
+
+                if (isNaN(lastFreq) || lastFreq === 0.0) {
+                    // Falls nichts Sinnvolles da ist → untere Bandgrenze
+                    currentFrequency = tuningLowerLimit;
+                } else {
+                    // Gleiches Raster wie in startScan():
+                    //  - < 74 MHz  -> 0.01 MHz
+                    //  - >= 74 MHz -> 0.1 MHz, außer Whitelist (0.01 MHz)
+                    let step;
+                    if (lastFreq < 74.0) {
+                        step = 0.01;
+                    } else {
+                        if (ScannerMode === 'whitelist' && EnableWhitelist) {
+                            step = 0.01;
+                        } else {
+                            step = 0.1;
+                        }
+                    }
+
+                    currentFrequency = lastFreq + step;
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; // 2 Nachkommastellen
+                }
+            }
+        } else {
+            // Alle anderen Modi (spectrum, spectrumBL, difference, differenceBL ...)
+            // behalten das bisherige Verhalten:
+            //  - Wenn Calibration-Frequenz gesetzt -> immer darüber starten
+            //  - Sonst von der unteren Bandgrenze
+            if (SensitivityCalibrationFrequenz) {
+                await SensitivityValueCalibration();
+            } else {
+                currentFrequency = tuningLowerLimit;
+            }
+        }
+
+        startScan('up'); // Start scanning once
+    }
 }
 
 function stopAutoScan() {
