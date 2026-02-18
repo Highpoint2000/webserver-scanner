@@ -11,11 +11,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
-## v3.9a (FMDX Connector compatible Version - HOTFIX)
+## v3.9b (DX-Alert compatible Version)
 
-- Control options for the [TEF Logger App](https://github.com/Highpoint2000/TEFLoggerApp) (v3.4) and [FMDX Connector](https://github.com/Highpoint2000/FMDXConnector) (v1.0) have been implemented
-- Corrected client status and the starting and stopping of autoscan mode
-- Fixed a bug in the unit of measurement switching
+- Necessary adjustments for using the screenshot function of the DX-Alert plugin
  
 ## Installation notes:
 
@@ -78,6 +76,12 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v3.9a (FMDX Connector compatible Version - HOTFIX)
+
+- Control options for the [TEF Logger App](https://github.com/Highpoint2000/TEFLoggerApp) (v3.4) and [FMDX Connector](https://github.com/Highpoint2000/FMDXConnector) (v1.0) have been implemented
+- Corrected client status and the starting and stopping of autoscan mode
+- Fixed a bug in the unit of measurement switching
 
 ### v3.9 (FMDX Connector compatible Version)
 

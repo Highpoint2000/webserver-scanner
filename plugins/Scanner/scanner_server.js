@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 27.11.2025     ///
+///  by Highpoint               last update: 18.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -23,6 +23,7 @@ const apiData = require('./../../server/datahandler');
 // Define the paths to the old and new configuration files
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
 const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
+const dxAlertConfigFilePath = path.join(__dirname, './../../plugins_configs/DX-Alert.json');
 
 // Default values for the configuration file
 const defaultConfig = {
@@ -147,56 +148,83 @@ function loadConfig(filePath) {
     return finalConfig;
 }
 
+// Global variables for DX-Alert config
+let dxScreenshotAlert = 'off';
+let dxAlertDistance = 0;
+let dxAlertDistanceMax = 20000;
+let dxAlertConfigExists = false;
+
+// Function to load DX-Alert config if it exists
+function loadDXAlertConfig(filePath) {
+    if (fs.existsSync(filePath)) {
+        try {
+            const configData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            dxScreenshotAlert = configData.ScreenshotAlert || 'off';
+            dxAlertDistance = configData.AlertDistance || 0;
+            dxAlertDistanceMax = configData.AlertDistanceMax || 20000;
+            dxAlertConfigExists = true;
+            logInfo('Scanner: DX-Alert config loaded successfully.');
+        } catch (e) {
+            logError(`Failed to parse DX-Alert config: ${e.message}`);
+            dxAlertConfigExists = false;
+        }
+    } else {
+        dxAlertConfigExists = false;
+        // logInfo('Scanner: DX-Alert config not found.');
+    }
+}
+
 
 // Load or create the configuration file
 const configPlugin = loadConfig(newConfigFilePath);
+loadDXAlertConfig(dxAlertConfigFilePath); // Load DX-Alert settings
 
 // Access variables as before
-const Scanmode = configPlugin.Scanmode;
-const Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
-const Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
-const StartAutoScan = configPlugin.StartAutoScan;
-const AntennaSwitch = configPlugin.AntennaSwitch;
-const OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
+let Scanmode = configPlugin.Scanmode;
+let Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
+let Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
+let StartAutoScan = configPlugin.StartAutoScan;
+let AntennaSwitch = configPlugin.AntennaSwitch;
+let OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
 
 let defaultSensitivityValue = configPlugin.defaultSensitivityValue;
 let SensitivityCalibrationFrequenz = configPlugin.SensitivityCalibrationFrequenz;
-const defaultScanHoldTime = configPlugin.defaultScanHoldTime;
-const defaultScannerMode = configPlugin.defaultScannerMode;
-  let scanIntervalTime = configPlugin.scanIntervalTime;
-const scanBandwith = configPlugin.scanBandwith;
+let defaultScanHoldTime = configPlugin.defaultScanHoldTime;
+let defaultScannerMode = configPlugin.defaultScannerMode;
+let scanIntervalTime = configPlugin.scanIntervalTime;
+let scanBandwith = configPlugin.scanBandwith;
 
-const EnableBlacklist = configPlugin.EnableBlacklist;
-const EnableWhitelist = configPlugin.EnableWhitelist;
+let EnableBlacklist = configPlugin.EnableBlacklist;
+let EnableWhitelist = configPlugin.EnableWhitelist;
 
 let tuningLowerLimit = configPlugin.tuningLowerLimit;
 let tuningUpperLimit = configPlugin.tuningUpperLimit;
 
-const EnableSpectrumScan = configPlugin.EnableSpectrumScan;
-const EnableDifferenceScan = configPlugin.EnableDifferenceScan;
-const SpectrumChangeValue = configPlugin.SpectrumChangeValue;
-  let SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
-  let SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
+let EnableSpectrumScan = configPlugin.EnableSpectrumScan;
+let EnableDifferenceScan = configPlugin.EnableDifferenceScan;
+let SpectrumChangeValue = configPlugin.SpectrumChangeValue;
+let SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
+let SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
 
-const HTMLlogOnlyID = configPlugin.HTMLlogOnlyID;
-const HTMLlogRAW = configPlugin.HTMLlogRAW;
-const HTMLOnlyFirstLog = configPlugin.HTMLOnlyFirstLog;
-const CSVcreate = configPlugin.CSVcreate
-const CSVcompletePS = configPlugin.CSVcompletePS
-const UTCtime = configPlugin.UTCtime;
-  let Log_Blacklist = configPlugin.Log_Blacklist;
-  let SignalStrengthUnit = configPlugin.SignalStrengthUnit;
+let HTMLlogOnlyID = configPlugin.HTMLlogOnlyID;
+let HTMLlogRAW = configPlugin.HTMLlogRAW;
+let HTMLOnlyFirstLog = configPlugin.HTMLOnlyFirstLog;
+let CSVcreate = configPlugin.CSVcreate
+let CSVcompletePS = configPlugin.CSVcompletePS
+let UTCtime = configPlugin.UTCtime;
+let Log_Blacklist = configPlugin.Log_Blacklist;
+let SignalStrengthUnit = configPlugin.SignalStrengthUnit;
 
-  let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
-const FMLIST_Autolog = configPlugin.FMLIST_Autolog;
-  let FMLIST_MinDistance = configPlugin.FMLIST_MinDistance;
-  let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
-  let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
-const FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
-  let FMLIST_ShortServerName = configPlugin.FMLIST_ShortServerName;
-  let FMLIST_Blacklist = configPlugin.FMLIST_Blacklist;
+let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
+let FMLIST_Autolog = configPlugin.FMLIST_Autolog;
+let FMLIST_MinDistance = configPlugin.FMLIST_MinDistance;
+let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
+let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
+let FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
+let FMLIST_ShortServerName = configPlugin.FMLIST_ShortServerName;
+let FMLIST_Blacklist = configPlugin.FMLIST_Blacklist;
 
-const BEEP_CONTROL = configPlugin.BEEP_CONTROL;
+let BEEP_CONTROL = configPlugin.BEEP_CONTROL;
 
 const { execSync } = require('child_process');
 const NewModules = ['speaker'];
@@ -1651,7 +1679,7 @@ async function startScan(direction) {
 
         currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
         
-        // If scanning upwards
+        // If scanning downwards
         if (direction === 'up' ) {
             if (currentFrequency < 74.00) {
                 currentFrequency += 0.01; // Increase by 0.01 if frequency is less than 74 MHz
@@ -2077,7 +2105,24 @@ function checkWhitelist() {
 											stereo_detect = false;
 											station = '';
 											Savefreq = freq;
-											startScan('up'); // Restart scanning after the delay						
+
+                                            // Determine wait time for screenshot
+                                            let screenshotWaitTime = 0;
+                                            if (dxAlertConfigExists && dxScreenshotAlert === 'on' && distance >= dxAlertDistance && distance < dxAlertDistanceMax) {
+                                                if (OnlyScanHoldTime === 'off') {
+                                                    screenshotWaitTime = 3000;
+                                                } else if (OnlyScanHoldTime === 'on' && ScanHoldTime < 3) {
+                                                    screenshotWaitTime = 3000;
+                                                }
+                                            }
+
+                                            if (screenshotWaitTime > 0) {
+                                                setTimeout(() => {
+                                                    startScan('up'); // Restart scanning after the delay
+                                                }, screenshotWaitTime);
+                                            } else {
+                                                startScan('up'); // Restart scanning immediately
+                                            }					
                                 } 
 															
                  			} else {
