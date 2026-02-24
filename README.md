@@ -15,6 +15,8 @@ This plugin provides scanning functions for the FM-DX web server.
 
 - Using the new plugin API to communicate with the web server and spectrum plugin -> Scanner can now also be used in Admin Lock mode (Web server and Spectrum plugin update required!)
 - Automatic calibration adjusted
+
+Thanks to AmateurAudioDude for the Pull Request!
  
 ## Installation notes:
 
