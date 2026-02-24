@@ -20,6 +20,33 @@ const crypto = require('crypto'); // Import crypto module
 const { logInfo, logError, logWarn } = require('./../../server/console');
 const apiData = require('./../../server/datahandler');
 
+let pluginsApi;
+let emitPluginEvent = () => {};
+
+try {
+    pluginsApi = require('./../../server/plugins_api');
+
+    if (pluginsApi?.emitPluginEvent) {
+        emitPluginEvent = pluginsApi.emitPluginEvent;
+    }
+
+    if (pluginsApi?.onPluginEvent) {
+        pluginsApi.onPluginEvent('sigArray', (data) => {
+            handleDataPluginsMessage(JSON.stringify({
+                type: 'sigArray',
+                value: data,
+                isScanning: true
+            }), null);
+        });
+    }
+} catch (err) {
+    if (err.code === 'MODULE_NOT_FOUND') {
+        logWarn('Scanner unable to find plugins_api, using fallback');
+    } else {
+        throw err; // unexpected error
+    }
+}
+
 // Define the paths to the old and new configuration files
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
 const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
@@ -1635,7 +1662,17 @@ async function setupSendSocket() {
 
             isSpectrumCooldown = true;
 
-            DataPluginsSocket.send(message);
+            // --- pluginsApi (internal only) ---
+            const internalMessage = JSON.parse(message);
+
+            if (pluginsApi?.emitPluginEvent) {
+                emitPluginEvent('spectrum-graph', internalMessage, { broadcast: false });
+            }
+
+            // --- DataPluginsSocket (fallback) ---
+            if (DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+                DataPluginsSocket.send(message);
+            }
 
             setTimeout(() => {
                 isSpectrumCooldown = false;
