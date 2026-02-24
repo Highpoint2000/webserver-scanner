@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0a)      ///
 ///                                                         ///
 ///  by Highpoint               last update: 24.02.2026     ///
 ///  powered by PE5PVB                                      ///
@@ -462,7 +462,7 @@ const SearchPE5PVB = Search_PE5PVB_Mode;
 const status = '';
 const Search = '';
 const source = '127.0.0.1';
-const logDir = path.resolve(__dirname, '../../web/logs'); // Absoluter Pfad zum Log-Verzeichnis
+const logDir = path.resolve(__dirname, '../../web/logs'); // Absolute path to the log directory
 
 if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir);
@@ -837,8 +837,8 @@ async function handleDataPluginsMessage(eventData, ws) {
 
         // ---------------------------------------------------
         // TEF Logger vs. Legacy Scanner:
-        //  - TEF Logger: source enthält "tef"  → Auth-Pflicht
-        //  - Legacy Scanner: alles andere     → Vollzugriff
+        //  - TEF Logger: source contains "tef"  -> Requires Auth
+        //  - Legacy Scanner: everything else    -> Full access
         // ---------------------------------------------------
         const isTefLoggerClient =
             typeof clientSource === 'string' &&
@@ -847,7 +847,7 @@ async function handleDataPluginsMessage(eventData, ws) {
         // --- SESSION AUTHENTICATION & SEARCH COMMANDS (UNRESTRICTED) ---
         if (message.type === 'Scanner') {
 
-            // Handle unrestricted Search commands immediately (für alle Clients)
+            // Handle unrestricted Search commands immediately (for all clients)
             if (message.value.status === 'command' && message.value.Search) {
                 if (message.value.Search === 'down') {
                     if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
@@ -859,8 +859,8 @@ async function handleDataPluginsMessage(eventData, ws) {
             }
 
             // ---------------------------------------------------
-            // AUTH: Nur TEF Logger muss sich authentifizieren
-            // Legacy-Scanner: ignoriert auth_request, hat eh Vollzugriff
+            // AUTH: Only TEF Logger needs to authenticate
+            // Legacy-Scanner: ignores auth_request, has full access anyway
             // ---------------------------------------------------
             if (isTefLoggerClient && message.value.status === 'auth_request') {
                 if (adminPass) {
@@ -906,10 +906,10 @@ async function handleDataPluginsMessage(eventData, ws) {
             // Handle status requests
             if (message.value.status === 'request') {
                 if (!isTefLoggerClient) {
-                    // Legacy Scanner: immer Vollzugriff, unabhängig von adminPass
+                    // Legacy Scanner: always full access, independent of adminPass
                     SendResponseMessage(clientSource);
                 } else {
-                    // TEF Logger: nur nach erfolgreicher Auth, wenn adminPass gesetzt
+                    // TEF Logger: only after successful Auth, if adminPass is set
                     if (!adminPass || authorizedClients.has(ws)) {
                         SendResponseMessage(clientSource);
                     } else {
@@ -922,8 +922,8 @@ async function handleDataPluginsMessage(eventData, ws) {
         
         // ---------------------------------------------------
         // RESTRICTED COMMANDS:
-        //  - TEF Logger + adminPass → Auth nötig
-        //  - Legacy Scanner         → NIE Auth nötig (Vollzugriff)
+        //  - TEF Logger + adminPass -> Requires Auth
+        //  - Legacy Scanner         -> NEVER requires Auth (Full access)
         // ---------------------------------------------------
         const requiresAuth = isTefLoggerClient && !!adminPass;
 
@@ -935,7 +935,7 @@ async function handleDataPluginsMessage(eventData, ws) {
         }
         // --- END OF AUTHENTICATION / UNRESTRICTED LOGIC ---
 
-        // Handle other messages from clients (Legacy immer erlaubt, TEF Logger nur nach Auth)
+        // Handle other messages from clients (Legacy always allowed, TEF Logger only after Auth)
 
         if (message.type === 'sigArray' && message.isScanning) {
             sigArray = message.value; 
@@ -996,7 +996,7 @@ async function handleDataPluginsMessage(eventData, ws) {
         }
 
         if (message.type === 'Scanner' && message.value.status === 'command') {
-            // These commands require authorization ONLY for TEF Logger (legacy immer frei)
+            // These commands require authorization ONLY for TEF Logger (legacy always free)
 
             if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
                 Sensitivity = message.value.Sensitivity;
@@ -1011,7 +1011,7 @@ async function handleDataPluginsMessage(eventData, ws) {
 
             if (message.value.ScannerMode === 'normal') {
                 ScannerMode = 'normal';
-                hasSensitivityCalibrationRun = false;   // Nach Mode-Wechsel: nächster AutoScan startet wieder "von vorne"
+                hasSensitivityCalibrationRun = false;   // After Mode-Switch: next AutoScan starts from the beginning again
                 logInfo(`Scanner set mode "normal" [IP: ${clientSource}]`);
                 SendResponseMessage(clientSource);
             }
@@ -1019,7 +1019,7 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (message.value.ScannerMode === 'blacklist' && EnableBlacklist) {
                 if (blacklist.length > 0) {
                     ScannerMode = 'blacklist';
-                    hasSensitivityCalibrationRun = false;   // Neue Session für diesen Modus
+                    hasSensitivityCalibrationRun = false;   // New Session for this mode
                     logInfo(`Scanner set mode "blacklist" [IP: ${clientSource}]`);
                 } else {
                     logInfo(`Scanner mode "blacklist" not available! [IP: ${clientSource}]`);
@@ -1032,7 +1032,7 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
                 if (whitelist.length > 0) {
                     ScannerMode = 'whitelist';
-                    hasSensitivityCalibrationRun = false;   // Neue Session für diesen Modus
+                    hasSensitivityCalibrationRun = false;   // New Session for this mode
                     logInfo(`Scanner set mode "whitelist" [IP: ${clientSource}]`);
                 } else {
                     logInfo(`Scanner mode "whitelist" not available! [IP: ${clientSource}]`);
@@ -1082,11 +1082,17 @@ async function handleDataPluginsMessage(eventData, ws) {
                 SendResponseMessage(clientSource);
                 stopAutoScan();
             }
+
+            // Handle Tune commands forwarded from TEF logger app
+            if (message.value.Tune !== undefined && message.value.Tune !== '') {
+                logInfo(`Scanner received tuning command "${message.value.Tune}" [IP: ${clientSource}]`);
+                sendCommandToClient(message.value.Tune);
+            }
         }
 
         if (message.type === 'GPS') {
-            // GPS Updates: für Legacy und TEF Logger erlaubt,
-            // aber TEF Logger nur nach Auth (wegen requiresAuth oben)
+            // GPS Updates: allowed for Legacy and TEF Logger,
+            // but TEF Logger only after Auth (because of requiresAuth above)
             const { lat, lon, alt, mode, time } = message.value;
             if (lat !== '') LAT = lat;
             if (lon !== '') LON = lon;
@@ -1625,30 +1631,30 @@ async function AutoScan() {
             (ScannerMode === 'whitelist' && EnableWhitelist);
 
         if (isStandardMode) {
-            // In normal/blacklist/whitelist unterscheiden wir:
-            //  - erster Start nach Mode-Wechsel  -> Calibration-Frequenz oder untere Bandgrenze
-            //  - Restart nach Auto-Stop          -> an der nächsten Frequenz weiter
+            // In normal/blacklist/whitelist we differentiate:
+            //  - first start after mode switch -> Calibration frequency or lower band limit
+            //  - restart after Auto-Stop -> continue at the next frequency
 
             if (!hasSensitivityCalibrationRun) {
-                // Erster Start in diesem Modus
+                // First start in this mode
                 currentFrequency = tuningLowerLimit; // Ensure frequency starts from bottom
                 if (SensitivityCalibrationFrequenz) {
-                    // Start über Calibration-Frequenz
+                    // Start via Calibration frequency
                     await SensitivityValueCalibration();
                 }
                 hasSensitivityCalibrationRun = true;
             } else {
-                // Restart nach Auto-Stop → nicht zurück zur Calibration / Bandgrenze,
-                // sondern mit der nächsten Frequenz weitermachen
+                // Restart after Auto-Stop -> do not go back to calibration / band limit,
+                // but continue with the next frequency
                 let lastFreq = parseFloat(freq);
 
                 if (isNaN(lastFreq) || lastFreq === 0.0) {
-                    // Falls nichts Sinnvolles da ist → untere Bandgrenze
+                    // If nothing meaningful is there -> lower band limit
                     currentFrequency = tuningLowerLimit;
                 } else {
-                    // Gleiches Raster wie in startScan():
+                    // Same grid as in startScan():
                     //  - < 74 MHz  -> 0.01 MHz
-                    //  - >= 74 MHz -> 0.1 MHz, außer Whitelist (0.01 MHz)
+                    //  - >= 74 MHz -> 0.1 MHz, except Whitelist (0.01 MHz)
                     let step;
                     if (lastFreq < 74.0) {
                         step = 0.01;
@@ -1661,14 +1667,14 @@ async function AutoScan() {
                     }
 
                     currentFrequency = lastFreq + step;
-                    currentFrequency = Math.round(currentFrequency * 100) / 100; // 2 Nachkommastellen
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; // 2 decimal places
                 }
             }
         } else {
-            // Alle anderen Modi (spectrum, spectrumBL, difference, differenceBL ...)
-            // behalten das bisherige Verhalten:
-            //  - Wenn Calibration-Frequenz gesetzt -> immer darüber starten
-            //  - Sonst von der unteren Bandgrenze
+            // All other modes (spectrum, spectrumBL, difference, differenceBL ...)
+            // keep the previous behavior:
+            //  - If Calibration frequency is set -> always start via it
+            //  - Otherwise from the lower band limit
             currentFrequency = tuningLowerLimit; // Ensure frequency starts from bottom
             if (SensitivityCalibrationFrequenz) {
                 await SensitivityValueCalibration();
@@ -1792,7 +1798,7 @@ async function startScan(direction) {
 						await SensitivityValueCalibration();
 						if (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL) {
 							setTimeout(() => {
-								startSpectrumAnalyse(); // Trigger spectrum analysis nach 1 Sekunde
+								startSpectrumAnalyse(); // Trigger spectrum analysis after 1 second
 							}, 1000);
 						}
                         
@@ -2483,7 +2489,7 @@ async function writeCSVLogEntry() {
         logFilePathCSV = getLogFilePathCSV();
     }
     
-    // Datenaufbereitung für FMLIST
+    // Data preparation for FMLIST
     const [seconds, nanoseconds] = process.hrtime();
     const nanoString = nanoseconds.toString().padStart(9, '0');
     const dateTimeStringNanoSeconds = `${date}T${time.slice(0, -1)}${nanoString} Z`;
@@ -2529,7 +2535,7 @@ async function writeCSVLogEntry() {
     const AF = `"${af}"`;
     const RT = `"${rt}"`;
 
-    // --- TX information (neu anhängen) ---
+    // --- TX information (append newly) ---
     const safe = v => (typeof v === 'undefined' || v === null) ? '' : String(v).trim().replace(/"/g, '');
     const TX_STATION = `"${safe(station)}"`;
     const TX_CITY    = `"${safe(city)}"`;
@@ -2608,11 +2614,11 @@ async function writeCSVLogEntry() {
     const TX_LON_CSV = `${(TX_LON || '').replace(/"/g, '')}`;
     // --- Ende TX information ---
 
-    // Erzeuge die Log-Zeile als String
-    // "30," vor die erste Spalte setzen
+    // Create the log line as a string
+    // Put '30,' before the first column
     let newLine = `30,${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT},,,,`;
 
-    // Anhängen der TX Felder am Ende (in der gleichen CSV-Reihenfolge wie prefilledData)
+    // Append the TX fields at the end (in the same CSV order as prefilledData)
     newLine += `${TX_STATION},${TX_CITY},${TX_ITU},${TX_ERP},${TX_POL},${TX_DIST},${TX_AZ},${TX_LAT_CSV},${TX_LON_CSV}\n`;
 
     try {
