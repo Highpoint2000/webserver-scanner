@@ -11,7 +11,7 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
-## v4.0a (FMDX Webserver 1.4.0 / FMDX Connector 2.0a compatible Version)
+## v4.0a (FMDX Webserver 1.4.0 / FMDX Connector 2.1 compatible Version)
 
 - Using the new plugin API to communicate with the web server and spectrum plugin -> Scanner can now also be used in Admin Lock mode (Web server and Spectrum plugin update required!)
 - Automatic calibration adjusted
