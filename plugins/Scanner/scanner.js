@@ -1,23 +1,21 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V3.9b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.0)       ///
 ///                                                         ///
-///  by Highpoint               last update: 18.02.2026     ///
+///  by Highpoint               last update: 24.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
 
-/////// compatible from webserver version 1.3.8 !!! ///////////
-
     const pluginSetupOnlyNotify = true;
     const CHECK_FOR_UPDATES = true;
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '3.9b';
+    const pluginVersion = '4.0';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -43,6 +41,8 @@
     let wsSendSocket;
     let clientIp               = '';
     let isTuneAuthenticated    = false;
+    let isTunerLocked          = false;
+    let isTuningAllowed        = true;
     let scannerButtonsExecuted = false;
     let Scan = 'off';
     let ScanPE5PVBstatus       = '';
@@ -605,10 +605,18 @@ async function fetchFirstLine() {
         }
 
         searchDownButton.addEventListener('click', function () {
+            if (!isTuningAllowed) {
+                sendToast('warning', 'Scanner', 'Tuner is currently locked to admin!', false, false);
+                return;
+            }
             sendSearch('down');
         });
 
         searchUpButton.addEventListener('click', function () {
+            if (!isTuningAllowed) {
+                sendToast('warning', 'Scanner', 'Tuner is currently locked to admin!', false, false);
+                return;
+            }
             sendSearch('up');
         });
     }
@@ -1186,12 +1194,21 @@ async function fetchFirstLine() {
         const canControlReceiver =
             bodyText.includes("You are logged in and can control the receiver.");
 
+        // Check if tuner is currently locked to admin
+        isTunerLocked = !!document.querySelector('.fa-solid.fa-key.pointer.tooltip') || !!document.querySelector('.fa-solid.fa-lock.pointer.tooltip');
+
         if (isAdminLoggedIn || canControlReceiver) {
             console.log("Admin or Tune mode found. Scanner Plugin Authentication successful.");
             isTuneAuthenticated = true;
         } else {
             console.log("No special authentication message found. Authentication failed.");
             isTuneAuthenticated = false;
+        }
+
+        if (!isTunerLocked || isTuneAuthenticated) {
+            isTuningAllowed = true;
+        } else {
+            isTuningAllowed = false;
         }
     }
 

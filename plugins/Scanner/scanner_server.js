@@ -1,15 +1,13 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V3.9b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0)       ///
 ///                                                         ///
-///  by Highpoint               last update: 18.02.2026     ///
+///  by Highpoint               last update: 24.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
 ///                                                         ///
 ///////////////////////////////////////////////////////////////
-
-/////// compatible from webserver version 1.3.8 !!! ///////////
 
 /// Use Scanner wizard: https://tef.noobish.eu/logos/scanner_wizard.html for configuration the Plugin !!!
 
@@ -19,6 +17,38 @@ const fs = require('fs');
 const crypto = require('crypto'); // Import crypto module
 const { logInfo, logError, logWarn } = require('./../../server/console');
 const apiData = require('./../../server/datahandler');
+
+let pluginsApi;
+let emitPluginEvent = () => {};
+let sendPrivilegedCommand = null;
+
+try {
+    pluginsApi = require('./../../server/plugins_api');
+
+    if (pluginsApi?.emitPluginEvent) {
+        emitPluginEvent = pluginsApi.emitPluginEvent;
+    }
+
+    if (pluginsApi?.sendPrivilegedCommand) {
+        sendPrivilegedCommand = pluginsApi.sendPrivilegedCommand;
+    }
+
+    if (pluginsApi?.onPluginEvent) {
+        pluginsApi.onPluginEvent('sigArray', (data) => {
+            handleDataPluginsMessage(JSON.stringify({
+                type: 'sigArray',
+                value: data,
+                isScanning: true
+            }), null);
+        });
+    }
+} catch (err) {
+    if (err.code === 'MODULE_NOT_FOUND') {
+        logWarn('Scanner unable to find plugins_api, using fallback');
+    } else {
+        throw err; // unexpected error
+    }
+}
 
 // Define the paths to the old and new configuration files
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
@@ -493,6 +523,7 @@ let writeStatusHTMLLog = true;
 let writeStatusLogFMLIST = true;
 let logSnapshot;
 let hasSensitivityCalibrationRun = false;
+let isCalibrating = false; // Block flag for normal scanning operations during calibration
 
 // ---- START: Session-based Auth State ----
 const authorizedClients = new WeakSet(); // Store authorized WebSocket clients
@@ -1077,18 +1108,32 @@ function InitialMessage() {
     });
 }
 
-function sendDataToClient(frequency) {
-    if (textSocket && textSocket.readyState === WebSocket.OPEN) {
-        const dataToSend = `T${(frequency * 1000).toFixed(0)}`;
-        textSocket.send(dataToSend);
-    } else {
-        logError('WebSocket not open.');
-        setTimeout(() => sendDataToClient(frequency), 100); // Retry after a short delay
+async function sendDataToClient(frequency) {
+    const dataToSend = `T${(frequency * 1000).toFixed(0)}`;
+    try {
+        if (sendPrivilegedCommand) {
+            await sendPrivilegedCommand(dataToSend, true);
+            return;
+        }
+
+        if (textSocket && textSocket.readyState === WebSocket.OPEN) {
+            textSocket.send(dataToSend);
+        } else {
+            logError('WebSocket not open.');
+            setTimeout(() => sendDataToClient(frequency), 100); // Retry after a short delay
+        }
+    } catch (error) {
+        logError("Failed to send data to client:", error);
     }
 }
 
 async function sendCommandToClient(command) {
     try {
+        if (sendPrivilegedCommand) {
+            const success = await sendPrivilegedCommand(command, true);
+            if (success) return;
+        }
+
         // Ensure the TextWebSocket connection is established
         await TextWebSocket();
 
@@ -1252,7 +1297,7 @@ function checkUserCount(users) {
 			} else {
 				sendDataToClient(saveAutoscanFrequency);
 			}
-			if (AntennaSwitch && saveAutoscanAntenna) textSocket.send(`Z${saveAutoscanAntenna}`);
+			if (AntennaSwitch && saveAutoscanAntenna) sendCommandToClient(`Z${saveAutoscanAntenna}`);
         }
     }
 }
@@ -1439,11 +1484,14 @@ async function handleSocketMessage(messageData) {
         }
     }
 
-    if (!ScanPE5PVB) {
-        checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter);
-    } else {
-		PE5PVBlog(freq, picode, station, checkStrengthCounter)
-	}
+    // Prevent scanner from wandering off during calibration
+    if (!isCalibrating) {
+        if (!ScanPE5PVB) {
+            checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter);
+        } else {
+            PE5PVBlog(freq, picode, station, checkStrengthCounter)
+        }
+    }
 
     // Check user count and handle scanning if needed
     checkUserCount(users);
@@ -1497,26 +1545,58 @@ function sendNextAntennaCommand() {
 }
 
 async function SensitivityValueCalibration() {
-    clearInterval(scanInterval);
-    currentFrequency = SensitivityCalibrationFrequenz;
-    currentFrequency = Math.round(currentFrequency * 100) / 100;
-    sendDataToClient(currentFrequency);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    Sensitivity = Math.round(strength) + Math.round(defaultSensitivityValue);
-    // logInfo(`Scanner set Sensitivity Value on ${currentFrequency} MHz to ${Sensitivity} [${Math.round(strength)} + ${defaultSensitivityValue}]`);			
+    isCalibrating = true; 
+    try {
+        clearInterval(scanInterval); // Pause scanning
+        let calibFreq = Math.round(parseFloat(SensitivityCalibrationFrequenz) * 100) / 100;
+        
+        // 1. If in a spectrum mode, wait until the spectrum scan finishes (sigArray is populated)
+        if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
+            let waitSpectrum = 0;
+            // Wait up to 10 seconds for the spectrum array to fill
+            while (sigArray.length === 0 && waitSpectrum < 50) { 
+                await new Promise(resolve => setTimeout(resolve, 200));
+                waitSpectrum++;
+            }
+            // Extra delay to ensure the tuner is ready to receive new commands after the heavy scan
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
 
-    // Create and send a broadcast message to stop the scan
-    const Message = createMessage(
-        'broadcast',
-        '255.255.255.255',
-        Scan,
-        '',
-        Sensitivity,
-        ScannerMode,
-        ScanHoldTime,
-        FMLIST_Autolog
-    );
-    DataPluginsSocket.send(JSON.stringify(Message));
+        sendDataToClient(calibFreq);
+        
+        // 2. Wait until the tuner has actually tuned to the calibration frequency
+        let retries = 0;
+        while (retries < 50) { 
+            const currentReportedFreq = parseFloat(freq);
+            // Check if the reported frequency matches our target calibration frequency
+            if (!isNaN(currentReportedFreq) && Math.abs(currentReportedFreq - calibFreq) < 0.05) {
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+        }
+
+        // 3. Wait an additional 2 seconds for the signal strength reading to stabilize
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        Sensitivity = Math.round(strength) + Math.round(defaultSensitivityValue);
+        // logInfo(`Scanner set Sensitivity Value on ${calibFreq} MHz to ${Sensitivity} [${Math.round(strength)} + ${defaultSensitivityValue}]`);			
+
+        // Create and send a broadcast message to update the UI
+        const Message = createMessage(
+            'broadcast',
+            '255.255.255.255',
+            Scan,
+            '',
+            Sensitivity,
+            ScannerMode,
+            ScanHoldTime,
+            FMLIST_Autolog
+        );
+        DataPluginsSocket.send(JSON.stringify(Message));
+    } finally {
+        isCalibrating = false; // Re-enable normal scanning checks
+    }
 }
 
 
@@ -1536,7 +1616,7 @@ async function AutoScan() {
         }
 
         scanBandwithSave = bandwith;
-        textSocket.send(`W${scanBandwith}\n`);
+        sendCommandToClient(`W${scanBandwith}\n`);
 
         // Only these modes get the "continue at next frequency" behaviour
         const isStandardMode =
@@ -1551,12 +1631,10 @@ async function AutoScan() {
 
             if (!hasSensitivityCalibrationRun) {
                 // Erster Start in diesem Modus
+                currentFrequency = tuningLowerLimit; // Ensure frequency starts from bottom
                 if (SensitivityCalibrationFrequenz) {
                     // Start über Calibration-Frequenz
                     await SensitivityValueCalibration();
-                } else {
-                    // Keine Calibration-Frequenz gesetzt -> von unterer Bandgrenze starten
-                    currentFrequency = tuningLowerLimit;
                 }
                 hasSensitivityCalibrationRun = true;
             } else {
@@ -1591,10 +1669,9 @@ async function AutoScan() {
             // behalten das bisherige Verhalten:
             //  - Wenn Calibration-Frequenz gesetzt -> immer darüber starten
             //  - Sonst von der unteren Bandgrenze
+            currentFrequency = tuningLowerLimit; // Ensure frequency starts from bottom
             if (SensitivityCalibrationFrequenz) {
                 await SensitivityValueCalibration();
-            } else {
-                currentFrequency = tuningLowerLimit;
             }
         }
 
@@ -1613,7 +1690,7 @@ function stopAutoScan() {
 			logInfo('Scanner set bandwith from: auto mode back to:', scanBandwithSave, 'Hz');
 		}		
 	}
-	textSocket.send(`W${scanBandwithSave}\n`);
+	sendCommandToClient(`W${scanBandwithSave}\n`);
 }
 
 let isSpectrumCooldown = false;
@@ -1635,7 +1712,17 @@ async function setupSendSocket() {
 
             isSpectrumCooldown = true;
 
-            DataPluginsSocket.send(message);
+            // --- pluginsApi (internal only) ---
+            const internalMessage = JSON.parse(message);
+
+            if (pluginsApi?.emitPluginEvent) {
+                emitPluginEvent('spectrum-graph', internalMessage, { broadcast: false });
+            }
+
+            // --- DataPluginsSocket (fallback) ---
+            if (DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+                DataPluginsSocket.send(message);
+            }
 
             setTimeout(() => {
                 isSpectrumCooldown = false;
@@ -1708,6 +1795,11 @@ async function startScan(direction) {
 								startSpectrumAnalyse(); // Trigger spectrum analysis nach 1 Sekunde
 							}, 1000);
 						}
+                        
+                        // Restart the scan properly from the bottom after calibration completes
+                        currentFrequency = tuningLowerLimit;
+                        startScan('up');
+                        return; // Exit this execution cycle to allow clean restart
 					} else { 
 				      if ( ScannerMode === 'normal' || ScannerMode === 'blacklist' || ScannerMode === 'whitelist' ) {
 						  currentFrequency = tuningLowerLimit;
@@ -1879,6 +1971,8 @@ async function startScan(direction) {
 								}
 								
 								sendDataToClient(currentFrequency); // Send the updated frequency to the client
+                                // Restart the scan properly from the bottom after calibration completes
+                                startScan('up');
 								return; // Exit further processing in this cycle
                             }
                         } else if (direction === 'down') {
