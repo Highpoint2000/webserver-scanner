@@ -18,9 +18,10 @@ const crypto = require('crypto'); // Import crypto module
 const { logInfo, logError, logWarn } = require('./../../server/console');
 const apiData = require('./../../server/datahandler');
 
-let pluginsApi;
+let pluginsApi, wss, pluginsWss, serverConfig;
 let emitPluginEvent = () => {};
 let sendPrivilegedCommand = null;
+let useHooks = false;
 
 try {
     pluginsApi = require('./../../server/plugins_api');
@@ -29,8 +30,21 @@ try {
         emitPluginEvent = pluginsApi.emitPluginEvent;
     }
 
+    wss = pluginsApi.getWss?.();
+    pluginsWss = pluginsApi.getPluginsWss?.();
+    serverConfig = pluginsApi.getServerConfig?.();
+
+    pluginsWss.on('connection', handlePluginConnection);
+
     if (pluginsApi?.sendPrivilegedCommand) {
         sendPrivilegedCommand = pluginsApi.sendPrivilegedCommand;
+    }
+
+    useHooks = !!(wss && pluginsWss);
+    usePrivileged = !!sendPrivilegedCommand && useHooks;
+
+    if (useHooks && usePrivileged) {
+        logInfo(`Scanner using plugins_api with WebSocket hooks enabled`);
     }
 
     if (pluginsApi?.onPluginEvent) {
@@ -800,7 +814,7 @@ async function DataPluginsWebSocket() {
 
       // Add a reference to the WebSocket object for auth state tracking
       DataPluginsSocket.on('message', (data) => {
-        handleDataPluginsMessage(data, DataPluginsSocket);
+        if (!useHooks) handleDataPluginsMessage(data, DataPluginsSocket);
       });
       
       DataPluginsSocket.on('close', () => {
@@ -825,12 +839,31 @@ async function DataPluginsWebSocket() {
   }
 }
 
+function handlePluginConnection(ws, req) {
+    ws.on('message', (data) => {
+        handleDataPluginsMessage(data, req);
+    });
+}
+
 async function handleDataPluginsMessage(eventData, ws) {
     try {
         const message = JSON.parse(eventData);
 
         if (!message || (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS')) {
             return;
+        }
+
+        let isAdminLocked = false;
+
+        if (useHooks) {
+            const session = ws.session || {};
+            const isAdmin = session.isAdminAuthenticated || session.isTuneAuthenticated;
+            const isLocked = !serverConfig.publicTuner || serverConfig.lockToAdmin;
+
+            if (isLocked && !isAdmin) {
+                isAdminLocked = true;
+                logInfo('Scanner blocked non-admin scan during lock');
+            }
         }
         
         const clientSource = message.source || 'unknown';
@@ -850,10 +883,10 @@ async function handleDataPluginsMessage(eventData, ws) {
             // Handle unrestricted Search commands immediately (for all clients)
             if (message.value.status === 'command' && message.value.Search) {
                 if (message.value.Search === 'down') {
-                    if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
+                    if (!isAdminLocked) if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
                 }
                 if (message.value.Search === 'up') {
-                    if (SearchPE5PVB) { sendCommandToClient('C2'); } else { startSearch('up'); }
+                    if (!isAdminLocked) if (SearchPE5PVB) { sendCommandToClient('C2'); } else { startSearch('up'); }
                 }
                 return; // Search commands are handled, exit
             }
