@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 24.02.2026     ///
+///  by Highpoint               last update: 25.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -65,18 +65,18 @@ const defaultConfig = {
 	OnlyScanHoldTime: 'off',			 	// Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
 
     defaultSensitivityValue: 30,        	// Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-											// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values ​​are 1-10 dBf/dBµV/dBm
+											// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values are 1-10 dBf/dBµV/dBm
 	SensitivityCalibrationFrequenz: '',		// Value in MHz e.g. '87.3' / If the field is left blank (default setting), the scanner will not perform automatic noise signal calibration
     defaultScanHoldTime: 5,              	// Value in s: 1,2,3,4,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
     defaultScannerMode: 'normal',        	// Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,               	// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
-    EnableBlacklist: false,              	// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
-    EnableWhitelist: false,              	// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
+    EnableBlacklist: false,              	// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values (e.g. 89.000) must be located in the scanner plugin folder 
+    EnableWhitelist: false,              	// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values (e.g. 89.000) must be located in the scanner plugin folder 
 	
-	tuningLowerLimit: '',	             	// Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
-	tuningUpperLimit: '',				 	// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
+	tuningLowerLimit: '',	             	// Set the lower band limit (e.g. '87.5') if the values differ from the web server settings (default is '',)	
+	tuningUpperLimit: '',				 	// Set the upper band limit (e.g. '108.0') if the values differ from the web server settings (default is '',)
 
     EnableSpectrumScan: false,           	// Enable Spectrum, set it 'true' or 'false'
     EnableDifferenceScan: false,         	// Enable Spectrum, set it 'true' or 'false'
@@ -90,17 +90,17 @@ const defaultConfig = {
 	CSVcreate: true,					 	// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
 	CSVcompletePS: true,				 	// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true,                       	// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
-	Log_Blacklist: false,        		 	// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	Log_Blacklist: false,        		 	// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values (e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 	SignalStrengthUnit: 'dBf',			 	// Set to 'dBf', 'dBm' or 'dBµV' 
 
     FMLIST_OM_ID: '',                    	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-    FMLIST_Autolog: 'off',               	// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_Autolog: 'off',               	// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, "on" to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,             	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
     FMLIST_MaxDistance: 2000,            	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 200)
     FMLIST_LogInterval: 60,            		// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',             	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 	FMLIST_ShortServerName: '',		     	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values (e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     BEEP_CONTROL: false,                 	// Acoustic control function for scanning operation (true or false)
 };
@@ -535,18 +535,25 @@ let tuningLimit = config.webserver.tuningLimit;
 if (tuningUpperLimit === '') {
     tuningUpperLimit = config.webserver.tuningUpperLimit;
     if (tuningUpperLimit === '' || !tuningLimit) {
-        tuningUpperLimit = '108.0';
+        tuningUpperLimit = 108.0;
     }
 }
-if (parseFloat(tuningUpperLimit) > 108.0) {
-    tuningUpperLimit = '108.0';
+// Force parsing to float to remove trailing zeros and format issues
+tuningUpperLimit = parseFloat(tuningUpperLimit);
+if (isNaN(tuningUpperLimit) || tuningUpperLimit > 108.0) {
+    tuningUpperLimit = 108.0;
 }
 
 if (tuningLowerLimit === '') {
 	tuningLowerLimit = config.webserver.tuningLowerLimit;
 	if (tuningLowerLimit === '' || !tuningLimit) {
-		tuningLowerLimit = '87.5';
+		tuningLowerLimit = 87.5;
 	}
+}
+// Force parsing to float to remove trailing zeros and format issues
+tuningLowerLimit = parseFloat(tuningLowerLimit);
+if (isNaN(tuningLowerLimit)) {
+    tuningLowerLimit = 87.5;
 }
 
 Scan = 'off';
@@ -775,7 +782,7 @@ let lastMessageTimestamp = 0;
 
 /**
  * Builds and sends a Scanner response message back to the requesting client.
- * @param {string} targetIP – The IP (or identifier) from message.source
+ * @param {string} targetIP - The IP (or identifier) from message.source
  */
 function SendResponseMessage(targetIP) {
   const responseMessage = createMessage(
@@ -2147,11 +2154,11 @@ function checkWhitelist() {
                         ScanHoldTimeValue += 50;
                     }				
 					
-					let tuningLowerLimitwith00 = Math.round(tuningLowerLimit * 100) / 100;
-					let formattedNumber = tuningLowerLimitwith00.toFixed(3);
+					// Convert both values to numbers rounded to 2 decimal places to safely compare them
+					let currentFreqNum = Math.round(parseFloat(currentFrequency) * 100) / 100;
+					let lowerLimitNum = Math.round(parseFloat(tuningLowerLimit) * 100) / 100;
 
-				    //console.log(checkStrengthCounter,ScanHoldTimeValue,currentFrequency,formattedNumber);	
-					if (currentFrequency !== formattedNumber) {
+					if (currentFreqNum !== lowerLimitNum) {
 						clearInterval(scanInterval); // Clears a previously defined scanning interval
 						isScanning = false; // Updates a flag indicating scanning status		
 					}

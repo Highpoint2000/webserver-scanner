@@ -11,14 +11,11 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
-## v4.0a (FMDX Webserver 1.4.0 / FMDX Connector 2.0a compatible Version)
+## v4.0b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
-- Using the new plugin API to communicate with the web server and spectrum plugin -> Scanner can now also be used in Admin Lock mode (Web server and Spectrum plugin update required!)
-- Automatic calibration adjusted
-- Control of the locked web server via FMDX Connector built in
+- Problems with specifying incorrect scan limits corrected
 
-Thanks to AmateurAudioDude for the Pull Request!
- 
+
 ## Installation notes:
 
 1. [Download](https://github.com/Highpoint2000/webserver-scanner/releases) the last repository as a zip
@@ -79,6 +76,14 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.0a (FMDX Webserver 1.4.0 / FMDX Connector 2.0a compatible Version)
+
+- Using the new plugin API to communicate with the web server and spectrum plugin -> Scanner can now also be used in Admin Lock mode (Web server and Spectrum plugin update required!)
+- Automatic calibration adjusted
+- Control of the locked web server via FMDX Connector built in
+
+Thanks to AmateurAudioDude for the Pull Request!
 
 ### v4.0 (FMDX Webserver 1.4.0 compatible Version)
 
