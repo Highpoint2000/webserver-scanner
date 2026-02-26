@@ -1,7 +1,7 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.1)       ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.1a)      ///
 ///                                                         ///
 ///  by Highpoint               last update: 26.02.2026     ///
 ///  powered by PE5PVB                                      ///
@@ -363,14 +363,14 @@ async function fetchFirstLine() {
                     ScanPE5PVBstatus = ScanPE5PVB;
                 }
 
-                // store last internal values for later re-render on unit change
-                if (typeof Sensitivity !== 'undefined') {
+                // IMPORTANT: Only store valid (non-empty) values for later re-render to prevent NaN issues
+                if (Sensitivity !== undefined && Sensitivity !== null && Sensitivity !== '') {
                     lastInternalSensitivity = Sensitivity;
                 }
-                if (typeof ScannerMode !== 'undefined') {
+                if (ScannerMode !== undefined && ScannerMode !== null && ScannerMode !== '') {
                     lastScannerModeValue = ScannerMode;
                 }
-                if (typeof ScanHoldTime !== 'undefined') {
+                if (ScanHoldTime !== undefined && ScanHoldTime !== null && ScanHoldTime !== '') {
                     lastScanHoldTimeValue = ScanHoldTime;
                 }
 
@@ -410,8 +410,11 @@ async function fetchFirstLine() {
                         }
                     }
 
-                    const normSens = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
-                    updateDropdownValues(normSens, ScannerMode, ScanHoldTime);
+                    // Protect normalizeSensitivity from processing undefined or empty strings
+                    if (Sensitivity !== undefined && Sensitivity !== null && Sensitivity !== '') {
+                        const normSens = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+                        updateDropdownValues(normSens, ScannerMode, ScanHoldTime);
+                    }
 
                 } else if (
                     status === 'broadcast' &&
@@ -430,8 +433,10 @@ async function fetchFirstLine() {
                     sendInitialWebSocketMessage();
 
                 } else if (status === 'broadcast' || status === 'send') {
-                    const normSens = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
-                    updateDropdownValues(normSens, ScannerMode, ScanHoldTime);
+                    if (Sensitivity !== undefined && Sensitivity !== null && Sensitivity !== '') {
+                        const normSens = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+                        updateDropdownValues(normSens, ScannerMode, ScanHoldTime);
+                    }
                 }
 
                 // Scan button behaviour (UI only)
@@ -516,7 +521,7 @@ async function fetchFirstLine() {
     // Update dropdown values (display)
     ///////////////////////////////////////////////////////////
     function updateDropdownValues(Sensitivity, ScannerMode, ScanHoldTime) {
-        if (Sensitivity !== undefined && Sensitivity !== null && !Number.isNaN(Sensitivity)) {
+        if (Sensitivity !== undefined && Sensitivity !== null && Sensitivity !== '' && !Number.isNaN(Sensitivity)) {
             const sensitivityInput = document.querySelector('input[title="Scanner Sensitivity"]');
             if (sensitivityInput) {
                 if (ScanPE5PVBstatus) {
@@ -528,7 +533,7 @@ async function fetchFirstLine() {
             }
         }
 
-        if (ScannerMode) {
+        if (ScannerMode !== undefined && ScannerMode !== null && ScannerMode !== '') {
             const modeInput = document.querySelector('input[title="Scanner Mode"]');
             if (modeInput) {
                 modeInput.value = `${ScannerMode}`;
@@ -536,7 +541,7 @@ async function fetchFirstLine() {
             }
         }
 
-        if (ScanHoldTime) {
+        if (ScanHoldTime !== undefined && ScanHoldTime !== null && ScanHoldTime !== '') {
             const holdTimeInput = document.querySelector('input[title="Scanhold Time"]');
             if (holdTimeInput) {
                 holdTimeInput.value = `${ScanHoldTime} sec.`;
@@ -855,11 +860,13 @@ async function fetchFirstLine() {
                         }
                         setCookie('scannerControlsStatus', 'off', 7);
                     } else {
-                        if (lastInternalSensitivity !== null) {
+                        // Priority to the remembered state over closure variables
+                        if (lastInternalSensitivity !== null && lastInternalSensitivity !== '') {
                             const norm = normalizeSensitivity(lastInternalSensitivity, SignalStrengthUnit);
                             createScannerControls(norm, lastScannerModeValue, lastScanHoldTimeValue);
                         } else {
-                            createScannerControls(Sensitivity, ScannerMode, ScanHoldTime);
+                            const norm = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+                            createScannerControls(norm, ScannerMode, ScanHoldTime);
                         }
                         setCookie('scannerControlsStatus', 'on', 7);
                     }
@@ -909,11 +916,12 @@ async function fetchFirstLine() {
 
         const scannerControlsStatus = getCookie('scannerControlsStatus');
         if (scannerControlsStatus === 'on' && isTuneAuthenticated) {
-            if (lastInternalSensitivity !== null) {
+            if (lastInternalSensitivity !== null && lastInternalSensitivity !== '') {
                 const norm = normalizeSensitivity(lastInternalSensitivity, SignalStrengthUnit);
                 createScannerControls(norm, lastScannerModeValue, lastScanHoldTimeValue);
             } else {
-                createScannerControls(Sensitivity, ScannerMode, ScanHoldTime);
+                const norm = normalizeSensitivity(Sensitivity, SignalStrengthUnit);
+                createScannerControls(norm, ScannerMode, ScanHoldTime);
             }
         } else {
             const scannerControls = document.getElementById('scanner-controls');
@@ -1316,41 +1324,31 @@ async function fetchFirstLine() {
         SignalStrengthUnit = mapUnitLabelToInternal(initialLabel);
         console.log('[Scanner] Initial SignalStrengthUnit from UI:', SignalStrengthUnit);
 
-        const observer = new MutationObserver(mutations => {
-            let changed = false;
-            mutations.forEach(m => {
-                if (m.type === 'attributes' &&
-                    (m.attributeName === 'value' || m.attributeName === 'placeholder')) {
-                    changed = true;
-                }
-            });
+        // Standard JS assignments to input.value do NOT trigger MutationObserver.
+        // Therefore, we use a lightweight interval to check for changes instantly.
+        setInterval(() => {
+            const label = input.value || input.placeholder || '';
+            const newUnit = mapUnitLabelToInternal(label);
+            
+            if (newUnit !== SignalStrengthUnit) {
+                console.log('[Scanner] Signal unit changed in UI →', SignalStrengthUnit, '→', newUnit);
+                SignalStrengthUnit = newUnit;
 
-            if (changed) {
-                const label = input.value || input.placeholder || '';
-                const newUnit = mapUnitLabelToInternal(label);
-                if (newUnit !== SignalStrengthUnit) {
-                    console.log('[Scanner] Signal unit changed in UI →', SignalStrengthUnit, '→', newUnit);
-                    SignalStrengthUnit = newUnit;
+                if (lastInternalSensitivity !== null && lastInternalSensitivity !== '') {
+                    const norm = normalizeSensitivity(lastInternalSensitivity, SignalStrengthUnit);
 
-                    // Re-render scanner controls and sensitivity display using last internal values
-                    if (lastInternalSensitivity !== null) {
-                        const norm = normalizeSensitivity(lastInternalSensitivity, SignalStrengthUnit);
+                    // Check if scanner controls are currently open
+                    const existing = document.getElementById('scanner-controls');
+                    if (existing && isTuneAuthenticated) {
+                        existing.parentNode.removeChild(existing);
+                        // Recreate with new units
+                        createScannerControls(norm, lastScannerModeValue, lastScanHoldTimeValue);
+                        // Update the input field text to reflect the new unit
                         updateDropdownValues(norm, lastScannerModeValue, lastScanHoldTimeValue);
-
-                        const existing = document.getElementById('scanner-controls');
-                        if (existing && isTuneAuthenticated) {
-                            existing.parentNode.removeChild(existing);
-                            createScannerControls(norm, lastScannerModeValue, lastScanHoldTimeValue);
-                        }
                     }
                 }
             }
-        });
-
-        observer.observe(input, {
-            attributes: true,
-            attributeFilter: ['value', 'placeholder']
-        });
+        }, 250);
     }
 
     ///////////////////////////////////////////////////////////

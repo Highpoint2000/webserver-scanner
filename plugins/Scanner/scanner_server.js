@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.1a)      ///
 ///                                                         ///
 ///  by Highpoint               last update: 26.02.2026     ///
 ///  powered by PE5PVB                                      ///
@@ -448,15 +448,34 @@ function applyScannerConfig(configData) {
         Speaker = require('speaker');
     }
 
-    // Assign main modes directly
+    // Assign main modes directly to global variables
+    Sensitivity = defaultSensitivityValue;
     ScannerMode = defaultScannerMode;
     ScanHoldTime = defaultScanHoldTime;
     StatusFMLIST = FMLIST_Autolog;
     ScanPE5PVB = Autoscan_PE5PVB_Mode;
     SearchPE5PVB = Search_PE5PVB_Mode;
 
+    // Reset calibration flag so the new calibration frequency is triggered immediately
+    hasSensitivityCalibrationRun = false;
+
     // Update settings in the client-side script
     updateSettings();
+
+    // ALWAYS broadcast update to UI, regardless of whether the scanner is running or not
+    if (typeof DataPluginsSocket !== 'undefined' && DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+        const Message = createMessage(
+            'broadcast',
+            '255.255.255.255',
+            Scan,
+            '',
+            Sensitivity,
+            ScannerMode,
+            ScanHoldTime,
+            FMLIST_Autolog
+        );
+        DataPluginsSocket.send(JSON.stringify(Message));
+    }
 
     // If the scanner is currently running, cleanly restart it to force a new calibration
     if (Scan === 'on') {
@@ -466,27 +485,8 @@ function applyScannerConfig(configData) {
         
         // Wait briefly for current intervals to die off, then trigger a fresh auto-scan
         setTimeout(() => {
-            hasSensitivityCalibrationRun = false;
             AutoScan();
         }, 1000);
-    } else {
-        // Scanner is off: update values normally and broadcast to the UI
-        Sensitivity = defaultSensitivityValue;
-        hasSensitivityCalibrationRun = false;
-        
-        if (typeof DataPluginsSocket !== 'undefined' && DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
-            const Message = createMessage(
-                'broadcast',
-                '255.255.255.255',
-                Scan,
-                '',
-                Sensitivity,
-                ScannerMode,
-                ScanHoldTime,
-                FMLIST_Autolog
-            );
-            DataPluginsSocket.send(JSON.stringify(Message));
-        }
     }
 }
 
