@@ -11,9 +11,10 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
-## v4.0b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+## v4.1 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
-- Problems with specifying incorrect scan limits corrected
+- Settings in scanner.json are now updated on the fly when changes are made
+- Various code improvements and bug fixes
 
 
 ## Installation notes:
@@ -35,8 +36,6 @@ To create or modify the scanner configuration file (scanner.json) please use the
 
 ![image](https://github.com/user-attachments/assets/244a2036-6279-4066-9c90-193a9c47319a)
 
-
-After making changes to the scanner.json script, the server must be restarted!!!
 
 ## Important notes: 
 
@@ -76,6 +75,10 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.0b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+
+- Problems with specifying incorrect scan limits corrected
 
 ### v4.0a (FMDX Webserver 1.4.0 / FMDX Connector 2.0a compatible Version)
 

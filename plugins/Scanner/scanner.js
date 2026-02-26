@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.0b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.1)       ///
 ///                                                         ///
-///  by Highpoint               last update: 25.02.2026     ///
+///  by Highpoint               last update: 26.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.0b';
+    const pluginVersion = '4.1';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -1146,8 +1146,17 @@ async function fetchFirstLine() {
                 input.setAttribute('data-value', value);
                 dropdown.style.display = 'none';
 
+                // Hole aktuelle Werte direkt aus dem DOM, um veraltete Closure-Werte (wie den Default) zu vermeiden!
+                const currentSensInput = document.querySelector('input[title="Scanner Sensitivity"]');
+                const currentModeInput = document.querySelector('input[title="Scanner Mode"]');
+                const currentHoldInput = document.querySelector('input[title="Scanhold Time"]');
+
+                let currentSens = currentSensInput ? currentSensInput.getAttribute('data-value') : Sensitivity;
+                let currentMode = currentModeInput ? currentModeInput.getAttribute('data-value') : ScannerMode;
+                let currentHold = currentHoldInput ? currentHoldInput.getAttribute('data-value') : ScanHoldTime;
+
                 if (commandPrefix === 'I') {
-                    SendValue(value, ScannerMode, ScanHoldTime);
+                    SendValue(value, currentMode, currentHold);
                     if (
                         SpectrumLimiterValueStatus &&
                         value >= SpectrumLimiterValueStatus &&
@@ -1160,11 +1169,11 @@ async function fetchFirstLine() {
                     }
                 }
                 if (commandPrefix === 'M') {
-                    SendValue(Sensitivity, value, ScanHoldTime);
+                    SendValue(currentSens, value, currentHold);
                     ScannerModeStatus = value;
                 }
                 if (commandPrefix === 'K') {
-                    SendValue(Sensitivity, ScannerMode, value);
+                    SendValue(currentSens, currentMode, value);
                 }
             });
         });

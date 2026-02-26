@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.0)       ///
 ///                                                         ///
-///  by Highpoint               last update: 25.02.2026     ///
+///  by Highpoint               last update: 26.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,13 +15,130 @@ const https = require('https');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto'); // Import crypto module
+const WebSocket = require('ws');
+const { execSync } = require('child_process');
+
 const { logInfo, logError, logWarn } = require('./../../server/console');
 const apiData = require('./../../server/datahandler');
+const config = require('./../../config.json');
 
-let pluginsApi, wss, pluginsWss, serverConfig;
+// -------------------------------------------------------------
+// Global System & Operational Variables
+// -------------------------------------------------------------
+const adminPass = config.password.adminPass; // Use admin password from main config
+
+const ServerName = config.identification.tunerName; 
+const ServerDescription = config.identification.tunerDesc; 
+const DefaultFreq = config.defaultFreq;
+const enableDefaultFreq = config.enableDefaultFreq;
+const Antennas = config.antennas;
+const webserverPort = config.webserver.webserverPort || 8080; // Default to port 8080 if not specified
+
+const externalWsUrl = `ws://127.0.0.1:${webserverPort}`;
+const source = '127.0.0.1';
+const logDir = path.resolve(__dirname, '../../web/logs'); // Absolute path to the log directory
+
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
+
+const ScannerClientFile = path.join(__dirname, 'scanner.js');
+const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
+const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
+const dxAlertConfigFilePath = path.join(__dirname, './../../plugins_configs/DX-Alert.json');
+
+// Operational Global Variables
+let textSocket;
+let DataPluginsSocket;
+let autoScanSocket;
+let blacklist = [];
+let whitelist = [];
+let spectrum = [];
+let difference = [];
+let isScanning = false;
+let isSearching = false;
+let currentFrequency = 0;
+let previousFrequency = 0;
+let checkStrengthCounter = 0;
+let stereo_detect = false;
+let stereo_forced_user = 'stereo';
+let scanInterval = null; 
+let autoScanActive = false; 
+let autoScanTimer; 
+let autoScanScheduled = false; 
+let Scan = 'off';
+let enabledAntennas = [];
+let currentAntennaIndex = 0;
+let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength, strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, ecc, af, rt0, rt1, rt, saveAutoscanAntenna, saveAutoscanFrequency;
+let bandwith = 0;
+let CSV_LogfilePath;
+let CSV_LogfilePath_filtered;
+let HTML_LogfilePath;
+let HTML_LogfilePath_filtered;
+let textSocketLost;
+let scanBandwithSave;
+let ALT;
+let gpstime;
+let gpsmode;
+let ShortServerName;
+let sigArray = [];
+let sigArraySpectrum = [];
+let sigArrayDifference = [];
+let sigArraySave0 = [];
+let sigArraySave1 = [];
+let sigArraySave2 = [];
+let sigArraySave3 = [];
+let validFrequencies;
+let freqMap2;
+let logFilePathHTML;
+let logFilePathCSV;
+let writeStatusCSV = true;
+let writeStatusCSVps = false;
+let writeStatusHTMLLog = true;
+let writeStatusLogFMLIST = true;
+let logSnapshot;
+let hasSensitivityCalibrationRun = false;
+let isCalibrating = false; // Block flag for normal scanning operations during calibration
+
+// Global variables for DX-Alert config
+let dxScreenshotAlert = 'off';
+let dxAlertDistance = 0;
+let dxAlertDistanceMax = 20000;
+let dxAlertConfigExists = false;
+
+let Speaker;
+const NewModules = ['speaker'];
+
+// ---- START: Session-based Auth State ----
+const authorizedClients = new WeakSet(); // Store authorized WebSocket clients
+const activeChallenges = new Map();     // Store challenges per client
+// ---- END: Session-based Auth State ----
+
+// -------------------------------------------------------------
+// Global Variables mapped from Config
+// -------------------------------------------------------------
+let Scanmode, Autoscan_PE5PVB_Mode, Search_PE5PVB_Mode, StartAutoScan, AntennaSwitch, OnlyScanHoldTime;
+let defaultSensitivityValue, SensitivityCalibrationFrequenz, defaultScanHoldTime, defaultScannerMode, scanIntervalTime, scanBandwith;
+let EnableBlacklist, EnableWhitelist, tuningLowerLimit, tuningUpperLimit;
+let EnableSpectrumScan, EnableDifferenceScan, SpectrumChangeValue, SpectrumLimiterValue, SpectrumPlusMinusValue;
+let HTMLlogOnlyID, HTMLlogRAW, HTMLOnlyFirstLog, CSVcreate, CSVcompletePS, UTCtime, Log_Blacklist, SignalStrengthUnit;
+let FMLIST_OM_ID, FMLIST_Autolog, FMLIST_MinDistance, FMLIST_MaxDistance, FMLIST_LogInterval, FMLIST_CanLogServer, FMLIST_ShortServerName, FMLIST_Blacklist;
+let BEEP_CONTROL;
+
+let Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST;
+let EnableSpectrumScanBL = false;
+let EnableDifferenceScanBL = false;
+let ScanPE5PVB;
+let SearchPE5PVB;
+let LAT = config.identification.lat; 
+let LON = config.identification.lon; 
+
+// -------------------------------------------------------------
+// Plugin API Setup
+// -------------------------------------------------------------
+let pluginsApi;
 let emitPluginEvent = () => {};
 let sendPrivilegedCommand = null;
-let useHooks = false;
 
 try {
     pluginsApi = require('./../../server/plugins_api');
@@ -30,21 +147,8 @@ try {
         emitPluginEvent = pluginsApi.emitPluginEvent;
     }
 
-    wss = pluginsApi.getWss?.();
-    pluginsWss = pluginsApi.getPluginsWss?.();
-    serverConfig = pluginsApi.getServerConfig?.();
-
-    pluginsWss.on('connection', handlePluginConnection);
-
     if (pluginsApi?.sendPrivilegedCommand) {
         sendPrivilegedCommand = pluginsApi.sendPrivilegedCommand;
-    }
-
-    useHooks = !!(wss && pluginsWss);
-    usePrivileged = !!sendPrivilegedCommand && useHooks;
-
-    if (useHooks && usePrivileged) {
-        logInfo(`Scanner using plugins_api with WebSocket hooks enabled`);
     }
 
     if (pluginsApi?.onPluginEvent) {
@@ -64,12 +168,9 @@ try {
     }
 }
 
-// Define the paths to the old and new configuration files
-const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
-const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
-const dxAlertConfigFilePath = path.join(__dirname, './../../plugins_configs/DX-Alert.json');
-
-// Default values for the configuration file
+// -------------------------------------------------------------
+// Configuration Default Values
+// -------------------------------------------------------------
 const defaultConfig = {
     Scanmode: 1,                         	// 0 - offline mode or 1 - online mode
     Autoscan_PE5PVB_Mode: false,        	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
@@ -79,18 +180,18 @@ const defaultConfig = {
 	OnlyScanHoldTime: 'off',			 	// Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
 
     defaultSensitivityValue: 30,        	// Value in dBf/dBµV: 1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80 | in dBm: -115,-110,-105,-100,-95,-90,-85,-80,-75,-70,-65,-60,-55,-50,-45,-40 | in PE5PVB_Mode: 1,5,10,15,20,25,30
-											// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values are 1-10 dBf/dBµV/dBm
+											// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values ​​are 1-10 dBf/dBµV/dBm
 	SensitivityCalibrationFrequenz: '',		// Value in MHz e.g. '87.3' / If the field is left blank (default setting), the scanner will not perform automatic noise signal calibration
     defaultScanHoldTime: 5,              	// Value in s: 1,2,3,4,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
     defaultScannerMode: 'normal',        	// Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,               	// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
-    scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
-    EnableBlacklist: false,              	// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values (e.g. 89.000) must be located in the scanner plugin folder 
-    EnableWhitelist: false,              	// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values (e.g. 89.000) must be located in the scanner plugin folder 
+    EnableBlacklist: false,              	// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
+    EnableWhitelist: false,              	// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
 	
-	tuningLowerLimit: '',	             	// Set the lower band limit (e.g. '87.5') if the values differ from the web server settings (default is '',)	
-	tuningUpperLimit: '',				 	// Set the upper band limit (e.g. '108.0') if the values differ from the web server settings (default is '',)
+	tuningLowerLimit: '',	             	// Set the lower band limit (e.g. '87.5') if the values ​​differ from the web server settings (default is '',)	
+	tuningUpperLimit: '',				 	// Set the upper band limit (e.g. '108.0') if the values ​​differ from the web server settings (default is '',)
 
     EnableSpectrumScan: false,           	// Enable Spectrum, set it 'true' or 'false'
     EnableDifferenceScan: false,         	// Enable Spectrum, set it 'true' or 'false'
@@ -104,17 +205,17 @@ const defaultConfig = {
 	CSVcreate: true,					 	// Set to 'true' or 'false' for create CSV logging file and Mapviewer button, default is true
 	CSVcompletePS: true,				 	// Set to 'true' or 'false' for CSV data logging with or without PS Information, default is true
     UTCtime: true,                       	// Set to 'true' for logging with UTC Time, default is true (only valid for HTML File!)
-	Log_Blacklist: false,        		 	// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values (e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	Log_Blacklist: false,        		 	// Enable Log Blacklist, set it 'true' or 'false' / the blacklist_log.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 	SignalStrengthUnit: 'dBf',			 	// Set to 'dBf', 'dBm' or 'dBµV' 
 
     FMLIST_OM_ID: '',                    	// To use the logbook function, please enter your OM ID here, for example: FMLIST_OM_ID: '1234' - this is only necessary if no OMID is entered under FMLIST INTEGRATION on the web server
-    FMLIST_Autolog: 'off',               	// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, "on" to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
+    FMLIST_Autolog: 'off',               	// Setting the FMLIST autolog function. Set it to 'off' to deactivate the function, “on” to log everything and 'auto' if you only want to log in scanning mode (autoscan or background scan)
     FMLIST_MinDistance: 200,             	// set the minimum distance in km for an FMLIST log entry here (default: 200, minimum 200)
     FMLIST_MaxDistance: 2000,            	// set the maximum distance in km for an FMLIST log entry here (default: 2000, minimum 200)
     FMLIST_LogInterval: 60,            		// Specify here in minutes when a log entry can be sent again (default: 60, minimum 60)
     FMLIST_CanLogServer: '',             	// Activates a central server to manage log repetitions (e.g. '127.0.0.1:2000', default is '')   
 	FMLIST_ShortServerName: '',		     	// set short servername (max. 10 characters) e.g. 'DXserver01', default is '' 
-	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values (e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
+	FMLIST_Blacklist: false,             	// Enable FMLIST Blacklist, set it 'true' or 'false' / the blacklist_fmlist.txt file with the values ​​(e.g. 89.000;D3C3 or 89.000 or D3C3) must be located in the scanner plugin folder 
 
     BEEP_CONTROL: false,                 	// Acoustic control function for scanning operation (true or false)
 };
@@ -123,7 +224,6 @@ const defaultConfig = {
 function mergeConfig(defaultConfig, existingConfig) {
     const updatedConfig = {};
 
-    // Add the existing values that match defaultConfig keys
     for (const key in defaultConfig) {
         updatedConfig[key] = key in existingConfig ? existingConfig[key] : defaultConfig[key];
     }
@@ -134,35 +234,30 @@ function mergeConfig(defaultConfig, existingConfig) {
 // Function to load the old config, move it to the new location, and delete the old one
 function migrateOldConfig(oldFilePath, newFilePath) {
     if (fs.existsSync(oldFilePath)) {
-        // Load the old config
         const oldConfig = JSON.parse(fs.readFileSync(oldFilePath, 'utf-8'));
         
-        // Save the old config to the new location
         fs.writeFileSync(newFilePath, JSON.stringify(oldConfig, null, 2), 'utf-8');
         logInfo(`Old config migrated to ${newFilePath}`);
 
-        // Delete the old config file
         fs.unlinkSync(oldFilePath);
         logInfo(`Old config ${oldFilePath} deleted`);
         
         return oldConfig;
     }
 
-    return null;  // No old config found
+    return null;  
 }
 
 // Function to load or create the configuration file
 function loadConfig(filePath) {
     let existingConfig = {};
 
-    // 1) Ensure the target directory exists
     const dirPath = path.dirname(filePath);
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
         logInfo(`Directory created: ${dirPath}`);
     }
 
-    // 2) Migrate old config if it exists, otherwise read the current one
     const migratedConfig = migrateOldConfig(oldConfigFilePath, filePath);
     if (migratedConfig) {
         existingConfig = migratedConfig;
@@ -179,24 +274,28 @@ function loadConfig(filePath) {
         }
     }
 
-    // 3) Merge defaults with existing config
     const finalConfig = mergeConfig(defaultConfig, existingConfig);
+    const finalConfigString = JSON.stringify(finalConfig, null, 2);
 
-    // 4) Write the updated config back
     try {
-        fs.writeFileSync(filePath, JSON.stringify(finalConfig, null, 2), 'utf-8');
+        let needsWrite = true;
+        // Check if the file already contains exactly this configuration to prevent infinite watcher loops
+        if (fs.existsSync(filePath)) {
+            const currentContent = fs.readFileSync(filePath, 'utf-8');
+            if (currentContent.trim() === finalConfigString.trim()) {
+                needsWrite = false;
+            }
+        }
+        
+        if (needsWrite) {
+            fs.writeFileSync(filePath, finalConfigString, 'utf-8');
+        }
     } catch (e) {
         logError(`Failed to write ${filePath}: ${e.message}`);
     }
 
     return finalConfig;
 }
-
-// Global variables for DX-Alert config
-let dxScreenshotAlert = 'off';
-let dxAlertDistance = 0;
-let dxAlertDistanceMax = 20000;
-let dxAlertConfigExists = false;
 
 // Function to load DX-Alert config if it exists
 function loadDXAlertConfig(filePath) {
@@ -214,144 +313,8 @@ function loadDXAlertConfig(filePath) {
         }
     } else {
         dxAlertConfigExists = false;
-        // logInfo('Scanner: DX-Alert config not found.');
     }
 }
-
-
-// Load or create the configuration file
-const configPlugin = loadConfig(newConfigFilePath);
-loadDXAlertConfig(dxAlertConfigFilePath); // Load DX-Alert settings
-
-// Access variables as before
-let Scanmode = configPlugin.Scanmode;
-let Autoscan_PE5PVB_Mode = configPlugin.Autoscan_PE5PVB_Mode;
-let Search_PE5PVB_Mode = configPlugin.Search_PE5PVB_Mode;
-let StartAutoScan = configPlugin.StartAutoScan;
-let AntennaSwitch = configPlugin.AntennaSwitch;
-let OnlyScanHoldTime = configPlugin.OnlyScanHoldTime;
-
-let defaultSensitivityValue = configPlugin.defaultSensitivityValue;
-let SensitivityCalibrationFrequenz = configPlugin.SensitivityCalibrationFrequenz;
-let defaultScanHoldTime = configPlugin.defaultScanHoldTime;
-let defaultScannerMode = configPlugin.defaultScannerMode;
-let scanIntervalTime = configPlugin.scanIntervalTime;
-let scanBandwith = configPlugin.scanBandwith;
-
-let EnableBlacklist = configPlugin.EnableBlacklist;
-let EnableWhitelist = configPlugin.EnableWhitelist;
-
-let tuningLowerLimit = configPlugin.tuningLowerLimit;
-let tuningUpperLimit = configPlugin.tuningUpperLimit;
-
-let EnableSpectrumScan = configPlugin.EnableSpectrumScan;
-let EnableDifferenceScan = configPlugin.EnableDifferenceScan;
-let SpectrumChangeValue = configPlugin.SpectrumChangeValue;
-let SpectrumLimiterValue = configPlugin.SpectrumLimiterValue;
-let SpectrumPlusMinusValue = configPlugin.SpectrumPlusMinusValue
-
-let HTMLlogOnlyID = configPlugin.HTMLlogOnlyID;
-let HTMLlogRAW = configPlugin.HTMLlogRAW;
-let HTMLOnlyFirstLog = configPlugin.HTMLOnlyFirstLog;
-let CSVcreate = configPlugin.CSVcreate
-let CSVcompletePS = configPlugin.CSVcompletePS
-let UTCtime = configPlugin.UTCtime;
-let Log_Blacklist = configPlugin.Log_Blacklist;
-let SignalStrengthUnit = configPlugin.SignalStrengthUnit;
-
-let FMLIST_OM_ID = configPlugin.FMLIST_OM_ID;
-let FMLIST_Autolog = configPlugin.FMLIST_Autolog;
-let FMLIST_MinDistance = configPlugin.FMLIST_MinDistance;
-let FMLIST_MaxDistance = configPlugin.FMLIST_MaxDistance;
-let FMLIST_LogInterval = configPlugin.FMLIST_LogInterval;
-let FMLIST_CanLogServer = configPlugin.FMLIST_CanLogServer;
-let FMLIST_ShortServerName = configPlugin.FMLIST_ShortServerName;
-let FMLIST_Blacklist = configPlugin.FMLIST_Blacklist;
-
-let BEEP_CONTROL = configPlugin.BEEP_CONTROL;
-
-const { execSync } = require('child_process');
-const NewModules = ['speaker'];
-let Speaker;
-
-let EnableSpectrumScanBL = false;
-let EnableDifferenceScanBL = false;
-
-if (EnableSpectrumScan && EnableBlacklist) {
-	EnableSpectrumScanBL = true;
-}
-
-if (EnableDifferenceScan && EnableBlacklist) {
-	EnableDifferenceScanBL = true;
-}
-
-if (defaultScannerMode === 'spectrumBL' && !EnableSpectrumScanBL) {
-	defaultScannerMode = 'spectrum';
-}
-
-if (defaultScannerMode === 'differenceBL' && !EnableDifferenceScanBL) {
-	defaultScannerMode = 'difference';
-}
-
-if (SpectrumLimiterValue === 0) {
-    SpectrumLimiterValue = 100;
-}  
-
-if (SpectrumPlusMinusValue === 0) {
-    SpectrumPlusMinusValue = 100;
-}  
-
-if (scanIntervalTime > 1000) {
-	scanIntervalTime = 1000;
-}
-
-
-if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
-  defaultSensitivityValue = 10;
-}
-
-const ssu = (SignalStrengthUnit || '').toLowerCase();
-// defaultSensitivity conversion 
-if (SensitivityCalibrationFrequenz === '') {
-	let resultdefaultSensitivityValue;
-	if (ssu === 'dbµv' || ssu === 'dbμv') {
-		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 10.875;
-	} else if (ssu === 'dbm') {
-		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 119.75;
-	} else if (ssu === 'dbf') {
-		// No change for dBf!
-		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue);
-	} else {
-		resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue);
-	}
-	defaultSensitivityValue = Math.round(resultdefaultSensitivityValue);		
-}
-
-	let resultSpectrumLimiterValue;
-	if (ssu === 'dbµv' || ssu === 'dbμv') {
-		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue) + 10.875;
-	} else if (ssu === 'dbm') {
-		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue) + 119.75;
-	} else if (ssu === 'dbf') {
-		// No change for dBf!
-		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue);
-	} else {
-		resultSpectrumLimiterValue = parseFloat(SpectrumLimiterValue);
-	}
-	SpectrumLimiterValue = Math.round(resultSpectrumLimiterValue);
-	
-	let resultSpectrumPlusMinusValue;
-	if (ssu === 'dbµv' || ssu === 'dbμv') {
-		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue) + 10.875;
-	} else if (ssu === 'dbm') {
-		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue) + 119.75;
-	} else if (ssu === 'dbf') {
-		// No change for dBf!
-		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue);
-	} else {
-		resultSpectrumPlusMinusValue = parseFloat(SpectrumPlusMinusValue);
-	}
-	SpectrumPlusMinusValue = Math.round(resultSpectrumPlusMinusValue);
 
 function checkAndInstallNewModules() {
     NewModules.forEach(module => {
@@ -369,13 +332,163 @@ function checkAndInstallNewModules() {
     });
 }
 
-if (BEEP_CONTROL) {
-  checkAndInstallNewModules();
-  Speaker = require('speaker');
-}
+// Function to apply configuration data to global variables dynamically
+function applyScannerConfig(configData) {
+    Scanmode = configData.Scanmode;
+    Autoscan_PE5PVB_Mode = configData.Autoscan_PE5PVB_Mode;
+    Search_PE5PVB_Mode = configData.Search_PE5PVB_Mode;
+    StartAutoScan = configData.StartAutoScan;
+    AntennaSwitch = configData.AntennaSwitch;
+    OnlyScanHoldTime = configData.OnlyScanHoldTime;
 
-// Path to the target JavaScript file
-const ScannerClientFile = path.join(__dirname, 'scanner.js');
+    defaultSensitivityValue = configData.defaultSensitivityValue;
+    SensitivityCalibrationFrequenz = configData.SensitivityCalibrationFrequenz;
+    defaultScanHoldTime = configData.defaultScanHoldTime;
+    defaultScannerMode = configData.defaultScannerMode;
+    scanIntervalTime = configData.scanIntervalTime;
+    scanBandwith = configData.scanBandwith;
+
+    EnableBlacklist = configData.EnableBlacklist;
+    EnableWhitelist = configData.EnableWhitelist;
+
+    tuningLowerLimit = configData.tuningLowerLimit;
+    tuningUpperLimit = configData.tuningUpperLimit;
+
+    EnableSpectrumScan = configData.EnableSpectrumScan;
+    EnableDifferenceScan = configData.EnableDifferenceScan;
+    SpectrumChangeValue = configData.SpectrumChangeValue;
+    SpectrumLimiterValue = configData.SpectrumLimiterValue;
+    SpectrumPlusMinusValue = configData.SpectrumPlusMinusValue;
+
+    HTMLlogOnlyID = configData.HTMLlogOnlyID;
+    HTMLlogRAW = configData.HTMLlogRAW;
+    HTMLOnlyFirstLog = configData.HTMLOnlyFirstLog;
+    CSVcreate = configData.CSVcreate;
+    CSVcompletePS = configData.CSVcompletePS;
+    UTCtime = configData.UTCtime;
+    Log_Blacklist = configData.Log_Blacklist;
+    SignalStrengthUnit = configData.SignalStrengthUnit;
+
+    FMLIST_OM_ID = configData.FMLIST_OM_ID;
+    FMLIST_Autolog = configData.FMLIST_Autolog;
+    FMLIST_MinDistance = configData.FMLIST_MinDistance;
+    FMLIST_MaxDistance = configData.FMLIST_MaxDistance;
+    FMLIST_LogInterval = configData.FMLIST_LogInterval;
+    FMLIST_CanLogServer = configData.FMLIST_CanLogServer;
+    FMLIST_ShortServerName = configData.FMLIST_ShortServerName;
+    FMLIST_Blacklist = configData.FMLIST_Blacklist;
+
+    BEEP_CONTROL = configData.BEEP_CONTROL;
+
+    // Derived logic
+    EnableSpectrumScanBL = false;
+    EnableDifferenceScanBL = false;
+
+    if (EnableSpectrumScan && EnableBlacklist) {
+        EnableSpectrumScanBL = true;
+    }
+
+    if (EnableDifferenceScan && EnableBlacklist) {
+        EnableDifferenceScanBL = true;
+    }
+
+    if (defaultScannerMode === 'spectrumBL' && !EnableSpectrumScanBL) {
+        defaultScannerMode = 'spectrum';
+    }
+
+    if (defaultScannerMode === 'differenceBL' && !EnableDifferenceScanBL) {
+        defaultScannerMode = 'difference';
+    }
+
+    if (SpectrumLimiterValue === 0) SpectrumLimiterValue = 100;
+    if (SpectrumPlusMinusValue === 0) SpectrumPlusMinusValue = 100;
+    if (scanIntervalTime > 1000) scanIntervalTime = 1000;
+
+    if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
+        defaultSensitivityValue = 10;
+    }
+
+    const ssu = (SignalStrengthUnit || '').toLowerCase();
+    
+    if (SensitivityCalibrationFrequenz === '') {
+        let resultdefaultSensitivityValue;
+        if (ssu === 'dbµv' || ssu === 'dbμv') {
+            resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 10.875;
+        } else if (ssu === 'dbm') {
+            resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue) + 119.75;
+        } else {
+            resultdefaultSensitivityValue = parseFloat(defaultSensitivityValue);
+        }
+        defaultSensitivityValue = Math.round(resultdefaultSensitivityValue);		
+    }
+
+    // The Spectrum values are now treated strictly as native dBf, no dBuV conversion applied
+    SpectrumLimiterValue = Math.round(parseFloat(SpectrumLimiterValue));
+    SpectrumPlusMinusValue = Math.round(parseFloat(SpectrumPlusMinusValue));
+    SpectrumChangeValue = parseFloat(SpectrumChangeValue);
+
+    let tuningLimit = config.webserver.tuningLimit;
+    if (tuningUpperLimit === '') {
+        tuningUpperLimit = config.webserver.tuningUpperLimit || '108.0';
+    }
+    if (parseFloat(tuningUpperLimit) > 108.0) {
+        tuningUpperLimit = '108.0';
+    }
+
+    if (tuningLowerLimit === '') {
+        tuningLowerLimit = config.webserver.tuningLowerLimit || '87.5';
+    }
+
+    if (!FMLIST_OM_ID) {
+        FMLIST_OM_ID = config.extras.fmlistOmid;
+    }
+
+    if (BEEP_CONTROL && !Speaker) {
+        checkAndInstallNewModules();
+        Speaker = require('speaker');
+    }
+
+    // Assign main modes directly
+    ScannerMode = defaultScannerMode;
+    ScanHoldTime = defaultScanHoldTime;
+    StatusFMLIST = FMLIST_Autolog;
+    ScanPE5PVB = Autoscan_PE5PVB_Mode;
+    SearchPE5PVB = Search_PE5PVB_Mode;
+
+    // Update settings in the client-side script
+    updateSettings();
+
+    // If the scanner is currently running, cleanly restart it to force a new calibration
+    if (Scan === 'on') {
+        clearInterval(scanInterval);
+        isScanning = false;
+        stopAutoScan();
+        
+        // Wait briefly for current intervals to die off, then trigger a fresh auto-scan
+        setTimeout(() => {
+            hasSensitivityCalibrationRun = false;
+            AutoScan();
+        }, 1000);
+    } else {
+        // Scanner is off: update values normally and broadcast to the UI
+        Sensitivity = defaultSensitivityValue;
+        hasSensitivityCalibrationRun = false;
+        
+        if (typeof DataPluginsSocket !== 'undefined' && DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+            const Message = createMessage(
+                'broadcast',
+                '255.255.255.255',
+                Scan,
+                '',
+                Sensitivity,
+                ScannerMode,
+                ScanHoldTime,
+                FMLIST_Autolog
+            );
+            DataPluginsSocket.send(JSON.stringify(Message));
+        }
+    }
+}
 
 function updateSettings() {
   // Read the target file
@@ -439,142 +552,62 @@ function updateSettings() {
       updatedData = `const SignalStrengthUnit = '${SignalStrengthUnit}';\n` + updatedData;
     }
 
-    // Update/write the target file
-    fs.writeFile(ScannerClientFile, updatedData, 'utf8', (err) => {
-      if (err) {
-        logError('Error writing to the scanner.js file:', err);
-        return;
-      }
-      logInfo('Scanner.js file successfully updated');
-    });
+    // Only update/write the target file if the generated content is actually different to prevent file loops
+    if (updatedData !== targetData) {
+        fs.writeFile(ScannerClientFile, updatedData, 'utf8', (err) => {
+          if (err) {
+            logError('Error writing to the scanner.js file:', err);
+            return;
+          }
+          logInfo('Scanner.js file successfully updated');
+        });
+    }
   });
 }
 
-// Start the process
-updateSettings();
-
-
-////////////////////////////////////////////////////////////////
-
-const WebSocket = require('ws');
-const config = require('./../../config.json');
-
-const adminPass = config.password.adminPass; // Use admin password from main config
-
-const ServerName = config.identification.tunerName; 
-const ServerDescription = config.identification.tunerDesc; 
-const DefaultFreq = config.defaultFreq;
-const enableDefaultFreq = config.enableDefaultFreq;
-const Antennas = config.antennas;
-const webserverPort = config.webserver.webserverPort || 8080; // Default to port 8080 if not specified
-let LAT = config.identification.lat; 
-let LON = config.identification.lon; 
-
-const externalWsUrl = `ws://127.0.0.1:${webserverPort}`;
-const ScanPE5PVB = Autoscan_PE5PVB_Mode;
-const SearchPE5PVB = Search_PE5PVB_Mode;
-const status = '';
-const Search = '';
-const source = '127.0.0.1';
-const logDir = path.resolve(__dirname, '../../web/logs'); // Absolute path to the log directory
-
-if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir);
-}
-
-let textSocket;
-let DataPluginsSocket;
-let autoScanSocket;
-let blacklist = [];
-let whitelist = [];
-let spectrum = [];
-let difference = [];
-let isScanning = false;
-let isSearching = false;
-let currentFrequency = 0;
-let previousFrequency = 0;
-let checkStrengthCounter = 0;
-let stereo_detect = false;
-let modeValue = defaultScannerMode;
-let stereo_forced_user = 'stereo';
-let scanInterval = null; 
-let autoScanActive = false; 
-let autoScanTimer; 
-let autoScanScheduled = false; 
-let Sensitivity = defaultSensitivityValue;
-let ScannerMode = defaultScannerMode;
-let ScanHoldTime = defaultScanHoldTime;
-let StatusFMLIST = FMLIST_Autolog;
-let Scan;
-let enabledAntennas = [];
-let currentAntennaIndex = 0;
-let picode, Savepicode, ps, Saveps, Prevps, freq, Savefreq, strength,  strengthTop, rds, stereo, stereo_forced, ant, station, pol, erp, city, itu, distance, azimuth, stationid, Savestationid, tp, ta, pty, ecc, af, rt0, rt1, rt, saveAutoscanAntenna,saveAutoscanFrequency;
-let bandwith = 0;
-let CSV_LogfilePath;
-let CSV_LogfilePath_filtered;
-let HTML_LogfilePath;
-let HTML_LogfilePath_filtered;
-let textSocketLost;
-let scanBandwithSave;
-let ALT;
-let gpstime;
-let gpsmode;
-let ShortServerName;
-let sigArray = [];
-let sigArraySpectrum = [];
-let sigArrayDifference = [];
-let sigArraySave0 = [];
-let sigArraySave1 = [];
-let sigArraySave2 = [];
-let sigArraySave3 = [];
-let validFrequencies;
-let freqMap2;
-let logFilePathHTML;
-let logFilePathCSV;
-let writeStatusCSV = true;
-writeStatusCSVps = false;
-let writeStatusHTMLLog = true;
-let writeStatusLogFMLIST = true;
-let logSnapshot;
-let hasSensitivityCalibrationRun = false;
-let isCalibrating = false; // Block flag for normal scanning operations during calibration
-
-// ---- START: Session-based Auth State ----
-const authorizedClients = new WeakSet(); // Store authorized WebSocket clients
-const activeChallenges = new Map();     // Store challenges per client
-// ---- END: Session-based Auth State ----
-
-let tuningLimit = config.webserver.tuningLimit;
-
-if (tuningUpperLimit === '') {
-    tuningUpperLimit = config.webserver.tuningUpperLimit;
-    if (tuningUpperLimit === '' || !tuningLimit) {
-        tuningUpperLimit = 108.0;
+// Helper to watch files on the fly
+function setupFileWatcher(filePath, callback, logMessage) {
+    try {
+        if (fs.existsSync(filePath)) {
+            // fs.watchFile is much more reliable than fs.watch for config files and prevents rapid multiple triggers
+            fs.watchFile(filePath, { interval: 1000 }, (curr, prev) => {
+                // Only trigger if the modified time has actually changed
+                if (curr.mtimeMs !== prev.mtimeMs) {
+                    if (logMessage) logInfo(logMessage);
+                    callback();
+                }
+            });
+        }
+    } catch (err) {
+        logError(`Failed to setup watcher for ${filePath}:`, err.message);
     }
 }
-// Force parsing to float to remove trailing zeros and format issues
-tuningUpperLimit = parseFloat(tuningUpperLimit);
-if (isNaN(tuningUpperLimit) || tuningUpperLimit > 108.0) {
-    tuningUpperLimit = 108.0;
-}
 
-if (tuningLowerLimit === '') {
-	tuningLowerLimit = config.webserver.tuningLowerLimit;
-	if (tuningLowerLimit === '' || !tuningLimit) {
-		tuningLowerLimit = 87.5;
-	}
-}
-// Force parsing to float to remove trailing zeros and format issues
-tuningLowerLimit = parseFloat(tuningLowerLimit);
-if (isNaN(tuningLowerLimit)) {
-    tuningLowerLimit = 87.5;
-}
+// -------------------------------------------------------------
+// Initialize Setup and File Watchers
+// -------------------------------------------------------------
+const initialConfigPlugin = loadConfig(newConfigFilePath);
+loadDXAlertConfig(dxAlertConfigFilePath); 
+applyScannerConfig(initialConfigPlugin);
 
-Scan = 'off';
+setupFileWatcher(newConfigFilePath, () => {
+    const updatedConfig = loadConfig(newConfigFilePath);
+    applyScannerConfig(updatedConfig);
+}, 'Scanner configuration file changed. Reloading on the fly...');
 
-if (!FMLIST_OM_ID) {
-	FMLIST_OM_ID = config.extras.fmlistOmid;
-}
+setupFileWatcher(dxAlertConfigFilePath, () => {
+    loadDXAlertConfig(dxAlertConfigFilePath);
+}, 'DX-Alert configuration file changed. Reloading on the fly...');
+
+setupFileWatcher(path.join(__dirname, '../Scanner/blacklist.txt'), () => {
+    checkBlacklist();
+}, 'blacklist.txt changed. Reloading on the fly...');
+
+setupFileWatcher(path.join(__dirname, '../Scanner/whitelist.txt'), () => {
+    checkWhitelist();
+}, 'whitelist.txt changed. Reloading on the fly...');
+
+////////////////////////////////////////////////////////////////
 
 if (FMLIST_Blacklist) {
     const blacklistFile = path.join(__dirname, 'blacklist_fmlist.txt');
@@ -744,7 +777,6 @@ async function TextWebSocket(messageData) {
                     try {
                         // Parse the incoming message data
                         const messageData = JSON.parse(event.data);
-						// console.log(messageData);
 
                         checkSerialportStatus();
 
@@ -792,11 +824,9 @@ function startSearch(direction) {
 	}
 }
 
-let lastMessageTimestamp = 0;
-
 /**
  * Builds and sends a Scanner response message back to the requesting client.
- * @param {string} targetIP - The IP (or identifier) from message.source
+ * @param {string} targetIP – The IP (or identifier) from message.source
  */
 function SendResponseMessage(targetIP) {
   const responseMessage = createMessage(
@@ -810,7 +840,6 @@ function SendResponseMessage(targetIP) {
     FMLIST_Autolog
   );
   DataPluginsSocket.send(JSON.stringify(responseMessage));
-  // logInfo(`Sent response message: ${JSON.stringify(responseMessage)}`);
 }
 
 async function DataPluginsWebSocket() {
@@ -821,7 +850,7 @@ async function DataPluginsWebSocket() {
 
       // Add a reference to the WebSocket object for auth state tracking
       DataPluginsSocket.on('message', (data) => {
-        if (!useHooks) handleDataPluginsMessage(data, DataPluginsSocket);
+        handleDataPluginsMessage(data, DataPluginsSocket);
       });
       
       DataPluginsSocket.on('close', () => {
@@ -846,12 +875,6 @@ async function DataPluginsWebSocket() {
   }
 }
 
-function handlePluginConnection(ws, req) {
-    ws.on('message', (data) => {
-        handleDataPluginsMessage(data, req);
-    });
-}
-
 async function handleDataPluginsMessage(eventData, ws) {
     try {
         const message = JSON.parse(eventData);
@@ -859,25 +882,12 @@ async function handleDataPluginsMessage(eventData, ws) {
         if (!message || (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS')) {
             return;
         }
-
-        let isAdminLocked = false;
-
-        if (useHooks) {
-            const session = ws.session || {};
-            const isAdmin = session.isAdminAuthenticated || session.isTuneAuthenticated;
-            const isLocked = !serverConfig.publicTuner || serverConfig.lockToAdmin;
-
-            if (isLocked && !isAdmin) {
-                isAdminLocked = true;
-                logInfo('Scanner blocked non-admin scan during lock');
-            }
-        }
         
         const clientSource = message.source || 'unknown';
 
         // ---------------------------------------------------
         // TEF Logger vs. Legacy Scanner:
-        //  - TEF Logger: source contains "tef"  -> Requires Auth
+        //  - TEF Logger: source contains "tef"  -> Auth required
         //  - Legacy Scanner: everything else    -> Full access
         // ---------------------------------------------------
         const isTefLoggerClient =
@@ -890,10 +900,10 @@ async function handleDataPluginsMessage(eventData, ws) {
             // Handle unrestricted Search commands immediately (for all clients)
             if (message.value.status === 'command' && message.value.Search) {
                 if (message.value.Search === 'down') {
-                    if (!isAdminLocked) if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
+                    if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
                 }
                 if (message.value.Search === 'up') {
-                    if (!isAdminLocked) if (SearchPE5PVB) { sendCommandToClient('C2'); } else { startSearch('up'); }
+                    if (SearchPE5PVB) { sendCommandToClient('C2'); } else { startSearch('up'); }
                 }
                 return; // Search commands are handled, exit
             }
@@ -946,10 +956,10 @@ async function handleDataPluginsMessage(eventData, ws) {
             // Handle status requests
             if (message.value.status === 'request') {
                 if (!isTefLoggerClient) {
-                    // Legacy Scanner: always full access, independent of adminPass
+                    // Legacy Scanner: always full access, regardless of adminPass
                     SendResponseMessage(clientSource);
                 } else {
-                    // TEF Logger: only after successful Auth, if adminPass is set
+                    // TEF Logger: only after successful auth if adminPass is set
                     if (!adminPass || authorizedClients.has(ws)) {
                         SendResponseMessage(clientSource);
                     } else {
@@ -962,8 +972,8 @@ async function handleDataPluginsMessage(eventData, ws) {
         
         // ---------------------------------------------------
         // RESTRICTED COMMANDS:
-        //  - TEF Logger + adminPass -> Requires Auth
-        //  - Legacy Scanner         -> NEVER requires Auth (Full access)
+        //  - TEF Logger + adminPass -> Auth required
+        //  - Legacy Scanner         -> NEVER requires Auth (full access)
         // ---------------------------------------------------
         const requiresAuth = isTefLoggerClient && !!adminPass;
 
@@ -975,7 +985,7 @@ async function handleDataPluginsMessage(eventData, ws) {
         }
         // --- END OF AUTHENTICATION / UNRESTRICTED LOGIC ---
 
-        // Handle other messages from clients (Legacy always allowed, TEF Logger only after Auth)
+        // Handle other messages from clients (Legacy and TEF Logger allowed, but TEF Logger only after Auth due to requiresAuth above)
 
         if (message.type === 'sigArray' && message.isScanning) {
             sigArray = message.value; 
@@ -1036,7 +1046,21 @@ async function handleDataPluginsMessage(eventData, ws) {
         }
 
         if (message.type === 'Scanner' && message.value.status === 'command') {
-            // These commands require authorization ONLY for TEF Logger (legacy always free)
+
+            // Tune command from Connector App (requires authorization for TEF Logger)
+            if (message.value.Tune !== undefined && message.value.Tune !== null && message.value.Tune !== '' && message.value.Tune !== 'null') {
+                // If it is scanning, stop auto-scan before tuning
+                if (Scan === 'on') {
+                    Scan = 'off';
+                    logInfo(`Scanner stops auto-scan [IP: ${clientSource}] due to Tune command`);
+                    SendResponseMessage(clientSource);
+                    stopAutoScan();
+                }
+                
+                // Send the frequency to the tuner
+                sendCommandToClient(message.value.Tune);
+                logInfo(`Scanner executed Tune command "${message.value.Tune}" [IP: ${clientSource}]`);
+            }
 
             if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
                 Sensitivity = message.value.Sensitivity;
@@ -1051,7 +1075,7 @@ async function handleDataPluginsMessage(eventData, ws) {
 
             if (message.value.ScannerMode === 'normal') {
                 ScannerMode = 'normal';
-                hasSensitivityCalibrationRun = false;   // After Mode-Switch: next AutoScan starts from the beginning again
+                hasSensitivityCalibrationRun = false;   // After mode change: next AutoScan starts from scratch again
                 logInfo(`Scanner set mode "normal" [IP: ${clientSource}]`);
                 SendResponseMessage(clientSource);
             }
@@ -1059,7 +1083,7 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (message.value.ScannerMode === 'blacklist' && EnableBlacklist) {
                 if (blacklist.length > 0) {
                     ScannerMode = 'blacklist';
-                    hasSensitivityCalibrationRun = false;   // New Session for this mode
+                    hasSensitivityCalibrationRun = false;   // New session for this mode
                     logInfo(`Scanner set mode "blacklist" [IP: ${clientSource}]`);
                 } else {
                     logInfo(`Scanner mode "blacklist" not available! [IP: ${clientSource}]`);
@@ -1072,7 +1096,7 @@ async function handleDataPluginsMessage(eventData, ws) {
             if (message.value.ScannerMode === 'whitelist' && EnableWhitelist) {
                 if (whitelist.length > 0) {
                     ScannerMode = 'whitelist';
-                    hasSensitivityCalibrationRun = false;   // New Session for this mode
+                    hasSensitivityCalibrationRun = false;   // New session for this mode
                     logInfo(`Scanner set mode "whitelist" [IP: ${clientSource}]`);
                 } else {
                     logInfo(`Scanner mode "whitelist" not available! [IP: ${clientSource}]`);
@@ -1122,17 +1146,9 @@ async function handleDataPluginsMessage(eventData, ws) {
                 SendResponseMessage(clientSource);
                 stopAutoScan();
             }
-
-            // Handle Tune commands forwarded from TEF logger app
-            if (message.value.Tune !== undefined && message.value.Tune !== '') {
-                logInfo(`Scanner received tuning command "${message.value.Tune}" [IP: ${clientSource}]`);
-                sendCommandToClient(message.value.Tune);
-            }
         }
 
         if (message.type === 'GPS') {
-            // GPS Updates: allowed for Legacy and TEF Logger,
-            // but TEF Logger only after Auth (because of requiresAuth above)
             const { lat, lon, alt, mode, time } = message.value;
             if (lat !== '') LAT = lat;
             if (lon !== '') LON = lon;
@@ -1149,7 +1165,6 @@ async function handleDataPluginsMessage(eventData, ws) {
 function InitialMessage() {
     const ws = new WebSocket(externalWsUrl + '/data_plugins');
     ws.on('open', () => {
-        // logInfo(`Scanner connected to ${ws.url}`);	
         ws.send(JSON.stringify(createMessage('broadcast', '255.255.255.255', 'off', 'off', defaultSensitivityValue, defaultScannerMode, defaultScanHoldTime, FMLIST_Autolog))); // Send initial status
     });
 }
@@ -1184,7 +1199,6 @@ async function sendCommandToClient(command) {
         await TextWebSocket();
 
         if (textSocket && textSocket.readyState === WebSocket.OPEN) {
-        //    logInfo("WebSocket connected, sending command");
             sendCommand(textSocket, command);
         } else {
             logError("WebSocket is not open. Unable to send command.");
@@ -1196,7 +1210,6 @@ async function sendCommandToClient(command) {
 
 
 function sendCommand(socket, command) {
-    // logInfo("Scanner send command:", command);
     socket.send(command);
 }
 
@@ -1365,8 +1378,6 @@ async function fetchstationid(freq, picode, city) {
 
             // Read the text content from the response
             cachedData = await response.text();
-        } else {
-            // logInfo('Scanner Info: Using cached data.');
         }
 
         // Remove the period from freq
@@ -1386,7 +1397,6 @@ async function fetchstationid(freq, picode, city) {
         
         // Build the target string based on the provided variables with wildcards
         const targetString = `${cleanedFreq};${picode};${cityPattern}.*`;
-        // logInfo(`Scanner Info: Searching for specified combination: ${targetString}`);
 
         // Create a case-insensitive regular expression to match the target string
         const regex = new RegExp(targetString, 'i');
@@ -1404,10 +1414,8 @@ async function fetchstationid(freq, picode, city) {
             // Further cleaning can be done here if needed (e.g., removing specific characters)
             StationID = StationID.replace(/[^0-9]/g, ''); // Example: remove all non-alphanumeric characters
 
-            // logInfo(`Station ID: ${StationID}`);
             return StationID;
         } else {
-            // logInfo(`Scanner Info: The specified combination of ${cleanedFreq};*${picode}*;*${cityPattern}* was not found in the stationid_PL.txt.`);
             return null;
         }
     } catch (error) {
@@ -1578,12 +1586,10 @@ function sendNextAntennaCommand() {
 
     if (enabledAntennas.length < 2 || AntennaSwitch !== 'on') {
         // No need to switch if there's only one or no active antennas
-        // console.log('No need to switch antennas.');
         return;
     }
 
     const ant = enabledAntennas[currentAntennaIndex];
-    // logInfo(`Scanner switched to antenna ${ant.number - 1}: ${ant.name}`);
     sendCommandToClient(`Z${ant.number - 1}`); // Z0 to Z3 for ant1 to ant4
 
     // Move to the next index
@@ -1594,39 +1600,58 @@ async function SensitivityValueCalibration() {
     isCalibrating = true; 
     try {
         clearInterval(scanInterval); // Pause scanning
-        let calibFreq = Math.round(parseFloat(SensitivityCalibrationFrequenz) * 100) / 100;
         
-        // 1. If in a spectrum mode, wait until the spectrum scan finishes (sigArray is populated)
-        if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
+        // Safely parse the calibration frequency string into a float
+        let calibFreq = Math.round(parseFloat(SensitivityCalibrationFrequenz) * 100) / 100;
+        const targetFreqStr = calibFreq.toFixed(2);
+        
+        let usedSpectrum = false;
+
+        // 1. Check if spectrum plugin is enabled, wait until sigArray is populated
+        if (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL) {
             let waitSpectrum = 0;
             // Wait up to 10 seconds for the spectrum array to fill
             while (sigArray.length === 0 && waitSpectrum < 50) { 
                 await new Promise(resolve => setTimeout(resolve, 200));
                 waitSpectrum++;
             }
-            // Extra delay to ensure the tuner is ready to receive new commands after the heavy scan
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
 
-        sendDataToClient(calibFreq);
-        
-        // 2. Wait until the tuner has actually tuned to the calibration frequency
-        let retries = 0;
-        while (retries < 50) { 
-            const currentReportedFreq = parseFloat(freq);
-            // Check if the reported frequency matches our target calibration frequency
-            if (!isNaN(currentReportedFreq) && Math.abs(currentReportedFreq - calibFreq) < 0.05) {
-                break;
+            // Extract the signal strength for the calibration frequency instantly from the array
+            if (sigArray.length > 0) {
+                const spectrumEntry = sigArray.find(item => parseFloat(item.freq).toFixed(2) === targetFreqStr);
+                if (spectrumEntry) {
+                    Sensitivity = Math.round(parseFloat(spectrumEntry.sig)) + Math.round(defaultSensitivityValue);
+                    usedSpectrum = true;
+                }
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            retries++;
+            
+            if (usedSpectrum) {
+                // Extra delay to ensure the tuner is ready to receive new commands after the heavy scan
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         }
 
-        // 3. Wait an additional 2 seconds for the signal strength reading to stabilize
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        Sensitivity = Math.round(strength) + Math.round(defaultSensitivityValue);
-        // logInfo(`Scanner set Sensitivity Value on ${calibFreq} MHz to ${Sensitivity} [${Math.round(strength)} + ${defaultSensitivityValue}]`);			
+        // 2. Fallback to physical 2-second tuning calibration if no spectrum data was found
+        if (!usedSpectrum) {
+            sendDataToClient(calibFreq);
+            
+            // Wait until the tuner has actually tuned to the calibration frequency
+            let retries = 0;
+            while (retries < 50) { 
+                const currentReportedFreq = parseFloat(freq);
+                // Check if the reported frequency matches our target calibration frequency
+                if (!isNaN(currentReportedFreq) && Math.abs(currentReportedFreq - calibFreq) < 0.05) {
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+
+            // Wait an additional 2 seconds for the signal strength reading to stabilize
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            Sensitivity = Math.round(strength) + Math.round(defaultSensitivityValue);
+        }
 
         // Create and send a broadcast message to update the UI
         const Message = createMessage(
@@ -1672,8 +1697,8 @@ async function AutoScan() {
 
         if (isStandardMode) {
             // In normal/blacklist/whitelist we differentiate:
-            //  - first start after mode switch -> Calibration frequency or lower band limit
-            //  - restart after Auto-Stop -> continue at the next frequency
+            //  - First start after mode change  -> Calibration frequency or lower band limit
+            //  - Restart after Auto-Stop        -> continue at the next frequency
 
             if (!hasSensitivityCalibrationRun) {
                 // First start in this mode
@@ -1684,12 +1709,12 @@ async function AutoScan() {
                 }
                 hasSensitivityCalibrationRun = true;
             } else {
-                // Restart after Auto-Stop -> do not go back to calibration / band limit,
+                // Restart after Auto-Stop -> do not return to calibration / band limit,
                 // but continue with the next frequency
                 let lastFreq = parseFloat(freq);
 
                 if (isNaN(lastFreq) || lastFreq === 0.0) {
-                    // If nothing meaningful is there -> lower band limit
+                    // If nothing useful is there -> lower band limit
                     currentFrequency = tuningLowerLimit;
                 } else {
                     // Same grid as in startScan():
@@ -1784,281 +1809,227 @@ async function startSpectrumAnalyse() {
         await setupSendSocket(); // Wait for WebSocket processing
         if (sigArray.length > 0) {
             sigArray.forEach(item => {
-                //logInfo(`freq: ${item.freq}, sig: ${item.sig}`);
             });
-        } else {
-            //logInfo('No data in sigArray.');
         }
     } catch (error) {
-        //console.error('Error during WebSocket communication:', error.message);
     }
 }
 
 async function startScan(direction) {
     clearInterval(scanInterval); // Stops any active scan interval from the previous scan
     
-    // If the current frequency is invalid (NaN) or zero, set it to the lower tuning limit
+    // Explicitly parse the limits to floats to prevent string concatenation bugs (e.g. "87.30" + 0.1 = "87.300.1")
+    const lowerLimit = parseFloat(tuningLowerLimit);
+    const upperLimit = parseFloat(tuningUpperLimit);
+    
     if (isNaN(currentFrequency) || currentFrequency === 0.0) {
-        currentFrequency = tuningLowerLimit;
+        currentFrequency = lowerLimit;
     }
 	
     // Function to update the frequency during the scan
     async function updateFrequency() {
-		
-        if (!isScanning) {
-            //logInfo('Scanning has been stopped.'); // Log that scanning was stopped
-            return; // Exit the function if scanning is stopped
-        }
+        if (!isScanning) return false; 
 
         currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
         
-        // If scanning downwards
+        const isSpectrumMode = (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL');
+        const isSpectrumEnabled = (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL);
+        
+        // Helper block for consistently handling the end of the band / array wrap-around
+        async function handleBandEnd() {
+            clearInterval(scanInterval); // Stop the regular scan ticks to prevent overlapping loops
+            isCalibrating = true; // Lock the scanner to prevent checkStereo from interrupting the wait
+            
+            try {
+                sendNextAntennaCommand(); 
+                if (BEEP_CONTROL) {
+                    setTimeout(() => {
+                        fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav').pipe(new Speaker());
+                    }, 500);
+                }					
+                
+                // 1. Jump to the lower limit
+                currentFrequency = lowerLimit;
+                sendDataToClient(currentFrequency);
+
+                // 2. Perform spectrum scan and wait for it
+                if (isSpectrumEnabled) {
+                    sigArray = []; 
+                    startSpectrumAnalyse(); // Trigger spectrum analysis
+                    
+                    let waitSpectrum = 0;
+                    // Wait up to ~15 seconds (75 * 200ms) for the array to populate
+                    while (sigArray.length === 0 && waitSpectrum < 75) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                        waitSpectrum++;
+                        // Retrigger every ~3.4 seconds just in case
+                        if (waitSpectrum % 17 === 0) {
+                            startSpectrumAnalyse();
+                        }
+                    }
+                    
+                    // Extra delay to ensure the tuner is ready to receive new commands after the heavy scan
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                // 3. Followed by calibration (if active in the configuration)
+                if (SensitivityCalibrationFrequenz) {
+                    await SensitivityValueCalibration();
+                    isCalibrating = true; // Re-lock it because SensitivityValueCalibration released it in its finally block
+                }
+                
+                // 4. Restart the scan from the lower band limit
+                currentFrequency = lowerLimit;
+                
+            } finally {
+                isCalibrating = false; // Safely release the lock before restarting the scan
+            }
+            
+            // Start the scan now that the lock is released
+            startScan('up');
+            return true; // We exit this cycle to allow a clean restart
+        }
+
+        // If scanning upwards
         if (direction === 'up' ) {
             if (currentFrequency < 74.00) {
-                currentFrequency += 0.01; // Increase by 0.01 if frequency is less than 74 MHz
+                currentFrequency += 0.01; 
             } else {
 				if (Scan === 'on' && ScannerMode === 'whitelist' && EnableWhitelist) {		
-					currentFrequency += 0.01; // Decrease by 0.01 above 74 MHz
+					currentFrequency += 0.01; 
 				} else {
-					currentFrequency += 0.1; // Decrease by 0.1 above 74 MHz
+					currentFrequency += 0.1; 
 				}
             }
-            // If the frequency exceeds the upper limit, reset to the lower limit
-            if (currentFrequency > tuningUpperLimit) {
-                if (Scan === 'on' && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
-                    sendNextAntennaCommand(); // Send the next antenna command
-                    if (BEEP_CONTROL) {
-                        // Play a beep sound when reaching the upper limit
-                        setTimeout(() => {
-							fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav')
-								.pipe(new Speaker());
-						}, 500);
-                    }
-					if (SensitivityCalibrationFrequenz) {
-						await SensitivityValueCalibration();
-						if (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL) {
-							setTimeout(() => {
-								startSpectrumAnalyse(); // Trigger spectrum analysis after 1 second
-							}, 1000);
-						}
+            if (currentFrequency > upperLimit) {
+                if (Scan === 'on') {
+                    // Trigger handleBandEnd for normal modes OR if it's spectrum mode but the array is empty (e.g. startup)
+                    if (!isSpectrumMode || sigArray.length === 0) {
+                        const exitCycle = await handleBandEnd();
+                        if (exitCycle) return false;
                         
-                        // Restart the scan properly from the bottom after calibration completes
-                        currentFrequency = tuningLowerLimit;
-                        startScan('up');
-                        return; // Exit this execution cycle to allow clean restart
-					} else { 
-				      if ( ScannerMode === 'normal' || ScannerMode === 'blacklist' || ScannerMode === 'whitelist' ) {
-						  currentFrequency = tuningLowerLimit;
-					  }
-					}
+                        if (ScannerMode === 'normal' || ScannerMode === 'blacklist' || ScannerMode === 'whitelist' ) {
+                            currentFrequency = lowerLimit;
+                        }
+                    }
 				} else {
-				    if (Scan !== 'on') {
-				       currentFrequency = tuningLowerLimit;
-					}
+				    currentFrequency = lowerLimit;
 				}
             }
         }
-		
         // If scanning downwards
         else if (direction === 'down') {
             if (currentFrequency < 74.00) {
-                currentFrequency -= 0.01; // Decrease by 0.01 if frequency is less than 74 MHz
+                currentFrequency -= 0.01; 
             } else {
 				if (Scan === 'on' && ScannerMode === 'whitelist' && EnableWhitelist) {		
-					currentFrequency -= 0.01; // Decrease by 0.01 above 74 MHz
+					currentFrequency -= 0.01; 
 				} else {
-					currentFrequency -= 0.1; // Decrease by 0.1 above 74 MHz
+					currentFrequency -= 0.1; 
 				}
             }
 
-            // If the frequency goes below the lower limit, reset to the upper limit
-            if (currentFrequency < tuningLowerLimit) {
-                currentFrequency = tuningUpperLimit; // Reset to the upper limit
+            if (currentFrequency < lowerLimit) {
+                currentFrequency = upperLimit; 
             }
         }
 
-        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+        currentFrequency = Math.round(currentFrequency * 100) / 100; 
 
-        // Handle blacklist mode
         if (!ScanPE5PVB) {
+            // Handle blacklist mode
             if (ScannerMode === 'blacklist' && Scan === 'on' && EnableBlacklist) {
                 while (isInBlacklist(currentFrequency, blacklist)) { 
-                    // Skip over frequencies that are in the blacklist
                     if (direction === 'up') {
-                        if (currentFrequency < 74.00) {
-                            currentFrequency += 0.01;
-                        } else {
-                            currentFrequency += 0.1;
-                        }
-                        if (currentFrequency > tuningUpperLimit) {
-                            currentFrequency = tuningLowerLimit;
-                        }
+                        if (currentFrequency < 74.00) currentFrequency += 0.01;
+                        else currentFrequency += 0.1;
+                        if (currentFrequency > upperLimit) currentFrequency = lowerLimit;
                     } else if (direction === 'down') {
-                        if (currentFrequency < 74.00) {
-                            currentFrequency -= 0.01;
-                        } else {
-                            currentFrequency -= 0.1;
-                        }
-                        if (currentFrequency < tuningLowerLimit) {
-                            currentFrequency = tuningUpperLimit;
-                        }
+                        if (currentFrequency < 74.00) currentFrequency -= 0.01;
+                        else currentFrequency -= 0.1;
+                        if (currentFrequency < lowerLimit) currentFrequency = upperLimit;
                     }
-                    currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; 
                 }
             } 
-
 			// Handle whitelist mode
 			else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {		
-
 				while (!isInWhitelist(currentFrequency, whitelist)) { 
-
-					// Track the previous frequency before changing the current frequency
 					const tempPreviousFrequency = currentFrequency;
-
-					// Only scan frequencies in the whitelist
 					if (direction === 'up') {
 							currentFrequency += 0.01;
-						if (currentFrequency > tuningUpperLimit) {
-							currentFrequency = tuningLowerLimit;
-						}
+						if (currentFrequency > upperLimit) currentFrequency = lowerLimit;
 					} else if (direction === 'down') {
 							currentFrequency -= 0.01;
-						if (currentFrequency < tuningLowerLimit) {
-							currentFrequency = tuningUpperLimit;
-						}
+						if (currentFrequency < lowerLimit) currentFrequency = upperLimit;
 					}
+					currentFrequency = Math.round(currentFrequency * 100) / 100; 
 
-					currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
-
-					// Check if current frequency is smaller than the previous frequency
 					if (currentFrequency < tempPreviousFrequency) {
-						sendNextAntennaCommand(); // Send the next antenna command
-						if (SensitivityCalibrationFrequenz) {
-							await SensitivityValueCalibration();
-							if (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL) {
-								startSpectrumAnalyse(); // Trigger spectrum analysis
-							}
-						}				
+                        const exitCycle = await handleBandEnd();
+                        if (exitCycle) return false;
 					}			
-					
 				}
 			}
-	
-            else if (Scan === 'on' && sigArray.length !== 0 && (ScannerMode === 'spectrum' && EnableSpectrumScan || ScannerMode === 'spectrumBL' && EnableSpectrumScanBL || ScannerMode === 'difference' && EnableDifferenceScan || ScannerMode === 'differenceBL' && EnableDifferenceScanBL)) {
-                    // Filter valid frequencies based on the signal strength and sensitivity
-					// console.log(sigArraySpectrum);
-					
-					if (ScannerMode === 'spectrum') {
-						validFrequencies = sigArraySpectrum
-							.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue)
-							.map(item => parseFloat(item.freq));
-					}
-					
-					if (ScannerMode === 'spectrumBL' && EnableSpectrumScanBL) {
-						validFrequencies = sigArraySpectrum
-							.filter(item => 
-								parseFloat(item.sig) > Sensitivity &&
-								parseFloat(item.sig) < SpectrumLimiterValue &&
-								!isInBlacklist(parseFloat(item.freq), blacklist)
-							)
-							.map(item => parseFloat(item.freq));
-					}
-					
-					if (ScannerMode === 'difference') {
-						validFrequencies = sigArrayDifference
-							.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue)
-							.map(item => parseFloat(item.freq));
-					}
-					
-					if (ScannerMode === 'differenceBL' && EnableDifferenceScanBL) {
-						validFrequencies = sigArrayDifference
-							.filter(item => 
-								parseFloat(item.sig) > Sensitivity && 
-								parseFloat(item.sig) < SpectrumLimiterValue &&
-								!isInBlacklist(parseFloat(item.freq), blacklist)
-							)
-						.map(item => parseFloat(item.freq));
-					}				
-				
-                    // Keep updating the frequency until it matches a valid frequency
-                    while (!validFrequencies.includes(currentFrequency) || (Number(parseFloat(currentFrequency).toFixed(1)) === Number((parseFloat(tuningUpperLimit) + 0.1).toFixed(1)))) {
-                        if (direction === 'up') {
-                            if (currentFrequency < 74.00) {
-                                currentFrequency += 0.01;
-                            } else {
-                                currentFrequency += 0.1;
-                            }					
-                            if (currentFrequency > tuningUpperLimit) {
-								currentFrequency = tuningLowerLimit; // Set to start spectrum analysis frequency
-								sendNextAntennaCommand(); // Send the next antenna command						
-								if (BEEP_CONTROL) {
-								// Play a beep sound when reaching the upper limit
-									setTimeout(() => {
-										fs.createReadStream('./plugins/Scanner/sounds/beep_short_double.wav')
-											.pipe(new Speaker());
-									}, 500);
-								}					
-								sigArray = [];
-
-								function performSpectrumAnalysis() {
-									if (sigArray.length === 0) {
-										startSpectrumAnalyse(); // Trigger spectrum analysis
-									} else {
-										clearInterval(intervalId); // Stop the interval when sigArray is no longer zero-bit
-										return; // Exit further processing in this cycle
-									}
-								}
-
-								performSpectrumAnalysis();
-								let intervalId = setInterval(performSpectrumAnalysis, 3500);
-								
-								if (SensitivityCalibrationFrequenz) {
-									await SensitivityValueCalibration();					
-								}
-								
-								sendDataToClient(currentFrequency); // Send the updated frequency to the client
-                                // Restart the scan properly from the bottom after calibration completes
-                                startScan('up');
-								return; // Exit further processing in this cycle
-                            }
-                        } else if (direction === 'down') {
-                            if (currentFrequency < 74.00) {
-                                currentFrequency -= 0.01;
-                            } else {
-                                currentFrequency -= 0.1;
-                            }
-                            if (currentFrequency < tuningLowerLimit) {
-                                currentFrequency = tuningUpperLimit; // Reset to the upper limit
-                            }
+            // Handle spectrum/difference modes
+            else if (Scan === 'on' && sigArray.length !== 0 && isSpectrumMode) {
+				if (ScannerMode === 'spectrum') {
+					validFrequencies = sigArraySpectrum.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue).map(item => parseFloat(item.freq));
+				} else if (ScannerMode === 'spectrumBL' && EnableSpectrumScanBL) {
+					validFrequencies = sigArraySpectrum.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue && !isInBlacklist(parseFloat(item.freq), blacklist)).map(item => parseFloat(item.freq));
+				} else if (ScannerMode === 'difference') {
+					validFrequencies = sigArrayDifference.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue).map(item => parseFloat(item.freq));
+				} else if (ScannerMode === 'differenceBL' && EnableDifferenceScanBL) {
+					validFrequencies = sigArrayDifference.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue && !isInBlacklist(parseFloat(item.freq), blacklist)).map(item => parseFloat(item.freq));
+				}				
+			
+                while (!validFrequencies.includes(currentFrequency) || (Number(parseFloat(currentFrequency).toFixed(1)) === Number((upperLimit + 0.1).toFixed(1)))) {
+                    if (direction === 'up') {
+                        if (currentFrequency < 74.00) currentFrequency += 0.01;
+                        else currentFrequency += 0.1;					
+                        
+                        if (currentFrequency > upperLimit) {
+                            const exitCycle = await handleBandEnd();
+                            if (exitCycle) return false;
                         }
-
-                        currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
-
-                        // Exit the loop once a valid frequency is found
-                        if (validFrequencies.includes(currentFrequency)) {
-                            break;
-                        }
+                    } else if (direction === 'down') {
+                        if (currentFrequency < 74.00) currentFrequency -= 0.01;
+                        else currentFrequency -= 0.1;
+                        if (currentFrequency < lowerLimit) currentFrequency = upperLimit;
                     }
+
+                    currentFrequency = Math.round(currentFrequency * 100) / 100; 
+
+                    if (validFrequencies.includes(currentFrequency)) {
+                        break;
+                    }
+                }
              }
         }
 		
-		if ((ScannerMode === 'spectrum' && EnableSpectrumScan || ScannerMode === 'spectrumBL' && EnableSpectrumScanBL || ScannerMode === 'difference' && EnableDifferenceScan || ScannerMode === 'differenceBL' && EnableDifferenceScanBL) && Scan === 'on' && sigArray.length !== 0 && Sensitivity > SpectrumLimiterValue) {
+		if (isSpectrumMode && Scan === 'on' && sigArray.length !== 0 && Sensitivity > SpectrumLimiterValue) {
 			logError(`Scanner Error: ${Sensitivity}>${SpectrumLimiterValue } ---> Sensitivity must be smaller than SpectrumLimiter!`);
 		}
 
-        if (Scan === 'on' && (ScannerMode === 'spectrum' && EnableSpectrumScan || ScannerMode === 'spectrumBL' && EnableSpectrumScanBL || ScannerMode === 'difference' && EnableDifferenceScan || ScannerMode === 'differenceBL' && EnableDifferenceScanBL)) {
+        if (Scan === 'on' && isSpectrumMode) {
 			if (sigArray.length !== 0 && Sensitivity < SpectrumLimiterValue) {
-				sendDataToClient(currentFrequency); // Send the updated frequency to the client
+				sendDataToClient(currentFrequency); 
 			}
 		} else {
-			//console.log('sendDataToClient',currentFrequency)
-			sendDataToClient(currentFrequency); // Send the updated frequency to the client
+			sendDataToClient(currentFrequency); 
 		}
+        
+        return true; // Cycle completed successfully without triggering an interrupt
     }
 
-    isScanning = true; // Mark scanning as in progress
-    updateFrequency(); // Call update frequency once before starting the interval
-    scanInterval = setInterval(updateFrequency, scanIntervalTime); // Set up the scanning interval
+    isScanning = true; 
+    
+    // Safely execute the first tick and establish the interval only if no calibration/restart was triggered
+    updateFrequency().then(shouldStartInterval => {
+        if (shouldStartInterval && !isCalibrating && isScanning) {
+            scanInterval = setInterval(updateFrequency, scanIntervalTime); 
+        }
+    });
 }
 
 function isInBlacklist(frequency, blacklist) {
@@ -2136,285 +2107,282 @@ function checkWhitelist() {
     });
 }
 
-		function checkSpectrum() {
-		// Check if the whitelist feature is enabled
-			if (!EnableWhitelist) {
-				logInfo('Whitelist is not enabled. Skipping check.');
-				return;
-			}
-		}
+function checkSpectrum() {
+// Check if the whitelist feature is enabled
+    if (!EnableWhitelist) {
+        logInfo('Whitelist is not enabled. Skipping check.');
+        return;
+    }
+}
 		
 		
-       function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
-		        
-			let ScanHoldTimeValue = ScanHoldTime * 10;
+function checkStereo(stereo_detect, freq, strength, picode, station, checkStrengthCounter) {
+        
+    let ScanHoldTimeValue = ScanHoldTime * 10;
 
-            if (stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {
-				
-				// Overwrite the actual signal strength in the corresponding array for all four modes
-				if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' ) {
-					
-					// Choose the correct array based on the mode
-					const arr = (ScannerMode === 'difference' || ScannerMode === 'differenceBL')
-						? sigArrayDifference
-						: sigArraySpectrum;
+    if (stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {
+        
+        // Overwrite the actual signal strength in the corresponding array for all four modes
+        if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' ) {
+            
+            // Choose the correct array based on the mode
+            const arr = (ScannerMode === 'difference' || ScannerMode === 'differenceBL')
+                ? sigArrayDifference
+                : sigArraySpectrum;
 
-					// Round frequency to two decimal places for consistent comparison
-					const freqRounded = Math.round(parseFloat(freq) * 100) / 100;
+            // Round frequency to two decimal places for consistent comparison
+            const freqRounded = Math.round(parseFloat(freq) * 100) / 100;
 
-					// Find the matching entry index
-					const idx = arr.findIndex(item =>
-						Math.round(parseFloat(item.freq) * 100) / 100 === freqRounded
-					);
+            // Find the matching entry index
+            const idx = arr.findIndex(item =>
+                Math.round(parseFloat(item.freq) * 100) / 100 === freqRounded
+            );
 
-					if (idx !== -1) {
-						// Update existing entry
-						arr[idx].sig = strength.toString();
-					} else {
-						// Add a new entry if not found
-						arr.push({
-							freq: freqRounded.toFixed(2),
-							sig:  strength.toString()
-						});
-					}
-				}			
-
-                if (strength > Sensitivity || picode.length > 1 || strength > Sensitivity && !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {					
-					//console.log(strength, Sensitivity);
-					
-
-                    if (picode.length > 1 && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
-                        ScanHoldTimeValue += 50;
-                    }				
-					
-					// Convert both values to numbers rounded to 2 decimal places to safely compare them
-					let currentFreqNum = Math.round(parseFloat(currentFrequency) * 100) / 100;
-					let lowerLimitNum = Math.round(parseFloat(tuningLowerLimit) * 100) / 100;
-
-					if (currentFreqNum !== lowerLimitNum) {
-						clearInterval(scanInterval); // Clears a previously defined scanning interval
-						isScanning = false; // Updates a flag indicating scanning status		
-					}
-
-							if (HTMLlogRAW && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
-									writeHTMLLogEntry(false); // activate non filtered log
-									Savepicode = picode;
-									Saveps = ps;
-									Savestationid = stationid;
-							}			
-		
-							if (Scan === 'on') {
-								
-								date = new Date().toLocaleDateString();
-								time = new Date().toLocaleTimeString();				
-								
-								if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
-
-										if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
-											
-											if ((CSVcompletePS && CSVcreate && !ps.includes('?')) || (!CSVcompletePS && CSVcreate && Savefreq !== freq)) {
-												writeCSVLogEntry(); // filtered log
-											}
-											
-											if ((!HTMLlogRAW && stationid && HTMLlogOnlyID) || (!HTMLlogRAW && !HTMLlogOnlyID)) {
-												writeHTMLLogEntry(true); // filtered log
-											}
-											
-											if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid ) {
-												logSnapshot = {
-													stationid,
-													station,
-													itu,
-													city,
-													distance,
-													freq,
-													picode,
-													ps,
-													strength,
-													tp,
-													ta,
-													af
-												};
-												writeLogFMLIST(logSnapshot);	
-											}
-												
-										}
-										
-											//isScanning = false;
-											checkStrengthCounter = 0; // Reset the counter
-											stereo_detect = false;
-											station = '';
-											Savefreq = freq;
-
-                                            // Determine wait time for screenshot
-                                            let screenshotWaitTime = 0;
-                                            if (dxAlertConfigExists && dxScreenshotAlert === 'on' && distance >= dxAlertDistance && distance < dxAlertDistanceMax) {
-                                                if (OnlyScanHoldTime === 'off') {
-                                                    screenshotWaitTime = 3000;
-                                                } else if (OnlyScanHoldTime === 'on' && ScanHoldTime < 3) {
-                                                    screenshotWaitTime = 3000;
-                                                }
-                                            }
-
-                                            if (screenshotWaitTime > 0) {
-                                                setTimeout(() => {
-                                                    startScan('up'); // Restart scanning after the delay
-                                                }, screenshotWaitTime);
-                                            } else {
-                                                startScan('up'); // Restart scanning immediately
-                                            }					
-                                } 
-															
-                 			} else {
-							
-								if (freq !== Savefreq) {
-									writeStatusCSV = true;
-									writeStatusHTMLLog = true;
-									writeStatusLogFMLIST = true;
-									writeStatusCSVps = true;
-								}	
-																	
-								if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
-									
-									if (!ps.includes('?') && writeStatusCSVps && !CSVcompletePS && CSVcreate) {
-										writeCSVLogEntry(); // filtered log
-										writeStatusCSVps = false;
-									}
-									if ((writeStatusCSV && CSVcreate && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && CSVcreate && !CSVcompletePS)) {
-										writeCSVLogEntry(); // filtered log
-										writeStatusCSV = false;
-									}
-									if ((!HTMLlogRAW && stationid && HTMLlogOnlyID && writeStatusHTMLLog) || (!HTMLlogRAW && !HTMLlogOnlyID && writeStatusHTMLLog)){
-										writeHTMLLogEntry(true); // filtered log
-										writeStatusHTMLLog = false;
-									}
-									if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid && writeStatusLogFMLIST) {
-										logSnapshot = {
-											stationid,
-											station,
-											itu,
-											city,
-											distance,
-											freq,
-											picode,
-											ps,
-											strength,
-											tp,
-											ta,
-											af
-										};
-										writeLogFMLIST(logSnapshot);	
-										writeStatusLogFMLIST = false;
-									}
-									Savefreq = freq;
-								}
-							}
-							isScanning = false;
-							
-                } else {
-
-					if (Scan === 'on') {
-						if (checkStrengthCounter > 10) {
-							clearInterval(scanInterval); // Clears a previously defined scanning interval
-							stereo_detect = false;
-							isScanning = false; // Updates a flag indicating scanning status
-							startScan('up');
-						}
-					}				
-                }
+            if (idx !== -1) {
+                // Update existing entry
+                arr[idx].sig = strength.toString();
             } else {
+                // Add a new entry if not found
+                arr.push({
+                    freq: freqRounded.toFixed(2),
+                    sig:  strength.toString()
+                });
+            }
+        }			
 
-				if (Scan === 'on') {
-                    if (checkStrengthCounter > 10) {
-                        clearInterval(scanInterval); // Clears a previously defined scanning interval
-                        isScanning = false; // Updates a flag indicating scanning status
-                        stereo_detect = false;
-                        startScan('up');
+        if (strength > Sensitivity || picode.length > 1 || strength > Sensitivity && !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {					
+
+            if (picode.length > 1 && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
+                ScanHoldTimeValue += 50;
+            }				
+            
+            let tuningLowerLimitwith00 = Math.round(tuningLowerLimit * 100) / 100;
+            let formattedNumber = tuningLowerLimitwith00.toFixed(3);
+
+            if (currentFrequency !== formattedNumber) {
+                clearInterval(scanInterval); // Clears a previously defined scanning interval
+                isScanning = false; // Updates a flag indicating scanning status		
+            }
+
+                    if (HTMLlogRAW && (Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {								
+                            writeHTMLLogEntry(false); // activate non filtered log
+                            Savepicode = picode;
+                            Saveps = ps;
+                            Savestationid = stationid;
+                    }			
+
+                    if (Scan === 'on') {
+                        
+                        date = new Date().toLocaleDateString();
+                        time = new Date().toLocaleTimeString();				
+                        
+                        if (checkStrengthCounter > ScanHoldTimeValue || (OnlyScanHoldTime === 'off' && ps.length > 1 && !ps.includes('?') && (Scanmode === 0 || (stationid && Scanmode === 1))))  {
+
+                                if (picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???') && freq !== Savefreq) {
+                                    
+                                    if ((CSVcompletePS && CSVcreate && !ps.includes('?')) || (!CSVcompletePS && CSVcreate && Savefreq !== freq)) {
+                                        writeCSVLogEntry(); // filtered log
+                                    }
+                                    
+                                    if ((!HTMLlogRAW && stationid && HTMLlogOnlyID) || (!HTMLlogRAW && !HTMLlogOnlyID)) {
+                                        writeHTMLLogEntry(true); // filtered log
+                                    }
+                                    
+                                    if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid ) {
+                                        logSnapshot = {
+                                            stationid,
+                                            station,
+                                            itu,
+                                            city,
+                                            distance,
+                                            freq,
+                                            picode,
+                                            ps,
+                                            strength,
+                                            tp,
+                                            ta,
+                                            af
+                                        };
+                                        writeLogFMLIST(logSnapshot);	
+                                    }
+                                        
+                                }
+                                
+                                    //isScanning = false;
+                                    checkStrengthCounter = 0; // Reset the counter
+                                    stereo_detect = false;
+                                    station = '';
+                                    Savefreq = freq;
+
+                                    // Determine wait time for screenshot
+                                    let screenshotWaitTime = 0;
+                                    if (dxAlertConfigExists && dxScreenshotAlert === 'on' && distance >= dxAlertDistance && distance < dxAlertDistanceMax) {
+                                        if (OnlyScanHoldTime === 'off') {
+                                            screenshotWaitTime = 3000;
+                                        } else if (OnlyScanHoldTime === 'on' && ScanHoldTime < 3) {
+                                            screenshotWaitTime = 3000;
+                                        }
+                                    }
+
+                                    if (screenshotWaitTime > 0) {
+                                        setTimeout(() => {
+                                            startScan('up'); // Restart scanning after the delay
+                                        }, screenshotWaitTime);
+                                    } else {
+                                        startScan('up'); // Restart scanning immediately
+                                    }					
+                        } 
+                                                    
+                    } else {
+                    
+                        if (freq !== Savefreq) {
+                            writeStatusCSV = true;
+                            writeStatusHTMLLog = true;
+                            writeStatusLogFMLIST = true;
+                            writeStatusCSVps = true;
+                        }	
+                                                            
+                        if (picode.length > 1 && picode !== '' && picode !== '?' && !picode.includes('??') && !picode.includes('???')) {
+                            
+                            if (!ps.includes('?') && writeStatusCSVps && !CSVcompletePS && CSVcreate) {
+                                writeCSVLogEntry(); // filtered log
+                                writeStatusCSVps = false;
+                            }
+                            if ((writeStatusCSV && CSVcreate && !ps.includes('?') && CSVcompletePS) || (writeStatusCSVps && CSVcreate && !CSVcompletePS)) {
+                                writeCSVLogEntry(); // filtered log
+                                writeStatusCSV = false;
+                            }
+                            if ((!HTMLlogRAW && stationid && HTMLlogOnlyID && writeStatusHTMLLog) || (!HTMLlogRAW && !HTMLlogOnlyID && writeStatusHTMLLog)){
+                                writeHTMLLogEntry(true); // filtered log
+                                writeStatusHTMLLog = false;
+                            }
+                            if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid && writeStatusLogFMLIST) {
+                                logSnapshot = {
+                                    stationid,
+                                    station,
+                                    itu,
+                                    city,
+                                    distance,
+                                    freq,
+                                    picode,
+                                    ps,
+                                    strength,
+                                    tp,
+                                    ta,
+                                    af
+                                };
+                                writeLogFMLIST(logSnapshot);	
+                                writeStatusLogFMLIST = false;
+                            }
+                            Savefreq = freq;
+                        }
                     }
-				}
+                    isScanning = false;
+                    
+        } else {
+
+            if (Scan === 'on') {
+                if (checkStrengthCounter > 10) {
+                    clearInterval(scanInterval); // Clears a previously defined scanning interval
+                    stereo_detect = false;
+                    isScanning = false; // Updates a flag indicating scanning status
+                    startScan('up');
+                }
+            }				
+        }
+    } else {
+
+        if (Scan === 'on') {
+            if (checkStrengthCounter > 10) {
+                clearInterval(scanInterval); // Clears a previously defined scanning interval
+                isScanning = false; // Updates a flag indicating scanning status
+                stereo_detect = false;
+                startScan('up');
             }
-        }	
-		
-      function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
-		  
-			let ScanHoldTimeValue = ScanHoldTime * 6;	
-		                                  
-            if (picode.length > 1) {
+        }
+    }
+}	
 
-							if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {						
-								if (HTMLlogRAW) {
-									writeHTMLLogEntry(false); // activate non filtered log
-									Savepicode = picode;
-									Saveps = ps;
-									Savestationid = stationid;
-								}
-							}			
+function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
+    
+    let ScanHoldTimeValue = ScanHoldTime * 6;	
+                                    
+    if (picode.length > 1) {
 
-							if (Scan === 'on') {
-								
-								date = new Date().toLocaleDateString();
-								time = new Date().toLocaleTimeString();						
+                    if ((Savepicode !== picode || Saveps !== ps || Savestationid !== stationid) && picode !== '?') {						
+                        if (HTMLlogRAW) {
+                            writeHTMLLogEntry(false); // activate non filtered log
+                            Savepicode = picode;
+                            Saveps = ps;
+                            Savestationid = stationid;
+                        }
+                    }			
 
-								if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
-											writeCSVLogEntry(true); // filtered log
-											if (!HTMLlogRAW) {
-												writeHTMLLogEntry(true); // filtered log
-											}
-											
-											if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
-												logSnapshot = {
-													stationid,
-													station,
-													itu,
-													city,
-													distance,
-													freq,
-													picode,
-													ps,
-													strength,
-													tp,
-													ta,
-													af
-												};
-												writeLogFMLIST(logSnapshot);	
-											}
-											
-											Savefreq = freq;	
-								}
+                    if (Scan === 'on') {
+                        
+                        date = new Date().toLocaleDateString();
+                        time = new Date().toLocaleTimeString();						
 
-								station = '';	
-																
-                 			} else {
-								
-								if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
-									writeCSVLogEntry(true); // filtered log
-									if (!HTMLlogRAW) {
-										writeHTMLLogEntry(true); // filtered log
-									}
-									
-									if (FMLIST_Autolog === 'on') {
-										logSnapshot = {
-											stationid,
-											station,
-											itu,
-											city,
-											distance,
-											freq,
-											picode,
-											ps,
-											strength,
-											tp,
-											ta,
-											af
-										};
-										writeLogFMLIST(logSnapshot);	
-									}
-									
-									Savefreq = freq;
-								}
-							}								              
-            }
-        }	
+                        if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
+                                    writeCSVLogEntry(true); // filtered log
+                                    if (!HTMLlogRAW) {
+                                        writeHTMLLogEntry(true); // filtered log
+                                    }
+                                    
+                                    if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
+                                        logSnapshot = {
+                                            stationid,
+                                            station,
+                                            itu,
+                                            city,
+                                            distance,
+                                            freq,
+                                            picode,
+                                            ps,
+                                            strength,
+                                            tp,
+                                            ta,
+                                            af
+                                        };
+                                        writeLogFMLIST(logSnapshot);	
+                                    }
+                                    
+                                    Savefreq = freq;	
+                        }
+
+                        station = '';	
+                                                        
+                    } else {
+                        
+                        if (ps.length > 1 && !ps.includes('?') && picode.length > 1 && picode !== '?' && !picode.includes('??') && !picode.includes('???') && stationid && freq !== Savefreq || checkStrengthCounter > ScanHoldTimeValue && freq !== Savefreq) {
+                            writeCSVLogEntry(true); // filtered log
+                            if (!HTMLlogRAW) {
+                                writeHTMLLogEntry(true); // filtered log
+                            }
+                            
+                            if (FMLIST_Autolog === 'on') {
+                                logSnapshot = {
+                                    stationid,
+                                    station,
+                                    itu,
+                                    city,
+                                    distance,
+                                    freq,
+                                    picode,
+                                    ps,
+                                    strength,
+                                    tp,
+                                    ta,
+                                    af
+                                };
+                                writeLogFMLIST(logSnapshot);	
+                            }
+                            
+                            Savefreq = freq;
+                        }
+                    }								              
+    }
+}	
 				
 // Function to find the appropriate entry based on `pty`
 function getProgrammeByPTYFromFile(pty, baseDir, relativePath) {
@@ -2575,7 +2543,7 @@ async function writeCSVLogEntry() {
     const AF = `"${af}"`;
     const RT = `"${rt}"`;
 
-    // --- TX information (append newly) ---
+    // --- TX information ---
     const safe = v => (typeof v === 'undefined' || v === null) ? '' : String(v).trim().replace(/"/g, '');
     const TX_STATION = `"${safe(station)}"`;
     const TX_CITY    = `"${safe(city)}"`;
@@ -2585,7 +2553,7 @@ async function writeCSVLogEntry() {
     const TX_DIST    = `${safe(distance)}`;
     const TX_AZ      = `${safe(azimuth)}`;
 
-    // By default keep TX lat/lon empty (per your request)
+    // By default keep TX lat/lon empty
     let TX_LAT = '';
     let TX_LON = '';
 
@@ -2644,7 +2612,6 @@ async function writeCSVLogEntry() {
                 }
             } catch (err) {
                 // on error keep TX_LAT/TX_LON empty
-                // optionally log via logError if desired:
                 logError && logError('Could not fetch TX coordinates from maps.fmdx.org:', err.message || err);
             }
         }
@@ -2652,10 +2619,10 @@ async function writeCSVLogEntry() {
 
     const TX_LAT_CSV = `${(TX_LAT || '').replace(/"/g, '')}`;
     const TX_LON_CSV = `${(TX_LON || '').replace(/"/g, '')}`;
-    // --- Ende TX information ---
+    // --- End TX information ---
 
     // Create the log line as a string
-    // Put '30,' before the first column
+    // Put "30," in front of the first column
     let newLine = `30,${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT},,,,`;
 
     // Append the TX fields at the end (in the same CSV order as prefilledData)
@@ -2911,7 +2878,6 @@ async function getLogInterval() {
 
         // Access and use the LogInterval_FMLIST value
         const logIntervalFMLIST = data.LogInterval_FMLIST;
-        // LogInfo(`The LogInterval for FMLIST is: ${logIntervalFMLIST} minutes`);
 		FMLIST_LogInterval = logIntervalFMLIST;
 		
 		if (FMLIST_Autolog === 'on') {
