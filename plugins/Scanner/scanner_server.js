@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.1a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.2)       ///
 ///                                                         ///
-///  by Highpoint               last update: 26.02.2026     ///
+///  by Highpoint               last update: 27.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -45,6 +45,7 @@ if (!fs.existsSync(logDir)) {
 const ScannerClientFile = path.join(__dirname, 'scanner.js');
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
 const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
+const pluginsConfigDir = path.dirname(newConfigFilePath);
 const dxAlertConfigFilePath = path.join(__dirname, './../../plugins_configs/DX-Alert.json');
 
 // Operational Global Variables
@@ -105,6 +106,25 @@ let dxScreenshotAlert = 'off';
 let dxAlertDistance = 0;
 let dxAlertDistanceMax = 20000;
 let dxAlertConfigExists = false;
+
+// Variables for dynamic scanner configurations
+let availableScannerConfigs = getAvailableConfigs();
+let activeScannerConfig = 'default';
+// Save state file directly in the scanner plugin folder (__dirname)
+const stateFilePath = path.join(__dirname, 'scanner_state.json');
+
+// Load last active config from state file
+if (fs.existsSync(stateFilePath)) {
+    try {
+        const stateData = JSON.parse(fs.readFileSync(stateFilePath, 'utf8'));
+        if (stateData && stateData.activeConfig && availableScannerConfigs.includes(stateData.activeConfig)) {
+            activeScannerConfig = stateData.activeConfig;
+            logInfo(`Scanner restored last active config: ${activeScannerConfig}`);
+        }
+    } catch (err) {
+        logError('Failed to read scanner_state.json, falling back to default.');
+    }
+}
 
 let Speaker;
 const NewModules = ['speaker'];
@@ -167,6 +187,67 @@ try {
         throw err; // unexpected error
     }
 }
+
+// -------------------------------------------------------------
+// Dynamic Configuration Helpers
+// -------------------------------------------------------------
+
+// Reads the directory and filters for scanner.json and scanner_xxx.json
+function getAvailableConfigs() {
+    try {
+        if (!fs.existsSync(pluginsConfigDir)) return ['default'];
+        const files = fs.readdirSync(pluginsConfigDir);
+        const configs = ['default']; // base scanner.json
+        files.forEach(file => {
+            if (file.startsWith('scanner_') && file.endsWith('.json')) {
+                // remove 'scanner_' prefix and '.json' suffix
+                const name = file.substring(8, file.length - 5);
+                configs.push(name);
+            }
+        });
+        return configs;
+    } catch (err) {
+        return ['default'];
+    }
+}
+
+// Watch the directory for dynamic config addition/removal
+let debounceConfigWatch;
+fs.watch(pluginsConfigDir, (eventType, filename) => {
+    if (filename && filename.startsWith('scanner') && filename.endsWith('.json')) {
+        clearTimeout(debounceConfigWatch);
+        debounceConfigWatch = setTimeout(() => {
+            const newConfigs = getAvailableConfigs();
+            if (JSON.stringify(newConfigs) !== JSON.stringify(availableScannerConfigs)) {
+                availableScannerConfigs = newConfigs;
+                logInfo(`Scanner config files changed. Available configs: ${availableScannerConfigs.join(', ')}`);
+                
+                // Revert to default if the currently active config was removed
+                if (!availableScannerConfigs.includes(activeScannerConfig)) {
+                    logWarn(`Active config '${activeScannerConfig}' was removed. Reverting to default.`);
+                    activeScannerConfig = 'default';
+                    
+                    // Update state file
+                    try {
+                        fs.writeFileSync(stateFilePath, JSON.stringify({ activeConfig: activeScannerConfig }), 'utf8');
+                    } catch (err) {}
+
+                    const fallbackConfig = loadConfig(newConfigFilePath);
+                    applyScannerConfig(fallbackConfig);
+                    if (typeof watchActiveConfigFile === 'function') watchActiveConfigFile('default');
+                } else {
+                    updateSettings(); // Rewrite variables to scanner.js
+                    
+                    // Broadcast new lists immediately
+                    if (DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+                        const msg = createMessage('broadcast', '255.255.255.255', Scan, '', Sensitivity, ScannerMode, ScanHoldTime, FMLIST_Autolog);
+                        DataPluginsSocket.send(JSON.stringify(msg));
+                    }
+                }
+            }
+        }, 500); // 500ms debounce
+    }
+});
 
 // -------------------------------------------------------------
 // Configuration Default Values
@@ -506,6 +587,9 @@ function updateSettings() {
     let hasEnableDifferenceScan = /const EnableDifferenceScan = .+;/.test(targetData);
     let hasEnableDifferenceScanBL = /const EnableDifferenceScanBL = .+;/.test(targetData);
     let hasSignalStrengthUnit   = /let SignalStrengthUnit = .+;/.test(targetData);
+    
+    let hasAvailableConfigs     = /let AvailableScannerConfigs = .+;/.test(targetData);
+    let hasActiveConfig         = /let ActiveScannerConfig = .+;/.test(targetData);
 
     // Replace or add the definitions
     let updatedData = targetData;
@@ -547,9 +631,22 @@ function updateSettings() {
     }
 
 	if (hasSignalStrengthUnit) {
-	  updatedData = updatedData.replace(/const SignalStrengthUnit = .*;/, `const SignalStrengthUnit = '${SignalStrengthUnit}';`);
+	  updatedData = updatedData.replace(/let SignalStrengthUnit = .*;/, `let SignalStrengthUnit = '${SignalStrengthUnit}';`);
 	} else {
-      updatedData = `const SignalStrengthUnit = '${SignalStrengthUnit}';\n` + updatedData;
+      updatedData = `let SignalStrengthUnit = '${SignalStrengthUnit}';\n` + updatedData;
+    }
+
+    const configsStr = JSON.stringify(availableScannerConfigs);
+    if (hasAvailableConfigs) {
+        updatedData = updatedData.replace(/let AvailableScannerConfigs = .*;/, `let AvailableScannerConfigs = ${configsStr};`);
+    } else {
+        updatedData = `let AvailableScannerConfigs = ${configsStr};\n` + updatedData;
+    }
+
+    if (hasActiveConfig) {
+        updatedData = updatedData.replace(/let ActiveScannerConfig = .*;/, `let ActiveScannerConfig = '${activeScannerConfig}';`);
+    } else {
+        updatedData = `let ActiveScannerConfig = '${activeScannerConfig}';\n` + updatedData;
     }
 
     // Only update/write the target file if the generated content is actually different to prevent file loops
@@ -586,14 +683,33 @@ function setupFileWatcher(filePath, callback, logMessage) {
 // -------------------------------------------------------------
 // Initialize Setup and File Watchers
 // -------------------------------------------------------------
-const initialConfigPlugin = loadConfig(newConfigFilePath);
+let targetFileOnStart = activeScannerConfig === 'default' ? 'scanner.json' : `scanner_${activeScannerConfig}.json`;
+let initialConfigFilePath = path.join(pluginsConfigDir, targetFileOnStart);
+
+const initialConfigPlugin = loadConfig(initialConfigFilePath);
 loadDXAlertConfig(dxAlertConfigFilePath); 
 applyScannerConfig(initialConfigPlugin);
 
-setupFileWatcher(newConfigFilePath, () => {
-    const updatedConfig = loadConfig(newConfigFilePath);
-    applyScannerConfig(updatedConfig);
-}, 'Scanner configuration file changed. Reloading on the fly...');
+// Dynamic Watcher for the currently active config file
+let currentWatchedConfigFile = null;
+
+function watchActiveConfigFile(configName) {
+    // Unwatch the previously active file to prevent duplicate triggers
+    if (currentWatchedConfigFile) {
+        fs.unwatchFile(currentWatchedConfigFile);
+    }
+
+    let targetFile = configName === 'default' ? 'scanner.json' : `scanner_${configName}.json`;
+    currentWatchedConfigFile = path.join(pluginsConfigDir, targetFile);
+
+    setupFileWatcher(currentWatchedConfigFile, () => {
+        const updatedConfig = loadConfig(currentWatchedConfigFile);
+        applyScannerConfig(updatedConfig);
+    }, `Active configuration file (${targetFile}) changed. Reloading on the fly...`);
+}
+
+// Initialize watcher for the active config at startup
+watchActiveConfigFile(activeScannerConfig);
 
 setupFileWatcher(dxAlertConfigFilePath, () => {
     loadDXAlertConfig(dxAlertConfigFilePath);
@@ -656,7 +772,9 @@ function createMessage(status, target, Scan, Search, Sensitivity, ScannerMode, S
 			ScanHoldTime: ScanHoldTime,
 			SpectrumLimiterValue: SpectrumLimiterValue,
             StatusFMLIST: StatusFMLIST,
-			InfoFMLIST: InfoFMLIST		
+			InfoFMLIST: InfoFMLIST,
+            AvailableConfigs: availableScannerConfigs,
+            ActiveConfig: activeScannerConfig
         },
         source: source,
         target: target
@@ -1046,6 +1164,42 @@ async function handleDataPluginsMessage(eventData, ws) {
         }
 
         if (message.type === 'Scanner' && message.value.status === 'command') {
+
+            // Handle dynamic config switch
+            if (message.value.LoadScannerConfig) {
+                let configName = message.value.LoadScannerConfig;
+                if (availableScannerConfigs.includes(configName)) {
+                    activeScannerConfig = configName;
+                    let targetFile = configName === 'default' ? 'scanner.json' : `scanner_${configName}.json`;
+                    let fullPath = path.join(pluginsConfigDir, targetFile);
+                    
+                    logInfo(`Scanner switching to config: ${targetFile} [IP: ${clientSource}]`);
+                    
+                    // Save active config state to persist across server restarts
+                    try {
+                        fs.writeFileSync(stateFilePath, JSON.stringify({ activeConfig: activeScannerConfig }), 'utf8');
+                    } catch (err) {
+                        logError('Failed to save scanner_state.json:', err.message);
+                    }
+                    
+                    // Stop any existing scanning loop smoothly before applying new config
+                    if (Scan === 'on') {
+                        clearInterval(scanInterval);
+                        isScanning = false;
+                        stopAutoScan();
+                    }
+
+                    const newConfig = loadConfig(fullPath);
+                    applyScannerConfig(newConfig); // This will update scanner.js and reboot scanner state
+                    
+                    // Update the file watcher to monitor the newly selected configuration file
+                    watchActiveConfigFile(configName);
+
+                    SendResponseMessage(clientSource);
+                } else {
+                    logWarn(`Client requested unknown config: ${configName}`);
+                }
+            }
 
             // Tune command from Connector App (requires authorization for TEF Logger)
             if (message.value.Tune !== undefined && message.value.Tune !== null && message.value.Tune !== '' && message.value.Tune !== 'null') {

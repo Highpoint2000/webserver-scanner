@@ -11,11 +11,9 @@ This plugin provides scanning functions for the FM-DX web server.
 ![image](https://github.com/user-attachments/assets/0a327a52-39b7-4b97-8a8e-ec90c91e8cd6)
 
 
-## v4.1a (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+## v4.2 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
-- Unit changes on the web server are now directly reflected in the scanner
-- Changes to the scanner mode in the JSON configuration are now displayed in the web interface
-- Problem with broadcast messages containing empty strings has been resolved
+Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. Note: The dropdown menu will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
 
 
 ## Installation notes:
@@ -76,6 +74,12 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.1a (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+
+- Unit changes on the web server are now directly reflected in the scanner
+- Changes to the scanner mode in the JSON configuration are now displayed in the web interface
+- Problem with broadcast messages containing empty strings has been resolved
 
 ### v4.1 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 

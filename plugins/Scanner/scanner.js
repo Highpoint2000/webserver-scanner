@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.1a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2)       ///
 ///                                                         ///
-///  by Highpoint               last update: 26.02.2026     ///
+///  by Highpoint               last update: 27.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,19 +15,20 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.1';
+    const pluginVersion = '4.2';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 
+    let AvailableScannerConfigs = ["default","BelDX","SpE","Tropo"];
+    let ActiveScannerConfig = 'BelDX';
     const EnableBlacklist = true; // auto from config
-    const EnableWhitelist = true; // auto from config
-    const EnableSpectrumScan = true; // auto from config
-    const EnableSpectrumScanBL = true; // auto from config
+    const EnableWhitelist = false; // auto from config
+    const EnableSpectrumScan = false; // auto from config
+    const EnableSpectrumScanBL = false; // auto from config
     const EnableDifferenceScan = true; // auto from config
     const EnableDifferenceScanBL = true; // auto from config
 
-    // IMPORTANT: now dynamic, NOT const
     let SignalStrengthUnit = 'dBµV'; // initial, will be updated from UI
 
     const currentURL   = new URL(window.location.href);
@@ -49,7 +50,7 @@
     let SpectrumLimiterValueStatus;
     let ScannerModeStatus;
 
-    // NEW: remember last internal values from server
+    // Remember last internal values from server
     let lastInternalSensitivity = null;
     let lastScannerModeValue    = null;
     let lastScanHoldTimeValue   = null;
@@ -96,42 +97,42 @@
             typeof PLUGIN_VERSION    !== 'undefined' ? PLUGIN_VERSION :
             'Unknown';
 
-async function fetchFirstLine() {
-    const urlCheckForUpdate = urlFetchLink;
+        async function fetchFirstLine() {
+            const urlCheckForUpdate = urlFetchLink;
 
-    try {
-        const response = await fetch(urlCheckForUpdate);
-        if (!response.ok) {
-            throw new Error(`[${pluginName}] update check HTTP error! status: ${response.status}`);
-        }
+            try {
+                const response = await fetch(urlCheckForUpdate);
+                if (!response.ok) {
+                    throw new Error(`[${pluginName}] update check HTTP error! status: ${response.status}`);
+                }
 
-        const text  = await response.text();
-        const lines = text.split('\n');
+                const text  = await response.text();
+                const lines = text.split('\n');
 
-        let version;
+                let version;
 
-        // Robuster: RegEx mit \s* statt exaktem " ="
-        const versionRegex = /const\s+(?:pluginVersion|plugin_version|PLUGIN_VERSION)\s*=\s*['"]([^'"]+)['"]/;
+                // Robuster: RegEx mit \s* statt exaktem " ="
+                const versionRegex = /const\s+(?:pluginVersion|plugin_version|PLUGIN_VERSION)\s*=\s*['"]([^'"]+)['"]/;
 
-        const versionLine = lines.find(line => versionRegex.test(line));
-        if (versionLine) {
-            const match = versionLine.match(versionRegex);
-            if (match) {
-                version = match[1];
+                const versionLine = lines.find(line => versionRegex.test(line));
+                if (versionLine) {
+                    const match = versionLine.match(versionRegex);
+                    if (match) {
+                        version = match[1];
+                    }
+                }
+
+                if (!version) {
+                    const firstLine = lines[0].trim();
+                    version = /^\d/.test(firstLine) ? firstLine : "Unknown";
+                }
+
+                return version;
+            } catch (error) {
+                console.error(`[${pluginName}] error fetching file:`, error);
+                return null;
             }
         }
-
-        if (!version) {
-            const firstLine = lines[0].trim();
-            version = /^\d/.test(firstLine) ? firstLine : "Unknown";
-        }
-
-        return version;
-    } catch (error) {
-        console.error(`[${pluginName}] error fetching file:`, error);
-        return null;
-    }
-}
 
 
         fetchFirstLine().then(newVersion => {
@@ -354,13 +355,34 @@ async function fetchFirstLine() {
                     ScanHoldTime,
                     SpectrumLimiterValue,
                     StatusFMLIST,
-                    InfoFMLIST
+                    InfoFMLIST,
+                    AvailableConfigs,
+                    ActiveConfig
                 } = eventData.value;
 
                 console.log(eventData.value);
 
                 if (typeof ScanPE5PVB !== 'undefined') {
                     ScanPE5PVBstatus = ScanPE5PVB;
+                }
+
+                // Update Dynamic Configuration lists if provided by WebSocket
+                let configsChanged = false;
+                if (AvailableConfigs !== undefined) {
+                    if (JSON.stringify(AvailableConfigs) !== JSON.stringify(AvailableScannerConfigs)) {
+                        AvailableScannerConfigs = AvailableConfigs;
+                        configsChanged = true;
+                    }
+                }
+                if (ActiveConfig !== undefined) {
+                    if (ActiveConfig !== ActiveScannerConfig) {
+                        ActiveScannerConfig = ActiveConfig;
+                        configsChanged = true;
+                    }
+                }
+
+                if (configsChanged && isTuneAuthenticated) {
+                    updateAdminScannerDropdownUI();
                 }
 
                 // IMPORTANT: Only store valid (non-empty) values for later re-render to prevent NaN issues
@@ -1227,7 +1249,134 @@ async function fetchFirstLine() {
         } else {
             isTuningAllowed = false;
         }
+
+        // Initialize the Scanner Option dynamic dropdown if logged in as admin
+        if (isAdminLoggedIn) {
+            createAdminScannerDropdown();
+        }
     }
+
+    ///////////////////////////////////////////////////////////
+    // Admin Dynamic Scanner Config Dropdown
+    ///////////////////////////////////////////////////////////
+    function createAdminScannerDropdown() {
+        // Look for the modal content area
+        const modalContent = document.querySelector('.modal-panel-content');
+        if (!modalContent) return;
+
+        // Search for the specific paragraph confirming admin login
+        const paragraphs = Array.from(modalContent.querySelectorAll('p.color-3'));
+        const adminPara = paragraphs.find(p => 
+            p.textContent.includes("You are logged in as an administrator.") || 
+            p.textContent.includes("You are logged in as an adminstrator.")
+        );
+
+        if (!adminPara) return; // Admin is not logged in
+
+        // If it doesn't exist, create it once
+        let container = document.getElementById('admin-scanner-dropdown-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'admin-scanner-dropdown-container';
+            container.className = 'panel-full flex-center no-bg m-0';
+            container.style.flexDirection = 'column';
+            container.style.marginTop = '15px';
+            container.style.marginBottom = '15px';
+
+            container.innerHTML = `
+                <span class="text-bold" style="color: var(--color-4); text-transform: uppercase; font-size: 13px; margin-bottom: 5px;">Scanner Setting</span>
+                <div class="dropdown" style="width: 215px; position: relative;">
+                    <input type="text" id="admin-scanner-dropdown-input" placeholder="Default" readonly tabindex="0" style="cursor: pointer; text-align: left; padding-left: 15px;">
+                    <ul class="options open-bottom" tabindex="-1" style="display: none; position: absolute; z-index: 100; width: 100%; text-align: left;">
+                        <!-- Options generated dynamically via updateAdminScannerDropdownUI -->
+                    </ul>
+                </div>
+            `;
+            // Insert directly above the admin logged-in text
+            adminPara.parentNode.insertBefore(container, adminPara);
+
+            // Add standard Dropdown Toggle behavior
+            const dropdownEl = container.querySelector('.dropdown');
+            const inputEl = dropdownEl.querySelector('input');
+            const optionsList = dropdownEl.querySelector('ul.options');
+
+            inputEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = optionsList.style.display === 'block';
+                
+                // Close all other dropdowns globally to prevent overlap
+                document.querySelectorAll('.dropdown .options').forEach(ul => {
+                    ul.style.display = 'none';
+                });
+                
+                optionsList.style.display = isOpen ? 'none' : 'block';
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!dropdownEl.contains(e.target)) {
+                    optionsList.style.display = 'none';
+                }
+            });
+        }
+
+        // Render the options
+        updateAdminScannerDropdownUI();
+    }
+
+    function updateAdminScannerDropdownUI() {
+        const container = document.getElementById('admin-scanner-dropdown-container');
+        if (!container) return;
+
+        // Hide if there are no additional configs besides default
+        if (!AvailableScannerConfigs || AvailableScannerConfigs.length <= 1) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+
+        const optionsList = container.querySelector('ul.options');
+        const inputEl = container.querySelector('input');
+
+        if (optionsList && inputEl) {
+            // Set the active displayed value
+            const displayValue = ActiveScannerConfig === 'default' ? 'Default' : ActiveScannerConfig;
+            inputEl.value = displayValue;
+            inputEl.setAttribute('data-value', ActiveScannerConfig);
+
+            // Rebuild the list items
+            optionsList.innerHTML = '';
+            AvailableScannerConfigs.forEach(conf => {
+                const li = document.createElement('li');
+                li.className = 'option';
+                li.tabIndex = 0;
+                li.setAttribute('data-value', conf);
+                li.textContent = conf === 'default' ? 'Default' : conf;
+                
+                li.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    inputEl.value = li.textContent;
+                    inputEl.setAttribute('data-value', conf);
+                    optionsList.style.display = 'none';
+                    
+                    console.log(`[Scanner] User selected config: ${conf}`);
+                    
+                    // Send command to switch configuration on the server
+                    if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
+                        wsSendSocket.send(JSON.stringify({
+                            type: 'Scanner',
+                            value: { status: 'command', LoadScannerConfig: conf },
+                            source: clientIp,
+                            target: target
+                        }));
+                    }
+                });
+                optionsList.appendChild(li);
+            });
+        }
+    }
+
 
     ///////////////////////////////////////////////////////////
     // Mapviewer button (CSV check)
