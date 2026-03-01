@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.2)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.2a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 27.02.2026     ///
+///  by Highpoint               last update: 28.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -49,6 +49,8 @@ const pluginsConfigDir = path.dirname(newConfigFilePath);
 const dxAlertConfigFilePath = path.join(__dirname, './../../plugins_configs/DX-Alert.json');
 
 // Operational Global Variables
+let manualSensitivityAbsolute = null;
+let manualSensitivityOffset = null;
 let textSocket;
 let DataPluginsSocket;
 let autoScanSocket;
@@ -529,8 +531,21 @@ function applyScannerConfig(configData) {
         Speaker = require('speaker');
     }
 
+    // Apply manual overrides based on calibration mode
+    if (SensitivityCalibrationFrequenz !== '') {
+        if (manualSensitivityOffset !== null) {
+            defaultSensitivityValue = manualSensitivityOffset;
+        }
+        Sensitivity = defaultSensitivityValue; // Fallback initial setting before calibration runs
+    } else {
+        if (manualSensitivityAbsolute !== null) {
+            Sensitivity = manualSensitivityAbsolute;
+        } else {
+            Sensitivity = defaultSensitivityValue;
+        }
+    }
+
     // Assign main modes directly to global variables
-    Sensitivity = defaultSensitivityValue;
     ScannerMode = defaultScannerMode;
     ScanHoldTime = defaultScanHoldTime;
     StatusFMLIST = FMLIST_Autolog;
@@ -1217,13 +1232,37 @@ async function handleDataPluginsMessage(eventData, ws) {
             }
 
             if (message.value.Sensitivity !== undefined && message.value.Sensitivity !== '') {
-                Sensitivity = message.value.Sensitivity;
-                if (ScanPE5PVB) {
-                    sendCommandToClient(`I${Sensitivity}`);
-                    logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
+                const parsedSensitivity = parseFloat(message.value.Sensitivity);
+
+                if (SensitivityCalibrationFrequenz !== '') {
+                    // Update the calibration offset dynamically
+                    manualSensitivityOffset = parsedSensitivity;
+                    defaultSensitivityValue = manualSensitivityOffset;
+                    // Force recalibration so the new offset is applied immediately to the absolute threshold
+                    hasSensitivityCalibrationRun = false;
+                    logInfo(`Scanner updated calibration offset to "${defaultSensitivityValue}" dynamically [IP: ${clientSource}]`);
+                    
+                    if (Scan === 'on') {
+                        clearInterval(scanInterval);
+                        isScanning = false;
+                        stopAutoScan();
+                        setTimeout(() => {
+                            AutoScan();
+                        }, 1000);
+                    } else {
+                        SendResponseMessage(clientSource);
+                    }
                 } else {
-                    logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
-                    SendResponseMessage(clientSource);
+                    // Update the absolute threshold
+                    manualSensitivityAbsolute = parsedSensitivity;
+                    Sensitivity = manualSensitivityAbsolute;
+                    if (ScanPE5PVB) {
+                        sendCommandToClient(`I${Sensitivity}`);
+                        logInfo(`Scanner (PE5PVB mode) set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
+                    } else {
+                        logInfo(`Scanner set sensitivity "${Sensitivity} dBf" [IP: ${clientSource}]`);
+                        SendResponseMessage(clientSource);
+                    }
                 }
             }
 
@@ -1324,7 +1363,7 @@ function InitialMessage() {
 }
 
 async function sendDataToClient(frequency) {
-    const dataToSend = `T${(frequency * 1000).toFixed(0)}`;
+    const dataToSend = `T${(parseFloat(frequency) * 1000).toFixed(0)}`;
     try {
         if (sendPrivilegedCommand) {
             await sendPrivilegedCommand(dataToSend, true);
@@ -1504,12 +1543,19 @@ function checkUserCount(users) {
 						.pipe(new Speaker());
 				}, 500);
 			}
-     
-			if (DefaultFreq !== '' && enableDefaultFreq) {
-				sendDataToClient(DefaultFreq);
-			} else {
-				sendDataToClient(saveAutoscanFrequency);
+
+            // Parse default frequency to ensure format consistency
+			let targetRestoreFreq = saveAutoscanFrequency;
+			if (enableDefaultFreq && DefaultFreq !== undefined && DefaultFreq !== null && DefaultFreq !== '') {
+				let sanitizedFreq = String(DefaultFreq).replace(',', '.'); // Replace comma with dot
+				let parsedFreq = parseFloat(sanitizedFreq);
+				if (!isNaN(parsedFreq)) {
+					targetRestoreFreq = parsedFreq;
+				}
 			}
+			
+			sendDataToClient(targetRestoreFreq);
+
 			if (AntennaSwitch && saveAutoscanAntenna) sendCommandToClient(`Z${saveAutoscanAntenna}`);
         }
     }
@@ -3166,18 +3212,21 @@ async function writeLogFMLIST({
 		freq = rounded.toFixed(2);
 	}
     
-    if (FMLIST_MinDistance < 200 || FMLIST_MinDistance === '' || FMLIST_MinDistance === undefined) {
-        FMLIST_MinDistance = 200;
+    // Ensure numeric distance types
+    let parsedDistance = parseFloat(distance);
+    let parsedMin = parseFloat(FMLIST_MinDistance);
+    let parsedMax = parseFloat(FMLIST_MaxDistance);
+
+    // Fallback default values
+    if (isNaN(parsedMin) || parsedMin < 200) parsedMin = 200;
+    if (isNaN(parsedMax) || parsedMax < 200) parsedMax = 2000;
+
+    // Strict numerical check to prevent string/NaN bypass bugs
+    if (isNaN(parsedDistance) || parsedDistance < parsedMin || parsedDistance > parsedMax) {
+        return; // Exit the function if the distance is invalid or out of range
     }
-    
-    if (FMLIST_MaxDistance < 200 || FMLIST_MaxDistance === '' || FMLIST_MaxDistance === undefined) {
-        FMLIST_MaxDistance = 2000;
-    }
-    
-    // Check if the distance is within the specified minimum and maximum limits
-    if (distance < FMLIST_MinDistance || distance > FMLIST_MaxDistance) {
-        return; // Exit the function if the distance is out of range
-    }
+
+    distance = parsedDistance; // Safe to use moving forward
     
     // Ensure that a station ID is provided
     if (!stationid) {

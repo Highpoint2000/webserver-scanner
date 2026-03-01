@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2)       ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 27.02.2026     ///
+///  by Highpoint               last update: 28.02.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,17 +15,17 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.2';
+    const pluginVersion = '4.2a';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 
-    let AvailableScannerConfigs = ["default","BelDX","SpE","Tropo"];
-    let ActiveScannerConfig = 'BelDX';
+    let AvailableScannerConfigs = ["default","Dave","Ivan","SpE","Tropo"];
+    let ActiveScannerConfig = 'default';
     const EnableBlacklist = true; // auto from config
-    const EnableWhitelist = false; // auto from config
-    const EnableSpectrumScan = false; // auto from config
-    const EnableSpectrumScanBL = false; // auto from config
+    const EnableWhitelist = true; // auto from config
+    const EnableSpectrumScan = true; // auto from config
+    const EnableSpectrumScanBL = true; // auto from config
     const EnableDifferenceScan = true; // auto from config
     const EnableDifferenceScanBL = true; // auto from config
 
@@ -1285,7 +1285,7 @@
 
             container.innerHTML = `
                 <span class="text-bold" style="color: var(--color-4); text-transform: uppercase; font-size: 13px; margin-bottom: 5px;">Scanner Setting</span>
-                <div class="dropdown" style="width: 215px; position: relative;">
+                <div class="dropdown" style="width: 200px; position: relative;">
                     <input type="text" id="admin-scanner-dropdown-input" placeholder="Default" readonly tabindex="0" style="cursor: pointer; text-align: left; padding-left: 15px;">
                     <ul class="options open-bottom" tabindex="-1" style="display: none; position: absolute; z-index: 100; width: 100%; text-align: left;">
                         <!-- Options generated dynamically via updateAdminScannerDropdownUI -->

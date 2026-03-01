@@ -14,12 +14,18 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
+## v4.2a (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
+Fixed an issue with frequency restoration:
+- The correct frequency is now restored when connecting to the web server and when stopping the scanner
+- If a default frequency is configured on the web server, it is always restored
+- If no default frequency is configured, the last used frequency is restored
 
+Fixed an issue with the default sensitivity value (defaultSensitivityValue):
+- When automatic calibration is active (SensitivityCalibrationFrequency is set), changes to the value in the JSON configuration are now taken into account when calculating the sensitivity calibration value
+- When automatic calibration is disabled: The default sensitivity value applies only at scanner startup
 
-
-## v4.2 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
-
+If the value is changed via the user interface, the updated value is used for all subsequent scans.
 Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. 
 
 Note: The dropdown menu in the webserver settings will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
@@ -83,6 +89,13 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+## v4.2 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+
+Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. 
+
+Note: The dropdown menu in the webserver settings will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
+
 
 ### v4.1a (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
