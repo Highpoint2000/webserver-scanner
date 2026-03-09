@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 28.02.2026     ///
+///  by Highpoint               last update: 09.03.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,13 +15,13 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.2a';
+    const pluginVersion = '4.2b';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 
-    let AvailableScannerConfigs = ["default","Dave","Ivan","SpE","Tropo"];
-    let ActiveScannerConfig = 'default';
+    let AvailableScannerConfigs = ["default","Dave","Ivan","SpE","Tropo","TVCL"];
+    let ActiveScannerConfig = 'Tropo';
     const EnableBlacklist = true; // auto from config
     const EnableWhitelist = true; // auto from config
     const EnableSpectrumScan = true; // auto from config
@@ -29,7 +29,7 @@
     const EnableDifferenceScan = true; // auto from config
     const EnableDifferenceScanBL = true; // auto from config
 
-    let SignalStrengthUnit = 'dBµV'; // initial, will be updated from UI
+    let SignalStrengthUnit = 'dBf'; // initial, will be updated from UI
 
     const currentURL   = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;

@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.2a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.2b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 28.02.2026     ///
+///  by Highpoint               last update: 09.03.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -46,7 +46,6 @@ const ScannerClientFile = path.join(__dirname, 'scanner.js');
 const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
 const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
 const pluginsConfigDir = path.dirname(newConfigFilePath);
-const dxAlertConfigFilePath = path.join(__dirname, './../../plugins_configs/DX-Alert.json');
 
 // Operational Global Variables
 let manualSensitivityAbsolute = null;
@@ -102,12 +101,6 @@ let writeStatusLogFMLIST = true;
 let logSnapshot;
 let hasSensitivityCalibrationRun = false;
 let isCalibrating = false; // Block flag for normal scanning operations during calibration
-
-// Global variables for DX-Alert config
-let dxScreenshotAlert = 'off';
-let dxAlertDistance = 0;
-let dxAlertDistanceMax = 20000;
-let dxAlertConfigExists = false;
 
 // Variables for dynamic scanner configurations
 let availableScannerConfigs = getAvailableConfigs();
@@ -378,25 +371,6 @@ function loadConfig(filePath) {
     }
 
     return finalConfig;
-}
-
-// Function to load DX-Alert config if it exists
-function loadDXAlertConfig(filePath) {
-    if (fs.existsSync(filePath)) {
-        try {
-            const configData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            dxScreenshotAlert = configData.ScreenshotAlert || 'off';
-            dxAlertDistance = configData.AlertDistance || 0;
-            dxAlertDistanceMax = configData.AlertDistanceMax || 20000;
-            dxAlertConfigExists = true;
-            logInfo('Scanner: DX-Alert config loaded successfully.');
-        } catch (e) {
-            logError(`Failed to parse DX-Alert config: ${e.message}`);
-            dxAlertConfigExists = false;
-        }
-    } else {
-        dxAlertConfigExists = false;
-    }
 }
 
 function checkAndInstallNewModules() {
@@ -702,7 +676,6 @@ let targetFileOnStart = activeScannerConfig === 'default' ? 'scanner.json' : `sc
 let initialConfigFilePath = path.join(pluginsConfigDir, targetFileOnStart);
 
 const initialConfigPlugin = loadConfig(initialConfigFilePath);
-loadDXAlertConfig(dxAlertConfigFilePath); 
 applyScannerConfig(initialConfigPlugin);
 
 // Dynamic Watcher for the currently active config file
@@ -725,10 +698,6 @@ function watchActiveConfigFile(configName) {
 
 // Initialize watcher for the active config at startup
 watchActiveConfigFile(activeScannerConfig);
-
-setupFileWatcher(dxAlertConfigFilePath, () => {
-    loadDXAlertConfig(dxAlertConfigFilePath);
-}, 'DX-Alert configuration file changed. Reloading on the fly...');
 
 setupFileWatcher(path.join(__dirname, '../Scanner/blacklist.txt'), () => {
     checkBlacklist();
@@ -2414,23 +2383,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                     station = '';
                                     Savefreq = freq;
 
-                                    // Determine wait time for screenshot
-                                    let screenshotWaitTime = 0;
-                                    if (dxAlertConfigExists && dxScreenshotAlert === 'on' && distance >= dxAlertDistance && distance < dxAlertDistanceMax) {
-                                        if (OnlyScanHoldTime === 'off') {
-                                            screenshotWaitTime = 3000;
-                                        } else if (OnlyScanHoldTime === 'on' && ScanHoldTime < 3) {
-                                            screenshotWaitTime = 3000;
-                                        }
-                                    }
-
-                                    if (screenshotWaitTime > 0) {
-                                        setTimeout(() => {
-                                            startScan('up'); // Restart scanning after the delay
-                                        }, screenshotWaitTime);
-                                    } else {
-                                        startScan('up'); // Restart scanning immediately
-                                    }					
+                                    startScan('up');
                         } 
                                                     
                     } else {

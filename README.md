@@ -14,22 +14,11 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.2a (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+## v4.2b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
-Fixed an issue with frequency restoration:
-- The correct frequency is now restored when connecting to the web server and when stopping the scanner
-- If a default frequency is configured on the web server, it is always restored
-- If no default frequency is configured, the last used frequency is restored
+- All the code for using the screenshot function through the DX-Alert plugin has been removed
 
-Fixed an issue with the default sensitivity value (defaultSensitivityValue):
-- When automatic calibration is active (SensitivityCalibrationFrequency is set), changes to the value in the JSON configuration are now taken into account when calculating the sensitivity calibration value
-- When automatic calibration is disabled: The default sensitivity value applies only at scanner startup
-
-If the value is changed via the user interface, the updated value is used for all subsequent scans.
-Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. 
-
-Note: The dropdown menu in the webserver settings will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
-
+Important note: Due to the diverse uses of the web server, especially the scanner, this function cannot currently be reliably implemented!
 
 ## Installation notes:
 
@@ -72,6 +61,9 @@ To create or modify the scanner configuration file (scanner.json) please use the
 - URDS CSV Log protocol and Map Viewer Button can be activated with CSVcreate option in the configuration settings
 - for manual or automatic upload the URDS CSV log protocol, please install the [URDS Upload Plugin](https://github.com/Highpoint2000/URDSupload)
 - Attention! To use dynamic sensitivity calibration, the reference frequency entered must be within the web server's approved frequency range. For example, 87.1 is within the range 87.0 - 108.0 MHz. The range to be scanned must be defined using the variables tuningLowerLimit and tuningUpperLimit in the scanner.json file and must also be within the web server's approved frequency range.
+- If the value is changed via the user interface, the updated value is used for all subsequent scans
+- Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. The dropdown menu in the webserver settings will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
+
 
 ### Blacklist & Whitelist Options
 
@@ -90,7 +82,24 @@ If you have any questions, would like to report problems, or have suggestions fo
 <details>
 <summary>History</summary>
 
-## v4.2 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+### v4.2b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+
+Fixed an issue with frequency restoration:
+- The correct frequency is now restored when connecting to the web server and when stopping the scanner
+- If a default frequency is configured on the web server, it is always restored
+- If no default frequency is configured, the last used frequency is restored
+
+Fixed an issue with the default sensitivity value (defaultSensitivityValue):
+- When automatic calibration is active (SensitivityCalibrationFrequency is set), changes to the value in the JSON configuration are now taken into account when calculating the sensitivity calibration value
+- When automatic calibration is disabled: The default sensitivity value applies only at scanner startup
+
+If the value is changed via the user interface, the updated value is used for all subsequent scans.
+Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. 
+
+Note: The dropdown menu in the webserver settings will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
+
+
+### v4.2 (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
 Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. 
 
