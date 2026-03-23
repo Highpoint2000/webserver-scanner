@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.2c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 09.03.2026     ///
+///  by Highpoint               last update: 23.03.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,13 +15,13 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.2b';
+    const pluginVersion = '4.2c';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 
     let AvailableScannerConfigs = ["default","Dave","Ivan","SpE","Tropo","TVCL"];
-    let ActiveScannerConfig = 'Tropo';
+    let ActiveScannerConfig = 'default';
     const EnableBlacklist = true; // auto from config
     const EnableWhitelist = true; // auto from config
     const EnableSpectrumScan = true; // auto from config
@@ -29,7 +29,7 @@
     const EnableDifferenceScan = true; // auto from config
     const EnableDifferenceScanBL = true; // auto from config
 
-    let SignalStrengthUnit = 'dBf'; // initial, will be updated from UI
+    let SignalStrengthUnit = 'dBµV'; // initial, will be updated from UI
 
     const currentURL   = new URL(window.location.href);
     const WebserverURL = currentURL.hostname;
@@ -1456,8 +1456,86 @@
 
     if (!window.matchMedia("(pointer: coarse)").matches) {
         initializeMapViewerButton();
+        initializeValidatorButton();
     }
+	
+	
+	///////////////////////////////////////////////////////////
+    // URDS Log Validator button
+    ///////////////////////////////////////////////////////////
+            function initializeValidatorButton() {
+        const buttonId = "URDSValidator";
 
+        const currentDomain = window.location.hostname;
+        const currentPort   = window.location.port ? ':' + window.location.port : '';
+        const baseUrl       = `${window.location.protocol}//${currentDomain}${currentPort}`;
+        const csvFileUrl    = `${baseUrl}/logs/CSVfilename`;
+
+        fetch(csvFileUrl, { cache: "no-cache" })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("File does not exist");
+                }
+                return response.text();
+            })
+            .then(() => {
+                const checkInterval = setInterval(() => {
+                    if (typeof addIconToPluginPanel === 'function') {
+                        clearInterval(checkInterval);
+                        console.log("addIconToPluginPanel found, adding URDS Log Validator button...");
+
+                        addIconToPluginPanel(buttonId, "Validator", "solid", "file-circle-check", "Open URDS Log Validator");
+
+                        setTimeout(() => {
+                            const button = document.getElementById(buttonId);
+                            if (button) {
+                                 button.addEventListener('click', () => {
+                                    fetch(csvFileUrl, { cache: "no-cache" })
+                                        .then(response => response.text())
+                                        .then(fileContent => {
+                                            const trimmedContent = fileContent.trim();
+                                            if (trimmedContent === "NoFileName") {
+                                                sendToast(
+                                                    'warning',
+                                                    'Scanner',
+                                                    'No CSV Logfile currently available!',
+                                                    false,
+                                                    false
+                                                );
+                                            } else {
+                                                const fileUrl = `${baseUrl}/logs/${trimmedContent}`;
+                                                const url = `https://highpoint.fmdx.org/webtools/urds-log-validator.html?file=${encodeURIComponent('https://cors-proxy.de:13128/' + fileUrl)}`;
+                                                console.log("Opening URDS Log Validator URL:", url);
+                                                window.open(url, '_blank');
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error("Error reading CSV file:", error);
+                                            sendToast(
+                                                'warning',
+                                                'Scanner',
+                                                'Error reading CSV Logfile!',
+                                                false,
+                                                false
+                                            );
+                                        });
+                                });
+                                console.log("✅ URDS Log Validator button added successfully!");
+                            } else {
+                                console.error("❌ URDS Log Validator button was not created.");
+                            }
+                        }, 1000);
+                    }
+                }, 500);
+            })
+            .catch(error => {
+                if (error.message === "File does not exist") {
+                    return;
+                }
+                console.error("CSV file fetch error:", error);
+            });
+    }
+	
     ///////////////////////////////////////////////////////////
     // NEW: Watcher for Signal Units dropdown
     ///////////////////////////////////////////////////////////

@@ -14,11 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.2b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+## v4.2c (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
-- All the code for using the screenshot function through the DX-Alert plugin has been removed
-
-Important note: Due to the diverse uses of the web server, especially the scanner, this function cannot currently be reliably implemented!
+- Extra button has been added for directly validating the current URDS CSV file via the URDS Validator
 
 ## Installation notes:
 
@@ -83,6 +81,12 @@ If you have any questions, would like to report problems, or have suggestions fo
 <summary>History</summary>
 
 ### v4.2b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+
+- All the code for using the screenshot function through the DX-Alert plugin has been removed
+
+Important note: Due to the diverse uses of the web server, especially the scanner, this function cannot currently be reliably implemented!
+
+### v4.2a (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
 Fixed an issue with frequency restoration:
 - The correct frequency is now restored when connecting to the web server and when stopping the scanner
