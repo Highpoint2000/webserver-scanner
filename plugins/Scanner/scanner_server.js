@@ -98,6 +98,7 @@ let writeStatusCSV = true;
 let writeStatusCSVps = false;
 let writeStatusHTMLLog = true;
 let writeStatusLogFMLIST = true;
+let writeStatusPluginLogEvent = true; // [Logbook]
 let logSnapshot;
 let hasSensitivityCalibrationRun = false;
 let isCalibrating = false; // Block flag for normal scanning operations during calibration
@@ -2356,6 +2357,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                     if ((!HTMLlogRAW && stationid && HTMLlogOnlyID) || (!HTMLlogRAW && !HTMLlogOnlyID)) {
                                         writeHTMLLogEntry(true); // filtered log
                                     }
+	                                emitScannerDxLogEvent(); // [Logbook]
                                     
                                     if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid ) {
                                         logSnapshot = {
@@ -2392,6 +2394,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                             writeStatusCSV = true;
                             writeStatusHTMLLog = true;
                             writeStatusLogFMLIST = true;
+	                        writeStatusPluginLogEvent = true; // [Logbook]
                             writeStatusCSVps = true;
                         }	
                                                             
@@ -2409,6 +2412,10 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                 writeHTMLLogEntry(true); // filtered log
                                 writeStatusHTMLLog = false;
                             }
+	                        if (writeStatusPluginLogEvent) { // [Logbook]
+	                            emitScannerDxLogEvent();
+	                            writeStatusPluginLogEvent = false;
+	                        }
                             if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid && writeStatusLogFMLIST) {
                                 logSnapshot = {
                                     stationid,
@@ -2481,6 +2488,7 @@ function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
                                     if (!HTMLlogRAW) {
                                         writeHTMLLogEntry(true); // filtered log
                                     }
+	                                emitScannerDxLogEvent(); // [Logbook]
                                     
                                     if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
                                         logSnapshot = {
@@ -2512,6 +2520,7 @@ function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
                             if (!HTMLlogRAW) {
                                 writeHTMLLogEntry(true); // filtered log
                             }
+	                        emitScannerDxLogEvent(); // [Logbook]
                             
                             if (FMLIST_Autolog === 'on') {
                                 logSnapshot = {
@@ -2876,6 +2885,92 @@ function getLogFilePathHTML(date, time, isFiltered) {
 
     return filePath;
 }
+
+// [Logbook] - begin
+function getCurrentLogDateTime() {
+	const now = new Date();
+	let date = now.toISOString().split('T')[0];
+	let time = now.toTimeString().split(' ')[0];
+
+	if (UTCtime) {
+		const { utcDate, utcTime } = getCurrentUTC();
+		time = utcTime;
+		date = utcDate;
+	}
+
+	return { date, time };
+}
+
+function getCurrentScannerAntennaName() {
+	const antennaNumber = (+ant) + 1;
+	const match = enabledAntennas.find(a => a.number === antennaNumber);
+	return String(match?.name || '').trim();
+}
+
+function emitScannerDxLogEvent() {
+	const now = new Date();
+	let date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+	let time = now.toTimeString().split(' ')[0]; // HH-MM-SS
+
+	if (UTCtime) {
+		const { utcDate, utcTime } = getCurrentUTC(); // time in UTC
+		time = utcTime;
+		date = utcDate;
+	}
+	const frequency = parseFloat(freq);
+	const distanceKm = parseFloat(distance);
+	const bearingDeg = parseFloat(azimuth);
+	const signalValue = Number.isFinite(parseFloat(strengthTop)) ? parseFloat(strengthTop) : parseFloat(strength);
+	const mapIdRaw = String(stationid || '').trim();
+	const mapId = mapIdRaw.toLowerCase() === 'offline' ? '' : mapIdRaw;
+	const stationName = String(station || ps || '').trim();
+	const txLocation = String(city || '').trim();
+	const antennaName = getCurrentScannerAntennaName();
+	const homeLat = parseFloat(LAT || config.identification.lat);
+	const homeLon = parseFloat(LON || config.identification.lon);
+
+	emitPluginEvent('scanner:dx-log', {
+		source: 'scanner',
+		band: 'FM',
+		date,
+		time,
+		timestampMs: Date.now(),
+		frequency,
+		frequencyText: Number.isFinite(frequency) ? frequency.toFixed(3) : String(freq || '').trim(),
+		itu: String(itu || '').trim(),
+		stationName,
+		txLocation,
+		stationLabel: [stationName, txLocation].filter(Boolean).join(', '),
+		details: [
+			`PI: ${String(picode || '?').trim().toUpperCase() || '?'}`,
+			`PS: ${String(ps || '?').trim() || '?'}`,
+			Number.isFinite(signalValue) ? `Signal: ${signalValue}` : '',
+			antennaName ? `Antenna: ${antennaName}` : ''
+		].filter(Boolean).join(', '),
+		pi: String(picode || '').trim().toUpperCase(),
+		ps: String(ps || '').trim(),
+		signalValue: Number.isFinite(signalValue) ? signalValue : null,
+		signalText: Number.isFinite(signalValue) ? `${signalValue}` : '',
+		distanceKm: Number.isFinite(distanceKm) ? distanceKm : null,
+		bearingDeg: Number.isFinite(bearingDeg) ? bearingDeg : null,
+		erpKw: Number.isFinite(parseFloat(erp)) ? parseFloat(erp) : null,
+		antenna: antennaName,
+		polarity: String(pol || '').trim(),
+		mode: Scan === 'on' ? 'A' : 'M',
+		mapId,
+		sourceFile: 'scanner:event',
+		homeLat: Number.isFinite(homeLat) ? homeLat : null,
+		homeLon: Number.isFinite(homeLon) ? homeLon : null,
+		mapUrl: mapId && Number.isFinite(homeLat) && Number.isFinite(homeLon)
+			? `https://maps.fmdx.org/#qth=${homeLat},${homeLon}&id=${mapId}&findId=*`
+			: '',
+		streamUrl: mapId ? `https://fmscan.org/stream.php?i=${mapId}` : '',
+		fmlistUrl: mapId && FMLIST_OM_ID !== ''
+			? `https://www.fmlist.org/fi_inslog.php?lfd=${mapId}&qrb=${distanceKm}&qtf=${bearingDeg}&country=${itu}&omid=${FMLIST_OM_ID}`
+			: ''
+	}, { broadcast: false });
+}
+// [Logbook] - end
 
 function writeHTMLLogEntry(isFiltered) {
 
