@@ -2357,7 +2357,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                     if ((!HTMLlogRAW && stationid && HTMLlogOnlyID) || (!HTMLlogRAW && !HTMLlogOnlyID)) {
                                         writeHTMLLogEntry(true); // filtered log
                                     }
-	                                emitScannerDxLogEvent(); // [Logbook]
+                                    if (stationid) emitScannerDxLogEvent(); // [Logbook]
                                     
                                     if ((FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') && stationid ) {
                                         logSnapshot = {
@@ -2412,7 +2412,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                 writeHTMLLogEntry(true); // filtered log
                                 writeStatusHTMLLog = false;
                             }
-	                        if (writeStatusPluginLogEvent) { // [Logbook]
+	                        if (stationid && writeStatusPluginLogEvent) { // [Logbook]
 	                            emitScannerDxLogEvent();
 	                            writeStatusPluginLogEvent = false;
 	                        }
@@ -2488,7 +2488,7 @@ function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
                                     if (!HTMLlogRAW) {
                                         writeHTMLLogEntry(true); // filtered log
                                     }
-	                                emitScannerDxLogEvent(); // [Logbook]
+	                                if (stationid) emitScannerDxLogEvent(); // [Logbook]
                                     
                                     if (FMLIST_Autolog === 'on' || FMLIST_Autolog === 'auto') {
                                         logSnapshot = {
@@ -2520,7 +2520,7 @@ function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
                             if (!HTMLlogRAW) {
                                 writeHTMLLogEntry(true); // filtered log
                             }
-	                        emitScannerDxLogEvent(); // [Logbook]
+	                        if (stationid) emitScannerDxLogEvent(); // [Logbook]
                             
                             if (FMLIST_Autolog === 'on') {
                                 logSnapshot = {
