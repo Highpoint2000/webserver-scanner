@@ -14,9 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.2c (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+## v4.3
 
-- Extra button has been added for directly validating the current URDS CSV file via the URDS Validator
+- Providing DX event data to the plugin API (PR from AmateurAudioDude)
 
 ## Installation notes:
 
@@ -79,6 +79,10 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.2c (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
+
+- Extra button has been added for directly validating the current URDS CSV file via the URDS Validator
 
 ### v4.2b (FMDX Webserver 1.4.0(a) / FMDX Connector 2.0a compatible Version)
 
