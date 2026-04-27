@@ -35,14 +35,15 @@ This plugin provides scanning functions for the FM-DX web server.
 9. Stop or close the fm-dx-webserver
 10. Start/Restart the fm-dx-webserver with "npm run webserver" on node.js console, check the console informations
 
+## Documentation:
+
+You can find detailed documentation here: https://highpoint.fmdx.org/manuals/Scanner-Documentation.html
+
 ## Configuration options:
 
 To create or modify the scanner configuration file (scanner.json) please use the [Scanner Wizard](https://tef.noobish.eu/logos/scanner_wizard.html). All options are stored and described there.
 
 ![image](https://github.com/user-attachments/assets/244a2036-6279-4066-9c90-193a9c47319a)
-
-You can find detailed documentation here: https://highpoint.fmdx.org/manuals/Scanner-Documentation.html
-
 
 ## Important notes: 
 
