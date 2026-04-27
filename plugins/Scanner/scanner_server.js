@@ -527,6 +527,18 @@ function applyScannerConfig(configData) {
     ScanPE5PVB = Autoscan_PE5PVB_Mode;
     SearchPE5PVB = Search_PE5PVB_Mode;
 
+    // Reload whitelist/blacklist so a profile switch that flips the Enable flag has data before AutoScan restarts.
+    if (EnableWhitelist) {
+        try { checkWhitelist(); } catch (err) { logError('Scanner: failed to reload whitelist on config apply:', err && err.message); }
+    } else {
+        whitelist = [];
+    }
+    if (EnableBlacklist) {
+        try { checkBlacklist(); } catch (err) { logError('Scanner: failed to reload blacklist on config apply:', err && err.message); }
+    } else {
+        blacklist = [];
+    }
+
     // Reset calibration flag so the new calibration frequency is triggered immediately
     hasSensitivityCalibrationRun = false;
 
@@ -1332,8 +1344,19 @@ function InitialMessage() {
     });
 }
 
+// Throttle floor for tuner commands which enforces a minimum gap between
+// consecutive sendDataToClient calls. Protects the radio hardware from
+// command floods caused by config races, or misconfigured scans.
+const TUNER_COMMAND_MIN_INTERVAL_MS = 20;
+let lastTunerCommandAt = 0;
+
 async function sendDataToClient(frequency) {
     const dataToSend = `T${(parseFloat(frequency) * 1000).toFixed(0)}`;
+    const gap = Date.now() - lastTunerCommandAt;
+    if (gap < TUNER_COMMAND_MIN_INTERVAL_MS) {
+        await new Promise(resolve => setTimeout(resolve, TUNER_COMMAND_MIN_INTERVAL_MS - gap));
+    }
+    lastTunerCommandAt = Date.now();
     try {
         if (sendPrivilegedCommand) {
             await sendPrivilegedCommand(dataToSend, true);
@@ -2055,8 +2078,10 @@ async function startScan(direction) {
                 isCalibrating = false; // Safely release the lock before restarting the scan
             }
             
-            // Start the scan now that the lock is released
-            startScan('up');
+            // Deferred so handleBandEnd -> startScan does not recurse synchronously and cause a stack blow.
+            setImmediate(() => {
+                if (isScanning || Scan === 'on') startScan('up');
+            });
             return true; // We exit this cycle to allow a clean restart
         }
 
@@ -2107,9 +2132,37 @@ async function startScan(direction) {
         currentFrequency = Math.round(currentFrequency * 100) / 100; 
 
         if (!ScanPE5PVB) {
+            // Abort if whitelist/blacklist cannot produce any tunable frequency in range, otherwise the loops below spin forever.
+            if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {
+                const inRange = whitelist.some(f => {
+                    const freq = parseFloat(f);
+                    return Number.isFinite(freq) && freq >= lowerLimit && freq <= upperLimit;
+                });
+                if (!inRange) {
+                    logWarn('Scanner: whitelist has no frequencies within the tuning range - stopping auto-scan.');
+                    isScanning = false;
+                    clearInterval(scanInterval);
+                    return false;
+                }
+            } else if (ScannerMode === 'blacklist' && Scan === 'on' && EnableBlacklist) {
+                const blockedEverywhere = (() => {
+                    const step = currentFrequency < 74.0 ? 0.01 : 0.1;
+                    for (let f = lowerLimit; f <= upperLimit + 1e-9; f += step) {
+                        if (!isInBlacklist(Math.round(f * 100) / 100, blacklist)) return false;
+                    }
+                    return true;
+                })();
+                if (blockedEverywhere) {
+                    logWarn('Scanner: blacklist covers every frequency in the tuning range - stopping auto-scan.');
+                    isScanning = false;
+                    clearInterval(scanInterval);
+                    return false;
+                }
+            }
+
             // Handle blacklist mode
             if (ScannerMode === 'blacklist' && Scan === 'on' && EnableBlacklist) {
-                while (isInBlacklist(currentFrequency, blacklist)) { 
+                while (isInBlacklist(currentFrequency, blacklist)) {
                     if (direction === 'up') {
                         if (currentFrequency < 74.00) currentFrequency += 0.01;
                         else currentFrequency += 0.1;
