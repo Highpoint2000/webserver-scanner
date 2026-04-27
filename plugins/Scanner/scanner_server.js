@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.3)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.4)      ///
 ///                                                         ///
-///  by Highpoint               last update: 20.04.2026     ///
+///  by Highpoint               last update: 27.04.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -911,20 +911,40 @@ async function TextWebSocket(messageData) {
     }
 }
 
+function sendSearch(direction) {
+    const roundedFreq = Math.round(parseFloat(currentFrequency) * 10) / 10;
+    currentFrequency = roundedFreq;
+
+    if (Search_PE5PVB_Mode) {
+        sendDataToClient(roundedFreq);
+        setTimeout(() => {
+            const searchCommand = (direction === 'up') ? 'C2' : 'C1';
+            sendCommandToClient(searchCommand);
+            // logInfo(`Scanner: Snapped to ${roundedFreq.toFixed(2)} MHz and started hardware search ${direction}`);
+        }, 150);
+        
+    } else {
+        startSearch(direction);
+    }
+}
 
 function startSearch(direction) {
     // Restart scanning in the specified direction
     clearInterval(scanInterval);
 
-	if (isScanning && isSearching) {
-		isScanning = true;
-		isSearching = false;
-		return;
-	} else {
-		setTimeout(() => startScan(direction), 150);
-		isScanning = false;
-		isSearching = true;
-	}
+    // Round the current frequency to the nearest 0.1 MHz (100 kHz)
+    // Example: 96.23 becomes 96.20
+    currentFrequency = Math.round(parseFloat(currentFrequency) * 10) / 10;
+
+    if (isScanning && isSearching) {
+        isScanning = true;
+        isSearching = false;
+        return;
+    } else {
+        setTimeout(() => startScan(direction), 150);
+        isScanning = false;
+        isSearching = true;
+    }
 }
 
 /**
@@ -1000,16 +1020,11 @@ async function handleDataPluginsMessage(eventData, ws) {
         // --- SESSION AUTHENTICATION & SEARCH COMMANDS (UNRESTRICTED) ---
         if (message.type === 'Scanner') {
 
-            // Handle unrestricted Search commands immediately (for all clients)
-            if (message.value.status === 'command' && message.value.Search) {
-                if (message.value.Search === 'down') {
-                    if (SearchPE5PVB) { sendCommandToClient('C1'); } else { startSearch('down'); }
-                }
-                if (message.value.Search === 'up') {
-                    if (SearchPE5PVB) { sendCommandToClient('C2'); } else { startSearch('up'); }
-                }
-                return; // Search commands are handled, exit
-            }
+            // Handle Search commands immediately
+			if (message.value.status === 'command' && message.value.Search) {
+				sendSearch(message.value.Search);
+			return; // Search command handled
+			}
 
             // ---------------------------------------------------
             // AUTH: Only TEF Logger needs to authenticate
@@ -1598,11 +1613,19 @@ async function fetchstationid(freq, picode, city) {
 async function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
 
-    // Now you don't need to use setTimeout, unless you need an explicit delay
     picode = messageData.pi;
     ps = messageData.ps;
-    freq = messageData.freq;
-	ecc = messageData.ecc;
+    
+    let incomingFreq = parseFloat(messageData.freq);
+    if (incomingFreq >= 74.0) {
+        // CCIR Band: Round to nearest 0.1 MHz (e.g., 96.23 becomes "96.20")
+        freq = (Math.round(incomingFreq * 10) / 10).toFixed(2);
+    } else {
+        // OIRT Band (< 74 MHz): Keep 0.01 MHz steps (e.g., "71.23")
+        freq = (Math.round(incomingFreq * 100) / 100).toFixed(2);
+    }
+    
+    ecc = messageData.ecc;
 	af = String(messageData.af).replace(/,/g, ';');
 	rt0	= messageData.rt0;
 	rt1	= messageData.rt1;
@@ -1999,6 +2022,11 @@ async function startScan(direction) {
     // Function to update the frequency during the scan
     async function updateFrequency() {
         if (!isScanning) return false; 
+		
+		// Force snap to 100kHz grid if above 74MHz and currently on a 10kHz offset
+        if (currentFrequency >= 74.0 && (Math.round(currentFrequency * 100) % 10 !== 0)) {
+            currentFrequency = Math.round(currentFrequency * 10) / 10;
+        }
 
         currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
         

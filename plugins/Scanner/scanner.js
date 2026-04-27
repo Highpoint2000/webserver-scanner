@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.3)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.4)      ///
 ///                                                         ///
-///  by Highpoint               last update: 20.04.2026     ///
+///  by Highpoint               last update: 27.04.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.3';
+    const pluginVersion = '4.4';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -1583,12 +1583,57 @@
     ///////////////////////////////////////////////////////////
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
-            initSignalUnitWatcher();   // <--- wichtig: Einheit aus UI übernehmen + beobachten
+            initSignalUnitWatcher();
             BlinkAutoScan();
             checkAdminMode();
             setupSendSocket();
         }, 1000);
     });
+
+///////////////////////////////////////////////////////////
+// Hardware Keyboard Shortcuts
+///////////////////////////////////////////////////////////
+document.addEventListener('keydown', (event) => {
+    // Prevent triggering shortcuts if the user is typing in an input field
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    const key = event.key.toLowerCase();
+
+    // Search Up (U)
+    if (key === 'u') {
+        if (!isTuningAllowed) {
+            sendToast('warning', 'Scanner', 'Tuner is currently locked to admin!', false, false);
+            return;
+        }
+        sendSearch('up');
+    } 
+    // Search Down (D)
+    else if (key === 'd') {
+        if (!isTuningAllowed) {
+            sendToast('warning', 'Scanner', 'Tuner is currently locked to admin!', false, false);
+            return;
+        }
+        sendSearch('down');
+    }
+    // Start/Stop Autoscan (S)
+    else if (key === 's') {
+        if (!isTuneAuthenticated) {
+            sendToast('warning', 'Scanner', 'Admin must be logged in to use the autoscan mode!', false, false);
+            return;
+        }
+        
+        const ScanButton = document.getElementById('Scan-on-off');
+        const isScanOn = ScanButton.getAttribute('data-scan-status') === 'on';
+
+        if (isScanOn) {
+            sendScan('off');
+        } else {
+            sendScan('on');
+        }
+    }
+});
 
     ///////////////////////////////////////////////////////////
     // Toast wrapper (global safe)
