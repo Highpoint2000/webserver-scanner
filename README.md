@@ -41,6 +41,8 @@ To create or modify the scanner configuration file (scanner.json) please use the
 
 ![image](https://github.com/user-attachments/assets/244a2036-6279-4066-9c90-193a9c47319a)
 
+You can find detailed documentation here: https://highpoint.fmdx.org/manuals/Scanner-Documentation.html
+
 
 ## Important notes: 
 
