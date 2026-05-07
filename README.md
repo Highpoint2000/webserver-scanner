@@ -37,7 +37,7 @@ You can find detailed documentation here: https://highpoint.fmdx.org/manuals/Sca
 
 ## Configuration options:
 
-To create or modify the scanner configuration file (scanner.json) please use the [Scanner Wizard](https://tef.noobish.eu/logos/scanner_wizard.html). All options are stored and described there.
+To create or modify the scanner configuration file (scanner.json) please use the [Scanner Wizard](https://highpoint.fmdx.org/webtools/scanner_wizard.html). All options are stored and described there.
 
 ![image](https://github.com/user-attachments/assets/244a2036-6279-4066-9c90-193a9c47319a)
 
