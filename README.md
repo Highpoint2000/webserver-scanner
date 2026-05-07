@@ -14,13 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-### v4.4
+## v4.4a
 
-- Fix potential scanner crash on profile switch (Thanks to AmateurAudioDude for PR)
-- Hardware keyboard shortcuts added: You can now control the scanner directly via the keyboard: Press U or u for Search Up / Press D or d for Search Down / Press S or s to Start/Stop Autoscan
-- Frequency Grid Snapping: The software search logic now automatically rounds the frequency to the nearest 100 kHz (or 10 kHz for the OIRT band) before calculating the next step. This prevents the scanner from maintaining a "crooked" offset (e.g., jumping from 96.23 to 96.33 instead of 96.30).
-- PE5PVB Hardware Search Sync: When using the receiver's internal hardware search mode (Search_PE5PVB_Mode), the server now forces the tuner to snap to the rounded 100 kHz grid before sending the hardware search command (C1/C2). This guarantees the hardware search always starts from a clean frequency.
-- Log Sanitization: All incoming frequencies from the tuner are now instantly rounded at the WebSocket handler level. This guarantees that no crooked 10 kHz frequencies (like 96.23) will ever be written to the CSV, HTML, FMLIST, or Logbook records.
+- Map Viewer URL linked to new domain
 
 ## Installation notes:
 
@@ -86,6 +82,15 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.4
+
+- Fix potential scanner crash on profile switch (Thanks to AmateurAudioDude for PR)
+- Hardware keyboard shortcuts added: You can now control the scanner directly via the keyboard: Press U or u for Search Up / Press D or d for Search Down / Press S or s to Start/Stop Autoscan
+- Frequency Grid Snapping: The software search logic now automatically rounds the frequency to the nearest 100 kHz (or 10 kHz for the OIRT band) before calculating the next step. This prevents the scanner from maintaining a "crooked" offset (e.g., jumping from 96.23 to 96.33 instead of 96.30).
+- PE5PVB Hardware Search Sync: When using the receiver's internal hardware search mode (Search_PE5PVB_Mode), the server now forces the tuner to snap to the rounded 100 kHz grid before sending the hardware search command (C1/C2). This guarantees the hardware search always starts from a clean frequency.
+- Log Sanitization: All incoming frequencies from the tuner are now instantly rounded at the WebSocket handler level. This guarantees that no crooked 10 kHz frequencies (like 96.23) will ever be written to the CSV, HTML, FMLIST, or Logbook records.
+
 
 ### v4.3
 

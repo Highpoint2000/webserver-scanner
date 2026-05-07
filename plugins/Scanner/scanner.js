@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.4)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.4a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 27.04.2026     ///
+///  by Highpoint               last update: 07.05.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.4';
+    const pluginVersion = '4.4a';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -1421,7 +1421,7 @@
                                                     false
                                                 );
                                             } else {
-                                                const url = `https://tef.noobish.eu/logos/URDSMapViewer.html?file=https://cors-proxy.de:13128/${baseUrl}/logs/${trimmedContent}`;
+                                                const url = `https://highpoint.fmdx.org/webtools/URDSMapViewer.html?file=https://cors-proxy.de:13128/${baseUrl}/logs/${trimmedContent}`;
                                                 console.log("Opening MapViewer URL:", url);
                                                 window.open(url, '_blank');
                                             }
