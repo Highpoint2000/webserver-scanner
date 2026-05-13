@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.4a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.4b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 07.05.2026     ///
+///  by Highpoint               last update: 13.05.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -912,6 +912,11 @@ async function TextWebSocket(messageData) {
 }
 
 function sendSearch(direction) {
+    if (!Search_PE5PVB_Mode && ScannerMode === 'whitelist' && EnableWhitelist && whitelist.length > 0) {
+        jumpToNextWhitelist(direction);
+        return; 
+    }
+
     const roundedFreq = Math.round(parseFloat(currentFrequency) * 10) / 10;
     currentFrequency = roundedFreq;
 
@@ -920,11 +925,43 @@ function sendSearch(direction) {
         setTimeout(() => {
             const searchCommand = (direction === 'up') ? 'C2' : 'C1';
             sendCommandToClient(searchCommand);
-            // logInfo(`Scanner: Snapped to ${roundedFreq.toFixed(2)} MHz and started hardware search ${direction}`);
         }, 150);
-        
     } else {
         startSearch(direction);
+    }
+}
+
+function jumpToNextWhitelist(direction) {
+    clearInterval(scanInterval);
+    isScanning = false;
+    isSearching = false;
+
+    let sortedWhitelist = [...new Set(whitelist.map(f => parseFloat(f)))].sort((a, b) => a - b);
+    let curr = parseFloat(currentFrequency);
+    let nextFreq;
+
+    if (direction === 'up') {
+        nextFreq = sortedWhitelist.find(f => f > curr);
+        if (nextFreq === undefined) {
+            nextFreq = sortedWhitelist[0]; 
+        }
+    } else { 
+        let reversed = [...sortedWhitelist].reverse();
+        nextFreq = reversed.find(f => f < curr);
+        if (nextFreq === undefined) {
+            nextFreq = reversed[0]; 
+        }
+    }
+
+    currentFrequency = nextFreq.toFixed(2);
+    
+    if (Scan === 'on') {
+        sendDataToClient(currentFrequency);
+        setTimeout(() => {
+            startScan('up'); 
+        }, 150);
+    } else {
+        sendDataToClient(currentFrequency);
     }
 }
 
@@ -2136,7 +2173,7 @@ async function startScan(direction) {
 
         if (!ScanPE5PVB) {
             // Handle blacklist mode
-            if (ScannerMode === 'blacklist' && Scan === 'on' && EnableBlacklist) {
+            if (ScannerMode === 'blacklist' && (Scan === 'on' || isSearching) && EnableBlacklist) {
                 while (isInBlacklist(currentFrequency, blacklist)) { 
                     if (direction === 'up') {
                         if (currentFrequency < 74.00) currentFrequency += 0.01;

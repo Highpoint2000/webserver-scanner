@@ -14,9 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.4a
+## v4.4b
 
-- Map Viewer URL linked to new domain
+- The Search buttons << >> now support the Blacklist and Whitelist options for Scan Mode selection
 
 ## Installation notes:
 
@@ -82,6 +82,10 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.4a
+
+- Map Viewer URL linked to new domain
 
 ### v4.4
 
