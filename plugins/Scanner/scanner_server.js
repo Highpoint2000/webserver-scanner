@@ -2754,7 +2754,8 @@ async function writeCSVLogEntry() {
     const GPSTIME = gpstime || new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
 
     const PI = `0x${picode}`;
-    const PS = `"${ps}"`;
+    const formattedPS = ps.replace(/ /g, '_').padEnd(8, '_').substring(0, 8); // Replaces spaces with underscores and forces exactly 8 characters
+    const PS = `"${formattedPS}"`;
     const TA = `${ta}`;
     const TP = `${tp}`;
     
@@ -3109,8 +3110,8 @@ function writeHTMLLogEntry(isFiltered) {
 	let link2 = stationid !== '' && stationid !== 'offline' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">MAP</a>` : '';     
 	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
-    let psWithUnderscores = ps.replace(/ /g, '_');
-	let scanmode;
+    let psWithUnderscores = ps.replace(/ /g, '_').padEnd(8, '_').substring(0, 8); // Replaces spaces with underscores and forces exactly 8 characters
+    let scanmode;
 	
 	if (Scan === 'on') {
 		scanmode = 'A';
