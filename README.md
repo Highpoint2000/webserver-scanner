@@ -17,6 +17,7 @@ This plugin provides scanning functions for the FM-DX web server.
 ## v4.4c
 
 - The PS Log is reset with every frequency change
+- Spaces in the PS are replaced by underscores
 
 ## Installation notes:
 
