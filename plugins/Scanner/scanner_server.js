@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.4b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.4c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 13.05.2026     ///
+///  by Highpoint               last update: 19.05.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1756,6 +1756,7 @@ async function handleSocketMessage(messageData) {
     if (freq !== previousFrequency) {
         checkStrengthCounter = 0;
         stereo_detect = false;
+		ps = "?";
     }
     
     previousFrequency = freq;
