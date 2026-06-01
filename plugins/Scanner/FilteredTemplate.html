@@ -477,21 +477,28 @@ function filterTable() {
         }
 
         /* Add click event listeners to table headers for sorting */
-		const headers = document.querySelectorAll("th");
-		headers[1].addEventListener("click", () => sortTable(1));           // TIME(UTC)
-		headers[2].addEventListener("click", () => sortTable(2, true));     // FREQ
-		headers[3].addEventListener("click", () => sortTable(3));           // PI
-		headers[4].addEventListener("click", () => sortTable(4));           // PS
-		headers[5].addEventListener("click", () => sortTable(5));           // NAME
-		headers[6].addEventListener("click", () => sortTable(6));           // CITY
-		headers[7].addEventListener("click", () => sortTable(7));           // ITU
-		headers[8].addEventListener("click", () => sortTable(8));           // ANT
-		headers[9].addEventListener("click", () => sortTable(9));           // P
-		headers[10].addEventListener("click", () => sortTable(10, true));   // ERP(kW)
-		headers[11].addEventListener("click", () => sortTable(11, true));   // STRENGTH(dBµV)
-		headers[12].addEventListener("click", () => sortTable(12, true));   // DIST(km)
-		headers[13].addEventListener("click", () => sortTable(13, true));   // AZ(°)
-		headers[14].addEventListener("click", () => sortTable(14));         // ID
+        const headers = document.querySelectorAll("th");
+        headers[1].addEventListener("click", () => sortTable(1));           // TIME(UTC)
+        headers[2].addEventListener("click", () => sortTable(2, true));     // FREQ
+        headers[3].addEventListener("click", () => sortTable(3));           // PI
+        headers[4].addEventListener("click", () => sortTable(4));           // PS
+        headers[5].addEventListener("click", () => sortTable(5));           // NAME
+        headers[6].addEventListener("click", () => sortTable(6));           // CITY
+        headers[7].addEventListener("click", () => sortTable(7));           // ITU
+        headers[8].addEventListener("click", () => sortTable(8));           // ANT
+        headers[9].addEventListener("click", () => sortTable(9));           // P
+        headers[10].addEventListener("click", () => sortTable(10, true));   // ERP(kW)
+        headers[11].addEventListener("click", () => sortTable(11, true));   // STRENGTH(dBµV)
+        headers[12].addEventListener("click", () => sortTable(12, true));   // DIST(km)
+        headers[13].addEventListener("click", () => sortTable(13, true));   // AZ(°)
+        headers[14].addEventListener("click", () => sortTable(14));         // ID
+        
+        // --- NEW COLUMNS ---
+        headers[15].addEventListener("click", () => sortTable(15));         // MODE
+        headers[16].addEventListener("click", () => sortTable(16, true));   // RDS AI (numeric sort)
+        headers[17].addEventListener("click", () => sortTable(17));         // PI AI
+        headers[18].addEventListener("click", () => sortTable(18));         // PS AI
+        headers[19].addEventListener("click", () => sortTable(19));         // COMMENT
 
         // Event listeners to ensure only one checkbox is selected
         document.querySelectorAll('#filterContainer input[type="checkbox"]').forEach((checkbox) => {

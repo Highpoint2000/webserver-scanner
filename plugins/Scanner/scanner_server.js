@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.4c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.5)       ///
 ///                                                         ///
-///  by Highpoint               last update: 19.05.2026     ///
+///  by Highpoint               last update: 01.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -102,6 +102,9 @@ let writeStatusPluginLogEvent = true; // [Logbook]
 let logSnapshot;
 let hasSensitivityCalibrationRun = false;
 let isCalibrating = false; // Block flag for normal scanning operations during calibration
+let rdsAiActiveStatus = 0;
+let currentNativePi = '';
+let currentNativePs = '';
 
 // Variables for dynamic scanner configurations
 let availableScannerConfigs = getAvailableConfigs();
@@ -1022,6 +1025,8 @@ async function DataPluginsWebSocket() {
 
       DataPluginsSocket.onopen = () => {
         logInfo(`Scanner connected to ${externalWsUrl}/data_plugins`);
+        // Frage beim AI RDS Decoder den aktuellen Follow-Status ab
+        DataPluginsSocket.send(JSON.stringify({type: 'rdsm_get_rds_follow'}));
       };
 
       DataPluginsSocket.onerror = (error) => {
@@ -1039,7 +1044,24 @@ async function handleDataPluginsMessage(eventData, ws) {
     try {
         const message = JSON.parse(eventData);
 
-        if (!message || (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS')) {
+        if (!message || (message.type !== 'Scanner' && message.type !== 'sigArray' && message.type !== 'GPS' && message.type !== 'rdsm_ai' && message.type !== 'rdsm_rds_follow_state' && message.type !== 'rdsm_freq')) {
+            return;
+        }
+
+        // --- Catch AI RDS Decoder data ---
+        if (message.type === 'rdsm_rds_follow_state') {
+            rdsAiActiveStatus = message.enabled ? 1 : 0;
+            return;
+        }
+        if (message.type === 'rdsm_freq') {
+            currentNativePi = '';
+            currentNativePs = '';
+            return;
+        }
+        if (message.type === 'rdsm_ai') {
+            // Aktualisiere nur die nativen Daten, greife den rdsAiActiveStatus NICHT an
+            currentNativePi = message.nativeWebserverPI !== undefined ? message.nativeWebserverPI : '';
+            currentNativePs = message.nativeWebserverPS !== undefined ? message.nativeWebserverPS : '';
             return;
         }
         
@@ -1727,15 +1749,19 @@ async function handleSocketMessage(messageData) {
 		ps = "?";
 	}
 	
-	if (!rt0 && rt1) {
+    if (!rt0 && rt1) {
 		rt = rt1;
-		} else if (!rt1 && rt0) {
-			rt = rt0;
-			} else if (rt0 && rt1) {
-				rt = `${rt0} ${rt1}`;
-			} else {
-				rt ='';
-			}
+	} else if (!rt1 && rt0) {
+		rt = rt0;
+	} else if (rt0 && rt1) {
+		rt = `${rt0} ${rt1}`;
+	} else {
+		rt = '';
+	}
+
+	if (typeof rt === 'string') {
+		rt = rt.replace(/"/g, "'").replace(/,/g, ";");
+	}
 
 	if (ecc === null) {
 		ecc = '';
@@ -2753,9 +2779,26 @@ async function writeCSVLogEntry() {
     const GPSMODE = gpsmode || '';
     const GPSTIME = gpstime || new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');  
 
-    const PI = `0x${picode}`;
-    const formattedPS = ps.replace(/ /g, '_').padEnd(8, '_').substring(0, 8); // Replaces spaces with underscores and forces exactly 8 characters
+    let logPi = picode;
+    let logPs = ps;
+    let rdsAiCol = rdsAiActiveStatus;
+    let piAiCol = '';
+    let psAiCol = '';
+
+    if (rdsAiCol === 1) {
+        logPi = (currentNativePi && currentNativePi !== '-' && currentNativePi !== '----') ? currentNativePi : '';
+        logPs = (currentNativePs && currentNativePs !== '-') ? currentNativePs : '';
+        piAiCol = picode;
+        psAiCol = ps;
+    }
+
+    const PI = logPi ? `0x${logPi}` : `""`;
+    const formattedPS = logPs ? logPs.replace(/ /g, '_').padEnd(8, '_').substring(0, 8) : ''; 
     const PS = `"${formattedPS}"`;
+    
+    const formattedPsAi = psAiCol ? psAiCol.replace(/ /g, '_').padEnd(8, '_').substring(0, 8) : '';
+    const PS_AI_CSV = formattedPsAi ? `"${formattedPsAi}"` : `""`;
+    const PI_AI_CSV = piAiCol ? `0x${piAiCol}` : `""`;
     const TA = `${ta}`;
     const TP = `${tp}`;
     
@@ -2855,7 +2898,7 @@ async function writeCSVLogEntry() {
     let newLine = `30,${UNIXTIME},${FREQTEXT},${frequencyInHz},${rdson},${SNRMIN},${SNRMAX},${dateTimeStringNanoSeconds},${GPSLAT},${GPSLON},${GPSMODE},${GPSALT},${GPSTIME},${PI},1,${PS},1,${TA},${TP},${MUSIC},${ProgramType},${GRP},${STEREO},${DYNPTY},${OTHERPI},,${ALLPSTEXT},${OTHERPS},,${ECC},${STATIONID},${AF},${RT},,,,`;
 
     // Append the TX fields at the end (in the same CSV order as prefilledData)
-    newLine += `${TX_STATION},${TX_CITY},${TX_ITU},${TX_ERP},${TX_POL},${TX_DIST},${TX_AZ},${TX_LAT_CSV},${TX_LON_CSV}\n`;
+    newLine += `${TX_STATION},${TX_CITY},${TX_ITU},${TX_ERP},${TX_POL},${TX_DIST},${TX_AZ},${TX_LAT_CSV},${TX_LON_CSV},${rdsAiCol},${PI_AI_CSV},${PS_AI_CSV},""\n`;
 
     try {
         if (CSVcreate) {
@@ -2939,8 +2982,8 @@ function getLogFilePathHTML(date, time, isFiltered) {
 		}
 		
         header += UTCtime 
-            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>MODE</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
-            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>MODE</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;
+            ? `<table border="1"><tr><th>DATE</th><th>TIME(UTC)</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>MODE</th><th>AI RDS</th><th>AI PI</th><th>AI PS</th><th>COMMENT</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n` 
+            : `<table border="1"><tr><th>DATE</th><th>TIME</th><th>FREQ</th><th>PI</th><th>PS</th><th>NAME</th><th>CITY</th><th>ITU</th><th>ANT</th><th>P</th><th>ERP(kW)</th><th>STRENGTH(${SignalStrengthUnit})</th><th>DIST(km)</th><th>AZ(°)</th><th>ID</th><th>MODE</th><th>AI RDS</th><th>AI PI</th><th>AI PS</th><th>COMMENT</th><th>STREAM</th><th>MAP</th><th>FMLIST</th></tr>\n`;			
 
         try {
             fs.writeFileSync(filePath, header, { flag: 'w' });
@@ -3110,17 +3153,30 @@ function writeHTMLLogEntry(isFiltered) {
 	let link2 = stationid !== '' && stationid !== 'offline' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">MAP</a>` : '';     
 	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
 
-    let psWithUnderscores = ps.replace(/ /g, '_').padEnd(8, '_').substring(0, 8); // Replaces spaces with underscores and forces exactly 8 characters
+    let logPi = picode;
+    let logPs = ps;
+    let rdsAiCol = rdsAiActiveStatus;
+    let piAiCol = '';
+    let psAiCol = '';
+
+    if (rdsAiCol === 1) {
+        logPi = (currentNativePi && currentNativePi !== '-' && currentNativePi !== '----') ? currentNativePi : '';
+        logPs = (currentNativePs && currentNativePs !== '-') ? currentNativePs : '';
+        piAiCol = picode;
+        psAiCol = ps;
+    }
+
+    let psWithUnderscores = logPs ? logPs.replace(/ /g, '_').padEnd(8, '_').substring(0, 8) : ''; 
+    let psAiWithUnderscores = psAiCol ? psAiCol.replace(/ /g, '_').padEnd(8, '_').substring(0, 8) : '';
+
     let scanmode;
-	
 	if (Scan === 'on') {
 		scanmode = 'A';
 	} else {
 		scanmode = 'M';
 	}
 
-    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${picode}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${scanmode}</td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
-
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${logPi}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${scanmode}</td><td>${rdsAiCol}</td><td>${piAiCol}</td><td>${psAiWithUnderscores}</td><td contenteditable="true"></td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
     let logContent = '';
     if (fs.existsSync(logFilePathHTML)) {
         try {
