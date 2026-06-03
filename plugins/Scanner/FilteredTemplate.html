@@ -366,7 +366,7 @@ function filterTable() {
 		for (let i = 1; i < rows.length; i++) {
 			if (rows[i].style.display !== "none") {
 				const cells = rows[i].getElementsByTagName("td");
-				const idCell = cells[cells.length - 5];
+				const idCell = cells[14];
 				if (idCell && idCell.textContent.trim()) {
 					uniqueIds.add(idCell.textContent.trim());
 				}
