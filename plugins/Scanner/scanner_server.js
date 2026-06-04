@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.5)       ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.5a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 01.06.2026     ///
+///  by Highpoint               last update: 04.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -3071,9 +3071,9 @@ function emitScannerDxLogEvent() {
 		sourceFile: 'scanner:event',
 		homeLat: Number.isFinite(homeLat) ? homeLat : null,
 		homeLon: Number.isFinite(homeLon) ? homeLon : null,
-		mapUrl: mapId && Number.isFinite(homeLat) && Number.isFinite(homeLon)
+        mapUrl: mapId && Number.isFinite(homeLat) && Number.isFinite(homeLon)
 			? `https://maps.fmdx.org/#qth=${homeLat},${homeLon}&id=${mapId}&findId=*`
-			: '',
+			: '', 
 		streamUrl: mapId ? `https://fmscan.org/stream.php?i=${mapId}` : '',
 		fmlistUrl: mapId && FMLIST_OM_ID !== ''
 			? `https://www.fmlist.org/fi_inslog.php?lfd=${mapId}&qrb=${distanceKm}&qtf=${bearingDeg}&country=${itu}&omid=${FMLIST_OM_ID}`

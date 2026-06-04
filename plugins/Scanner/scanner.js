@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.5)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.5a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 01.06.2026     ///
+///  by Highpoint               last update: 04.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.5';
+    const pluginVersion = '4.5a';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -1216,7 +1216,7 @@
     }
 
     function closeAllDropdowns() {
-        const allDropdowns = document.querySelectorAll('.dropdown .options');
+        const allDropdowns = document.querySelectorAll('#scanner-controls .dropdown .options, #admin-scanner-dropdown-container .dropdown .options');
         allDropdowns.forEach(dropdown => {
             dropdown.style.display = 'none';
         });
@@ -1304,8 +1304,8 @@
                 e.stopPropagation();
                 const isOpen = optionsList.style.display === 'block';
                 
-                // Close all other dropdowns globally to prevent overlap
-                document.querySelectorAll('.dropdown .options').forEach(ul => {
+                // Close all other scanner dropdowns locally to prevent overlap
+                document.querySelectorAll('#scanner-controls .dropdown .options, #admin-scanner-dropdown-container .dropdown .options').forEach(ul => {
                     ul.style.display = 'none';
                 });
                 

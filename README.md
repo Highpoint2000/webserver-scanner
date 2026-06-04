@@ -14,9 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.5
+## v4.5a
 
-- This version now additionally saves the current status of the RDS AI Decoder (1 = on / 0 = off), as well as the PI and PS data identified by the decoder to the CSV and HTML logs. This allows for subsequent validation and analysis of the quality of the AI ​​logs. Therefore, I recommend that all RDS AI Decoder users install both this update and the decoder update!
+- Fixed an issue where interacting with the scanner's dropdown menus prevented the main web server's dropdown menus from opening
 
 ## Installation notes:
 
@@ -82,6 +82,12 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+
+### v4.5
+
+- This version now additionally saves the current status of the RDS AI Decoder (1 = on / 0 = off), as well as the PI and PS data identified by the decoder to the CSV and HTML logs. This allows for subsequent validation and analysis of the quality of the AI ​​logs. Therefore, I recommend that all RDS AI Decoder users install both this update and the decoder update!
+
 
 ### v4.4c
 
