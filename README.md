@@ -16,7 +16,7 @@ This plugin provides scanning functions for the FM-DX web server.
 
 ## v4.6
 
-- Added StartScanByMUF (true/false) and StartScanByMUF_Region ('EU', 'NA', 'AU') variables to control the new automation. The scanner can now automatically start scanning when Sporadic-E MUF is detected via FMDX.org, and safely revert to its default state (off or auto) when the MUF drops.
+- Added StartScanByMUF (true/false) and StartScanByMUF_Region ('EU', 'NA', 'AU') variables to control the new automation. The scanner can now automatically start scanning when Sporadic-E MUF is detected, and safely revert to its default state (off or auto) when the MUF drops.
 
 ## Installation notes:
 
