@@ -14,9 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.5a
+## v4.6
 
-- Fixed an issue where interacting with the scanner's dropdown menus prevented the main web server's dropdown menus from opening
+- Added StartScanByMUF (true/false) and StartScanByMUF_Region ('EU', 'NA', 'AU') variables to control the new automation. The scanner can now automatically start scanning when Sporadic-E MUF is detected via FMDX.org, and safely revert to its default state (off or auto) when the MUF drops.
 
 ## Installation notes:
 
@@ -64,7 +64,7 @@ To create or modify the scanner configuration file (scanner.json) please use the
 - Attention! To use dynamic sensitivity calibration, the reference frequency entered must be within the web server's approved frequency range. For example, 87.1 is within the range 87.0 - 108.0 MHz. The range to be scanned must be defined using the variables tuningLowerLimit and tuningUpperLimit in the scanner.json file and must also be within the web server's approved frequency range.
 - If the value is changed via the user interface, the updated value is used for all subsequent scans
 - Multiple configuration files can now be created and selected via a drop-down menu in the web server settings (admin login required!). All settings are loaded on the fly, including subsequent changes to the configuration files. Additional configuration files must be named as follows: scanner_file1.json, scanner_file2.json, etc. They will then appear in the dropdown menu as file1, file2. The default file refers to the scanner.json file. The dropdown menu in the webserver settings will only be displayed if there are multiple scanner configuration files in the plugin_configs folder!
-- The scanner can also be controlled directly via the keyboard: Press U or u for "search up" / Press D or d for "search down" / Press S or s to start/stop automatic scanning.
+- The scanner can also be controlled directly via the keyboard: Press U or u for "search up" / Press D or d for "search down" / Press S or s to start/stop automatic scanning
 
 ### Blacklist & Whitelist Options
 
@@ -83,6 +83,9 @@ If you have any questions, would like to report problems, or have suggestions fo
 <details>
 <summary>History</summary>
 
+### v4.5a
+
+- Fixed an issue where interacting with the scanner's dropdown menus prevented the main web server's dropdown menus from opening
 
 ### v4.5
 

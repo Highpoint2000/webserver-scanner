@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.5a)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.6)      ///
 ///                                                         ///
-///  by Highpoint               last update: 04.06.2026     ///
+///  by Highpoint               last update: 10.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -105,6 +105,11 @@ let isCalibrating = false; // Block flag for normal scanning operations during c
 let rdsAiActiveStatus = 0;
 let currentNativePi = '';
 let currentNativePs = '';
+let StartScanByMUF = false;
+let StartScanByMUF_Region = 'EU';
+let isMUFScanActive = false;
+let mufCheckInterval = null;
+let currentUsers = 0; // Tracks connected users for MUF reversion logic
 
 // Variables for dynamic scanner configurations
 let availableScannerConfigs = getAvailableConfigs();
@@ -256,6 +261,8 @@ const defaultConfig = {
     Autoscan_PE5PVB_Mode: false,        	// Set to 'true' if ESP32 with PE5PVB firmware is being used and you want to use the auto scan mode of the firmware. Set it 'true' for FMDX Scanner Mode!
     Search_PE5PVB_Mode: false,           	// Set to "true" if ESP32 with PE5PVB firmware is being used and you want to use the search mode of the firmware.
     StartAutoScan: 'off',                	// Set to 'off/on/auto' (on - starts with webserver, auto - starts scanning after 10 s when no user is connected)  Set it 'on' or 'auto' for FMDX Scanner Mode!
+	StartScanByMUF: false,                  // Enable MUF-based forced Auto-Scan (true/false)
+    StartScanByMUF_Region: 'EU',            // Select region ('EU', 'NA', or 'AU')
     AntennaSwitch: 'off',               	// Set to 'off/on' for automatic switching with more than 1 antenna at the upper band limit / Only valid for Autoscan_PE5PVB_Mode = false 
 	OnlyScanHoldTime: 'off',			 	// Set to 'on/off' to force ScanHoldTime to be used for the detected frequency / use it for FM-DX monitoring
 
@@ -399,6 +406,8 @@ function applyScannerConfig(configData) {
     Autoscan_PE5PVB_Mode = configData.Autoscan_PE5PVB_Mode;
     Search_PE5PVB_Mode = configData.Search_PE5PVB_Mode;
     StartAutoScan = configData.StartAutoScan;
+    StartScanByMUF = configData.StartScanByMUF;                // NEW
+    StartScanByMUF_Region = configData.StartScanByMUF_Region;  // NEW
     AntennaSwitch = configData.AntennaSwitch;
     OnlyScanHoldTime = configData.OnlyScanHoldTime;
 
@@ -483,7 +492,6 @@ function applyScannerConfig(configData) {
         defaultSensitivityValue = Math.round(resultdefaultSensitivityValue);		
     }
 
-    // The Spectrum values are now treated strictly as native dBf, no dBuV conversion applied
     SpectrumLimiterValue = Math.round(parseFloat(SpectrumLimiterValue));
     SpectrumPlusMinusValue = Math.round(parseFloat(SpectrumPlusMinusValue));
     SpectrumChangeValue = parseFloat(SpectrumChangeValue);
@@ -509,12 +517,11 @@ function applyScannerConfig(configData) {
         Speaker = require('speaker');
     }
 
-    // Apply manual overrides based on calibration mode
     if (SensitivityCalibrationFrequenz !== '') {
         if (manualSensitivityOffset !== null) {
             defaultSensitivityValue = manualSensitivityOffset;
         }
-        Sensitivity = defaultSensitivityValue; // Fallback initial setting before calibration runs
+        Sensitivity = defaultSensitivityValue; 
     } else {
         if (manualSensitivityAbsolute !== null) {
             Sensitivity = manualSensitivityAbsolute;
@@ -523,20 +530,27 @@ function applyScannerConfig(configData) {
         }
     }
 
-    // Assign main modes directly to global variables
     ScannerMode = defaultScannerMode;
     ScanHoldTime = defaultScanHoldTime;
     StatusFMLIST = FMLIST_Autolog;
     ScanPE5PVB = Autoscan_PE5PVB_Mode;
     SearchPE5PVB = Search_PE5PVB_Mode;
 
-    // Reset calibration flag so the new calibration frequency is triggered immediately
     hasSensitivityCalibrationRun = false;
 
-    // Update settings in the client-side script
+    // --- NEW: MUF Integration Setup ---
+    if (mufCheckInterval) {
+        clearInterval(mufCheckInterval);
+        mufCheckInterval = null;
+    }
+    if (StartScanByMUF) {
+        mufCheckInterval = setInterval(checkMUFStatus, 60000); // Check every 60s
+        checkMUFStatus(); // Initial run
+    }
+    // ----------------------------------
+
     updateSettings();
 
-    // ALWAYS broadcast update to UI, regardless of whether the scanner is running or not
     if (typeof DataPluginsSocket !== 'undefined' && DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
         const Message = createMessage(
             'broadcast',
@@ -551,16 +565,126 @@ function applyScannerConfig(configData) {
         DataPluginsSocket.send(JSON.stringify(Message));
     }
 
-    // If the scanner is currently running, cleanly restart it to force a new calibration
     if (Scan === 'on') {
         clearInterval(scanInterval);
         isScanning = false;
         stopAutoScan();
         
-        // Wait briefly for current intervals to die off, then trigger a fresh auto-scan
         setTimeout(() => {
             AutoScan();
         }, 1000);
+    }
+}
+
+// -------------------------------------------------------------
+// MUF Background Checking & Automation
+// -------------------------------------------------------------
+
+function checkMUFStatus() {
+    if (!StartScanByMUF) {
+        if (isMUFScanActive) {
+            isMUFScanActive = false;
+            revertMUFScan();
+        }
+        return;
+    }
+
+    const regionMap = { 'EU': 'europe', 'NA': 'north_america', 'AU': 'australia' };
+    const regionKey = regionMap[StartScanByMUF_Region] || 'europe';
+
+    https.get('https://fmdx.org/includes/tools/get_muf.php', (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+            try {
+                const json = JSON.parse(data);
+                const regionData = json[regionKey];
+                
+                if (regionData && regionData.max_frequency && regionData.max_frequency !== 'No data') {
+                    const mufValue = parseFloat(regionData.max_frequency);
+                    
+                    if (mufValue > 0) { // Valid MUF detected
+                        if (!isMUFScanActive) {
+                            logInfo(`[MUF Scanner] Valid MUF detected (${regionData.max_frequency} MHz) for ${StartScanByMUF_Region}. Forcing Auto-Scan ON.`);
+                            isMUFScanActive = true;
+                            forceMUFScan();
+                        }
+                    } else {
+                        handleMUFInactive();
+                    }
+                } else {
+                    handleMUFInactive();
+                }
+            } catch (e) {
+                logError('[MUF Scanner] Error parsing MUF data:', e.message);
+            }
+        });
+    }).on('error', (e) => {
+        logError('[MUF Scanner] Network error checking MUF:', e.message);
+    });
+}
+
+function handleMUFInactive() {
+    if (isMUFScanActive) {
+        logInfo(`[MUF Scanner] MUF is no longer valid for ${StartScanByMUF_Region}. Reverting Auto-Scan to standard behavior.`);
+        isMUFScanActive = false;
+        revertMUFScan();
+    }
+}
+
+function forceMUFScan() {
+    if (Scan !== 'on') {
+        Scan = 'on';
+        
+        const Message = createMessage('broadcast', '255.255.255.255', Scan, '', Sensitivity, ScannerMode, ScanHoldTime, FMLIST_Autolog);
+        if (typeof DataPluginsSocket !== 'undefined' && DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+            DataPluginsSocket.send(JSON.stringify(Message));
+        }
+        
+        if (ScanPE5PVB) {
+            sendCommandToClient('J1');
+        } else {
+            isScanning = false;
+            AutoScan();
+        }
+        
+        if (BEEP_CONTROL) {
+            try {
+                fs.createReadStream('./plugins/Scanner/sounds/beep_long.wav').pipe(new Speaker());
+            } catch(e) {}
+        }
+    }
+}
+
+function revertMUFScan() {
+    // Evaluates standard logic based on StartAutoScan config and current users
+    if (StartAutoScan === 'on') {
+        // Leave it running
+        return; 
+    } else if (StartAutoScan === 'auto') {
+        if (currentUsers > 0 && Scan === 'on') {
+            turnOffScanner();
+        }
+        // If currentUsers === 0, checkUserCount() naturally handles starting it via timeout
+    } else if (StartAutoScan === 'off') {
+        if (Scan === 'on') {
+            turnOffScanner();
+        }
+    }
+}
+
+function turnOffScanner() {
+    Scan = 'off';
+    const Message = createMessage('broadcast', '255.255.255.255', Scan, '', Sensitivity, ScannerMode, ScanHoldTime, FMLIST_Autolog);
+    
+    if (typeof DataPluginsSocket !== 'undefined' && DataPluginsSocket && DataPluginsSocket.readyState === WebSocket.OPEN) {
+        DataPluginsSocket.send(JSON.stringify(Message));
+    }
+
+    if (ScanPE5PVB) {
+        sendCommandToClient('J0');
+    } else {
+        stopAutoScan();
     }
 }
 
@@ -1466,6 +1590,12 @@ function StatusInfoFMLIST() {
 let counter = 0; // Declare the counter variable
 
 function checkUserCount(users) {
+    currentUsers = users; // Update global tracking for MUF reversions
+
+    // --- NEW: Bypass standard auto-scan logic if MUF Scan is enforcing 'on' state ---
+    if (isMUFScanActive) {
+        return; 
+    }
 
     // Check if the conditions for starting the auto-scan are met
     if (users === 0) {
@@ -1499,27 +1629,16 @@ function checkUserCount(users) {
 							if (AntennaSwitch && apiData.initialData.ant) saveAutoscanAntenna = apiData.initialData.ant;
 							
 							if (currentFrequency > '74.00') {
-
-								// Multiply to isolate the second decimal place
 								const secondDecimalPlace = Math.floor((currentFrequency * 100) % 10);
-
-								// Round based on the second decimal place
 								if (secondDecimalPlace <= 5) {
-									// Round down
-									currentFrequency = Math.floor(currentFrequency * 10) / 10; // Round to one decimal place down
+									currentFrequency = Math.floor(currentFrequency * 10) / 10; 
 								} else {
-									// Round up
-									currentFrequency = Math.ceil(currentFrequency * 10) / 10; // Round to one decimal place up
+									currentFrequency = Math.ceil(currentFrequency * 10) / 10; 
 								}
-
-								// Format to two decimal places
 								currentFrequency = currentFrequency.toFixed(2); 
-
 								sendDataToClient(currentFrequency);
-								
 							}
 													
-                            // Log and handle the scan based on the mode
                             if (ScanPE5PVB) {
                                 logInfo(`Scanner (PE5PVB mode) starts auto-scan automatically [User: ${users}]`);
                                 logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Scanholdtime: "${ScanHoldTime}"`);
@@ -1534,32 +1653,27 @@ function checkUserCount(users) {
 															
                                 isScanning = false;
                                 AutoScan();								
-
                             }
 							
 							if (BEEP_CONTROL) {
 								fs.createReadStream('./plugins/Scanner/sounds/beep_long.wav').pipe(new Speaker());
 							}
                                 
-                            // Reset the scheduling flag
                             autoScanScheduled = false;
                         }
-                    }, 10000); // 10000 milliseconds = 10 seconds
+                    }, 10000); 
 
-                    // Set the scheduling flag to prevent overlapping timeouts
                     autoScanScheduled = true;
                 }
             }
-            counter = 0; // Reset the counter after processing
+            counter = 0; 
         }
     } else if (users > 0) {
         counter = 0;
-        if (autoScanActive && StartAutoScan === 'auto') {  // If there are users, auto-scan is active, and StartAutoScan is set to 'auto'
-            // Deactivate auto-scan
+        if (autoScanActive && StartAutoScan === 'auto') {  
             autoScanActive = false; 
             Scan = 'off';
 
-            // Create and send a broadcast message to stop the scan
             const Message = createMessage(
                 'broadcast',
                 '255.255.255.255',
@@ -1572,7 +1686,6 @@ function checkUserCount(users) {
             );
             DataPluginsSocket.send(JSON.stringify(Message));
 
-            // Log and handle the scan stop based on the mode
             if (ScanPE5PVB) {
                 logInfo(`Scanner (PE5PVB mode) stopped automatically auto-scan [User: ${users}]`);
                 sendCommandToClient('J0');
@@ -1588,10 +1701,9 @@ function checkUserCount(users) {
 				}, 500);
 			}
 
-            // Parse default frequency to ensure format consistency
 			let targetRestoreFreq = saveAutoscanFrequency;
 			if (enableDefaultFreq && DefaultFreq !== undefined && DefaultFreq !== null && DefaultFreq !== '') {
-				let sanitizedFreq = String(DefaultFreq).replace(',', '.'); // Replace comma with dot
+				let sanitizedFreq = String(DefaultFreq).replace(',', '.');
 				let parsedFreq = parseFloat(sanitizedFreq);
 				if (!isNaN(parsedFreq)) {
 					targetRestoreFreq = parsedFreq;
