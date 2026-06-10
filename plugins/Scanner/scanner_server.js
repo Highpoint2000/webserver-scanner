@@ -596,6 +596,12 @@ function checkMUFStatus() {
         let data = '';
         res.on('data', chunk => data += chunk);
         res.on('end', () => {
+
+            if (data.trim().startsWith('<')) {
+                handleMUFInactive(); 
+                return; 
+            }
+
             try {
                 const json = JSON.parse(data);
                 const regionData = json[regionKey];
@@ -603,7 +609,7 @@ function checkMUFStatus() {
                 if (regionData && regionData.max_frequency && regionData.max_frequency !== 'No data') {
                     const mufValue = parseFloat(regionData.max_frequency);
                     
-                    if (mufValue > 0) { // Valid MUF detected
+                    if (mufValue > 0) { // Gültiger MUF gefunden
                         if (!isMUFScanActive) {
                             logInfo(`[MUF Scanner] Valid MUF detected (${regionData.max_frequency} MHz) for ${StartScanByMUF_Region}. Forcing Auto-Scan ON.`);
                             isMUFScanActive = true;
@@ -616,11 +622,12 @@ function checkMUFStatus() {
                     handleMUFInactive();
                 }
             } catch (e) {
-                logError('[MUF Scanner] Error parsing MUF data:', e.message);
+                handleMUFInactive();
             }
         });
     }).on('error', (e) => {
-        logError('[MUF Scanner] Network error checking MUF:', e.message);
+        logError('[MUF Scanner] Network error checking MUF. API unreachable.');
+        handleMUFInactive();
     });
 }
 
