@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.6)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.6a)      ///
 ///                                                         ///
-///  by Highpoint               last update: 10.06.2026     ///
+///  by Highpoint               last update: 13.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -1724,70 +1724,6 @@ function checkUserCount(users) {
     }
 }
 
-// Variable to cache the file content
-let cachedData = null;
-
-async function fetchstationid(freq, picode, city) {
-    try {
-        // Check if data is already cached
-        if (!cachedData) {
-            // Fetch the content from the specified URL if not cached
-            const response = await fetch("https://tef.noobish.eu/logos/scripts/StationID_PL.txt");
-
-            // Check if the response is successful
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            // Read the text content from the response
-            cachedData = await response.text();
-        }
-
-        // Remove the period from freq
-        const cleanedFreq = freq.replace('.', '');
-
-        // Remove all special characters from city and convert to lowercase
-        const cleanedCity = city.replace(/[^a-z]/gi, '').toLowerCase();
-
-        // Extract the first four characters of the cleaned city
-        const cityPrefix = cleanedCity.substring(0, 3);
-
-        // Create a pattern with wildcards around each of the first four characters of the cleaned city
-        const cityPattern = cityPrefix
-            .split('')
-            .map(char => `.*${char}`)
-            .join('');
-        
-        // Build the target string based on the provided variables with wildcards
-        const targetString = `${cleanedFreq};${picode};${cityPattern}.*`;
-
-        // Create a case-insensitive regular expression to match the target string
-        const regex = new RegExp(targetString, 'i');
-
-        // Find the line that matches the target regex
-        const targetLine = cachedData.split('\n').find(line => regex.test(line));
-
-        if (targetLine) {
-            // Split the line by semicolons to get all the parts
-            const parts = targetLine.split(';');
-
-            // Extract and clean the station ID from the last column
-            let StationID = parts[parts.length - 1].trim();
-
-            // Further cleaning can be done here if needed (e.g., removing specific characters)
-            StationID = StationID.replace(/[^0-9]/g, ''); // Example: remove all non-alphanumeric characters
-
-            return StationID;
-        } else {
-            return null;
-        }
-    } catch (error) {
-        logError('Scanner Error:', error);
-        return null;
-    }
-}
-
-
 async function handleSocketMessage(messageData) {
     const txInfo = messageData.txInfo;
 
@@ -1849,12 +1785,7 @@ async function handleSocketMessage(messageData) {
 		bandwith = 0;
 	}
 	  
-    // Determine station ID for Polish stations
-    if (itu === "POL") {
-        stationid = await fetchstationid(freq, picode, city); 
-	} else {
-        stationid = messageData.txInfo.id;
-    }
+    stationid = messageData.txInfo.id;
 	
 	if (Scanmode === 0 ) {
 		stationid = 'offline';

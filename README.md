@@ -14,9 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.6
+## v4.6a
 
-- Added StartScanByMUF (true/false) and StartScanByMUF_Region ('EU', 'NA', 'AU') variables to control the new automation. The scanner can now automatically start scanning when Sporadic-E MUF is detected, and safely revert to its default state (off or auto) when the MUF drops.
+- Fixed error in the identification of Polish radio stations
 
 ## Installation notes:
 
@@ -82,6 +82,11 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.6
+
+- Added StartScanByMUF (true/false) and StartScanByMUF_Region ('EU', 'NA', 'AU') variables to control the new automation. The scanner can now automatically start scanning when Sporadic-E MUF is detected, and safely revert to its default state (off or auto) when the MUF drops.
+
 
 ### v4.5a
 
