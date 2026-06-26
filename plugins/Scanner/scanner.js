@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.6a)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.6b)      ///
 ///                                                         ///
-///  by Highpoint               last update: 13.06.2026     ///
+///  by Highpoint               last update: 26.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.6a';
+    const pluginVersion = '4.6b';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -580,13 +580,30 @@
         searchDownButton.id = 'search-down';
         searchDownButton.setAttribute('aria-label', 'Scan Down');
         searchDownButton.classList.add('rectangular-downbutton');
-        searchDownButton.innerHTML = '<i class="fa-solid fa-chevron-left"></i><i class="fa-solid fa-chevron-left"></i>';
 
         const searchUpButton = document.createElement('button');
         searchUpButton.id = 'search-up';
         searchUpButton.setAttribute('aria-label', 'Scan Up');
         searchUpButton.classList.add('rectangular-upbutton');
-        searchUpButton.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right"></i>';
+
+        let searchButtonsNarrow = null;
+        function drawSearchButtons() {
+            const isMobilePortrait = window.innerWidth < 769 && window.innerHeight > window.innerWidth;
+            const isNarrow = window.innerWidth < 968 && !isMobilePortrait;
+            if (isNarrow === searchButtonsNarrow) return;
+            searchButtonsNarrow = isNarrow;
+            if (isNarrow) {
+                searchDownButton.innerHTML = '<i class="fa-solid fa-angles-left"></i>';
+                searchUpButton.innerHTML = '<i class="fa-solid fa-angles-right"></i>';
+            } else {
+                searchDownButton.innerHTML = '<i class="fa-solid fa-chevron-left"></i><i class="fa-solid fa-chevron-left"></i>';
+                searchUpButton.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right"></i>';
+            }
+        }
+
+        drawSearchButtons();
+
+        window.addEventListener('resize', drawSearchButtons);
 
         const rectangularButtonStyle = `
             .rectangular-downbutton {

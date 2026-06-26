@@ -14,9 +14,12 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.6a
+## v4.6b
 
-- Fixed error in the identification of Polish radio stations
+- Autoscan Concurrency: Prevented scan activation or resumption during active user sessions via real-time connection checks and immediate timer cancellation.
+- System Stability & UI: Resolved spectrum-empty search errors and optimized button layouts for narrow displays.
+
+Many thanks to AmateurAudioDude for this code improvements!
 
 ## Installation notes:
 
@@ -82,6 +85,10 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.6a
+
+- Fixed error in the identification of Polish radio stations
 
 ### v4.6
 
