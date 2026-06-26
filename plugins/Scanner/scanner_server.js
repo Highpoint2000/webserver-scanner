@@ -1612,6 +1612,7 @@ function checkUserCount(users) {
                 if (!autoScanScheduled) {
                     // Set a timeout to start the auto-scan after 10 seconds
                     autoScanTimer = setTimeout(() => {	
+                        if (currentUsers !== 0) { autoScanScheduled = false; return; }
                         // Activate auto-scan
                         autoScanActive = true;  
                         Scan = 'on';
@@ -1677,6 +1678,7 @@ function checkUserCount(users) {
         }
     } else if (users > 0) {
         counter = 0;
+        if (autoScanScheduled) { clearTimeout(autoScanTimer); autoScanScheduled = false; }
         if (autoScanActive && StartAutoScan === 'auto') {  
             autoScanActive = false; 
             Scan = 'off';
@@ -2053,7 +2055,7 @@ async function AutoScan() {
             }
         }
 
-        startScan('up'); // Start scanning once
+        if (currentUsers === 0 && Scan === 'on') startScan('up'); // Start scanning once
     }
 }
 
@@ -2147,6 +2149,8 @@ async function startScan(direction) {
         const isSpectrumMode = (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL');
         const isSpectrumEnabled = (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL);
         
+        if (!ScanPE5PVB && Scan === 'on' && isSpectrumMode && sigArray.length === 0) { startSpectrumAnalyse(); return true; }
+
         // Helper block for consistently handling the end of the band / array wrap-around
         async function handleBandEnd() {
             clearInterval(scanInterval); // Stop the regular scan ticks to prevent overlapping loops
@@ -2172,6 +2176,7 @@ async function startScan(direction) {
                     let waitSpectrum = 0;
                     // Wait up to ~15 seconds (75 * 200ms) for the array to populate
                     while (sigArray.length === 0 && waitSpectrum < 75) {
+                        if (currentUsers > 0 || Scan !== 'on') break;
                         await new Promise(resolve => setTimeout(resolve, 200));
                         waitSpectrum++;
                         // Retrigger every ~3.4 seconds just in case
@@ -2198,7 +2203,7 @@ async function startScan(direction) {
             }
             
             // Start the scan now that the lock is released
-            startScan('up');
+            if (currentUsers === 0 && Scan === 'on') startScan('up');
             return true; // We exit this cycle to allow a clean restart
         }
 
@@ -3575,7 +3580,7 @@ async function writeLogFMLIST({
 			omid: FMLIST_OM_ID
 		},
 		type: type,  // Use the computed value for type
-		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue} dBµV ${loggedAntenna}`
+		log_msg: `${ShortServerName} ${ps.replace(/\s+/g, '_')}, PI: ${picode}, Signal: ${signalValue} dBµV${loggedAntenna}`
 	});
 
     // Define the options for the HTTPS request
