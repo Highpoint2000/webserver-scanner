@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.6c)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.7)       ///
 ///                                                         ///
-///  by Highpoint               last update: 28.06.2026     ///
+///  by Highpoint               last update: 29.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -270,7 +270,7 @@ const defaultConfig = {
 											// If Sensitivity Calibration Frequency is set then the threshold value above the noise signal can be specified here, possible values ​​are 1-10 dBf/dBµV/dBm
 	SensitivityCalibrationFrequenz: '',		// Value in MHz e.g. '87.3' / If the field is left blank (default setting), the scanner will not perform automatic noise signal calibration
     defaultScanHoldTime: 5,              	// Value in s: 1,2,3,4,5,7,10,15,20,30 / default is 7 / Only valid for Autoscan_PE5PVB_Mode = false  
-    defaultScannerMode: 'normal',        	// Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'difference', 'differenceBL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
+    defaultScannerMode: 'normal',        	// Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'spectrumWL' 'difference', 'differenceBL', 'differenceWL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,               	// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
     scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
 
@@ -993,7 +993,7 @@ async function TextWebSocket(messageData) {
 								logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity} dBf" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 							}
 						}
-						if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
+						if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'spectrumWL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' || ScannerMode === 'differenceWL') {
 							currentFrequency = tuningLowerLimit;
 							sendDataToClient(currentFrequency);
 							setTimeout(() => {
@@ -1474,11 +1474,13 @@ async function handleDataPluginsMessage(eventData, ws) {
                 SendResponseMessage(clientSource);
             }
 
-            if (
+			if (
                 (message.value.ScannerMode === 'spectrum'   && EnableSpectrumScan) ||
                 (message.value.ScannerMode === 'spectrumBL' && EnableSpectrumScan && EnableBlacklist) ||
+                (message.value.ScannerMode === 'spectrumWL' && EnableSpectrumScan && EnableWhitelist) ||
                 (message.value.ScannerMode === 'difference' && EnableDifferenceScan) ||
-                (message.value.ScannerMode === 'differenceBL' && EnableDifferenceScan && EnableBlacklist)
+                (message.value.ScannerMode === 'differenceBL' && EnableDifferenceScan && EnableBlacklist) ||
+                (message.value.ScannerMode === 'differenceWL' && EnableDifferenceScan && EnableWhitelist)
             ) {
                 ScannerMode = message.value.ScannerMode;
                 logInfo(`Scanner set mode "${ScannerMode}" [IP: ${clientSource}]`);
@@ -1653,7 +1655,7 @@ function checkUserCount(users) {
                                 sendCommandToClient('J1');
                             } else {
                                 logInfo(`Scanner starts auto-scan automatically [User: ${users}]`);
-								if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL') {
+								if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'spectrumWL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' || ScannerMode === 'differenceWL') {
 									logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Limit: "${SpectrumLimiterValue}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
 								} else {
 									logInfo(`Scanner Tuning Range: ${tuningLowerLimit} MHz - ${tuningUpperLimit} MHz | Sensitivity: "${Sensitivity}" | Mode: "${ScannerMode}" | Scanholdtime: "${ScanHoldTime}"`);
@@ -2146,7 +2148,7 @@ async function startScan(direction) {
 
         currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
         
-        const isSpectrumMode = (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL');
+        const isSpectrumMode = (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'spectrumWL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' || ScannerMode === 'differenceWL');
         const isSpectrumEnabled = (EnableSpectrumScan || EnableSpectrumScanBL || EnableDifferenceScan || EnableDifferenceScanBL);
         
         if (!ScanPE5PVB && Scan === 'on' && isSpectrumMode && sigArray.length === 0) { startSpectrumAnalyse(); return true; }
@@ -2269,28 +2271,9 @@ async function startScan(direction) {
                     currentFrequency = Math.round(currentFrequency * 100) / 100; 
                 }
             } 
-            // Handle whitelist mode
+            // Handle whitelist mode (Reverted to Original)
 			else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {		
-                if ((EnableSpectrumScan || EnableSpectrumScanBL) && sigArray.length === 0) {
-                    startSpectrumAnalyse();
-                    return true; 
-                }
-                
-                const isStrongEnough = (freq) => {
-                    if ((EnableSpectrumScan || EnableSpectrumScanBL) && sigArray.length > 0) {
- 
-                        let closestEntry = sigArray.reduce((prev, curr) => {
-                            return (Math.abs(parseFloat(curr.freq) - freq) < Math.abs(parseFloat(prev.freq) - freq) ? curr : prev);
-                        });
-                        
-                        if (closestEntry && Math.abs(parseFloat(closestEntry.freq) - freq) <= 0.06) {
-                            return parseFloat(closestEntry.sig) > Sensitivity; 
-                        }
-                    }
-                    return true;
-                };
-
-				while (!isInWhitelist(currentFrequency, whitelist) || !isStrongEnough(currentFrequency)) { 
+				while (!isInWhitelist(currentFrequency, whitelist)) { 
 					const tempPreviousFrequency = currentFrequency;
 					if (direction === 'up') {
 							currentFrequency += 0.01;
@@ -2307,16 +2290,20 @@ async function startScan(direction) {
 					}			
 				}
 			}
-            // Handle spectrum/difference modes
+            // Handle spectrum/difference modes (Added WL Modes)
             else if (Scan === 'on' && sigArray.length !== 0 && isSpectrumMode) {
 				if (ScannerMode === 'spectrum') {
 					validFrequencies = sigArraySpectrum.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue).map(item => parseFloat(item.freq));
 				} else if (ScannerMode === 'spectrumBL' && EnableSpectrumScanBL) {
 					validFrequencies = sigArraySpectrum.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue && !isInBlacklist(parseFloat(item.freq), blacklist)).map(item => parseFloat(item.freq));
+				} else if (ScannerMode === 'spectrumWL' && EnableSpectrumScan && EnableWhitelist) {
+					validFrequencies = sigArraySpectrum.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue && isInWhitelist(parseFloat(item.freq), whitelist)).map(item => parseFloat(item.freq));
 				} else if (ScannerMode === 'difference') {
 					validFrequencies = sigArrayDifference.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue).map(item => parseFloat(item.freq));
 				} else if (ScannerMode === 'differenceBL' && EnableDifferenceScanBL) {
 					validFrequencies = sigArrayDifference.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue && !isInBlacklist(parseFloat(item.freq), blacklist)).map(item => parseFloat(item.freq));
+				} else if (ScannerMode === 'differenceWL' && EnableDifferenceScan && EnableWhitelist) {
+					validFrequencies = sigArrayDifference.filter(item => parseFloat(item.sig) > Sensitivity && parseFloat(item.sig) < SpectrumLimiterValue && isInWhitelist(parseFloat(item.freq), whitelist)).map(item => parseFloat(item.freq));
 				}				
 			
                 while (!validFrequencies.includes(currentFrequency) || (Number(parseFloat(currentFrequency).toFixed(1)) === Number((upperLimit + 0.1).toFixed(1)))) {
@@ -2456,28 +2443,24 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
         
     let ScanHoldTimeValue = ScanHoldTime * 10;
 
-    if (strength > Sensitivity || stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' || ScannerMode === 'whitelist' && Scan === 'on' || ScannerMode === 'normal' && Scan === 'on')) {        
-        // Overwrite the actual signal strength in the corresponding array for all four modes
-        if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' ) {
+    // Added spectrumWL and differenceWL here
+    if (strength > Sensitivity || stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'spectrumWL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' || ScannerMode === 'differenceWL' && Scan === 'on' || ScannerMode === 'whitelist' && Scan === 'on' || ScannerMode === 'normal' && Scan === 'on')) {        
+        
+        if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'spectrumWL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' || ScannerMode === 'differenceWL' ) {
             
-            // Choose the correct array based on the mode
-            const arr = (ScannerMode === 'difference' || ScannerMode === 'differenceBL')
+            const arr = (ScannerMode === 'difference' || ScannerMode === 'differenceBL' || ScannerMode === 'differenceWL')
                 ? sigArrayDifference
                 : sigArraySpectrum;
 
-            // Round frequency to two decimal places for consistent comparison
             const freqRounded = Math.round(parseFloat(freq) * 100) / 100;
 
-            // Find the matching entry index
             const idx = arr.findIndex(item =>
                 Math.round(parseFloat(item.freq) * 100) / 100 === freqRounded
             );
 
             if (idx !== -1) {
-                // Update existing entry
                 arr[idx].sig = strength.toString();
             } else {
-                // Add a new entry if not found
                 arr.push({
                     freq: freqRounded.toFixed(2),
                     sig:  strength.toString()
@@ -2485,9 +2468,9 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
             }
         }			
 
-        if (strength > Sensitivity || picode.length > 1 || strength > Sensitivity && !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {					
+        if (strength > Sensitivity || picode.length > 1 || strength > Sensitivity && !isSearching &&  (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'spectrumWL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' || ScannerMode === 'differenceWL' && Scan === 'on' )) {					
 
-            if (picode.length > 1 && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL') {
+            if (picode.length > 1 && ScannerMode !== 'spectrum' && ScannerMode !== 'spectrumBL' && ScannerMode !== 'spectrumWL' && ScannerMode !== 'difference' && ScannerMode !== 'differenceBL' && ScannerMode !== 'differenceWL') {
                 ScanHoldTimeValue += 50;
             }				
             
@@ -2544,7 +2527,6 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                         
                                 }
                                 
-                                    //isScanning = false;
                                     checkStrengthCounter = 0; // Reset the counter
                                     stereo_detect = false;
                                     station = '';
@@ -2626,7 +2608,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
             }
         }
     }
-}	
+}
 
 function PE5PVBlog(freq, picode, station, checkStrengthCounter) {
     

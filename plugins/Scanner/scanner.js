@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.6c)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.7)      ///
 ///                                                         ///
-///  by Highpoint               last update: 26.06.2026     ///
+///  by Highpoint               last update: 29.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.6c';
+    const pluginVersion = '4.7';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
@@ -239,21 +239,28 @@
         }
     }
 
+    ///////////////////////////////////////////////////////////
+    // Commands over WebSocket
+    ///////////////////////////////////////////////////////////
     async function SendValue(Sensitivity, ScannerMode, ScanHoldTime) {
         const ssu = (SignalStrengthUnit || '').toLowerCase();
-        let resultSensitivity;
+        let resultSensitivity = ''; // Default to empty string instead of undefined
 
-        if (ssu === 'dbuv' || ssu === 'dbµv' || ssu === 'dbμv') {
-            resultSensitivity = Math.round(parseFloat(Sensitivity) + 10.875);
-        } else if (ssu === 'dbm') {
-            resultSensitivity = Math.round(parseFloat(Sensitivity) + 119.75);
-        } else if (ssu === 'dbf') {
-            resultSensitivity = Math.round(parseFloat(Sensitivity));
-        } else {
-            resultSensitivity = Math.round(parseFloat(Sensitivity));
+        // Only calculate offset if a real sensitivity value was deliberately passed
+        if (Sensitivity !== undefined && Sensitivity !== null && Sensitivity !== '') {
+            if (ssu === 'dbuv' || ssu === 'dbµv' || ssu === 'dbμv') {
+                resultSensitivity = Math.round(parseFloat(Sensitivity) + 10.875);
+            } else if (ssu === 'dbm') {
+                resultSensitivity = Math.round(parseFloat(Sensitivity) + 119.75);
+            } else if (ssu === 'dbf') {
+                resultSensitivity = Math.round(parseFloat(Sensitivity));
+            } else {
+                resultSensitivity = Math.round(parseFloat(Sensitivity));
+            }
         }
 
         try {
+            // Unchanged values will be sent as empty strings ('') and ignored by the server
             const valueMessage = createMessage('command', '', '', resultSensitivity, ScannerMode, ScanHoldTime);
             if (wsSendSocket && wsSendSocket.readyState === WebSocket.OPEN) {
                 wsSendSocket.send(JSON.stringify(valueMessage));
@@ -406,8 +413,10 @@
                             if (
                                 ScannerMode === 'spectrum'   ||
                                 ScannerMode === 'spectrumBL' ||
+                                ScannerMode === 'spectrumWL' ||
                                 ScannerMode === 'difference' ||
-                                ScannerMode === 'differenceBL'
+                                ScannerMode === 'differenceBL' ||
+                                ScannerMode === 'differenceWL'
                             ) {
                                 sendToastWithCooldown(
                                     'info',
@@ -1014,8 +1023,10 @@
         if (EnableWhitelist)      optionsHTML += `<li data-value="whitelist" class="option">whitelist</li>`;
         if (EnableSpectrumScan)   optionsHTML += `<li data-value="spectrum" class="option">spectrum</li>`;
         if (EnableSpectrumScanBL) optionsHTML += `<li data-value="spectrumBL" class="option">spectrumBL</li>`;
+        if (EnableSpectrumScan && EnableWhitelist) optionsHTML += `<li data-value="spectrumWL" class="option">spectrumWL</li>`;
         if (EnableDifferenceScan) optionsHTML += `<li data-value="difference" class="option">difference</li>`;
         if (EnableDifferenceScanBL) optionsHTML += `<li data-value="differenceBL" class="option">differenceBL</li>`;
+        if (EnableDifferenceScan && EnableWhitelist) optionsHTML += `<li data-value="differenceWL" class="option">differenceWL</li>`;
         optionsHTML += `</ul>`;
         modeContainer.innerHTML = optionsHTML;
 
@@ -1193,34 +1204,28 @@
                 input.setAttribute('data-value', value);
                 dropdown.style.display = 'none';
 
-                // Hole aktuelle Werte direkt aus dem DOM, um veraltete Closure-Werte (wie den Default) zu vermeiden!
-                const currentSensInput = document.querySelector('input[title="Scanner Sensitivity"]');
-                const currentModeInput = document.querySelector('input[title="Scanner Mode"]');
-                const currentHoldInput = document.querySelector('input[title="Scanhold Time"]');
-
-                let currentSens = currentSensInput ? currentSensInput.getAttribute('data-value') : Sensitivity;
-                let currentMode = currentModeInput ? currentModeInput.getAttribute('data-value') : ScannerMode;
-                let currentHold = currentHoldInput ? currentHoldInput.getAttribute('data-value') : ScanHoldTime;
-
+                // Send ONLY the deliberately changed value to the server to prevent accidental offsets
                 if (commandPrefix === 'I') {
-                    SendValue(value, currentMode, currentHold);
+                    SendValue(value, '', ''); // Send Sensitivity only
                     if (
                         SpectrumLimiterValueStatus &&
                         value >= SpectrumLimiterValueStatus &&
                         (ScannerModeStatus === 'spectrum'   ||
                          ScannerModeStatus === 'spectrumBL' ||
+                         ScannerModeStatus === 'spectrumWL' ||
                          ScannerModeStatus === 'difference' ||
-                         ScannerModeStatus === 'differenceBL')
+                         ScannerModeStatus === 'differenceBL' ||
+                         ScannerModeStatus === 'differenceWL')
                     ) {
                         sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${SpectrumLimiterValueStatus} ${SignalStrengthUnit})!`, false, false);
                     }
                 }
                 if (commandPrefix === 'M') {
-                    SendValue(currentSens, value, currentHold);
+                    SendValue('', value, ''); // Send ScannerMode only
                     ScannerModeStatus = value;
                 }
                 if (commandPrefix === 'K') {
-                    SendValue(currentSens, currentMode, value);
+                    SendValue('', '', value); // Send ScanHoldTime only
                 }
             });
         });

@@ -14,10 +14,11 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.6c
+## v4.7
 
-- The cooldown for the Spectrum Graph Socket has been reduced to 3000 ms to improve the responsiveness of the scanning process
-- Whitelist mode has been completely revamped and now utilizes the Spectrum plugin to pre-determine signal strength
+- Addition of two further scan modes: "spectrumWL" and "differenceWL". These hybrid modes combine the speed of spectrum-diagram-based filtering with the exclusivity of the "whitelist.txt" file
+- The standard whitelist scan mode has been reverted to its state prior to version 4.6c
+- Sensitivity fix: A user interface bug that caused a (cumulative) increase in the sensitivity value when switching modes has been resolved by ensuring that only explicitly updated values ​​are transmitted from the client to the server
 
 ## Installation notes:
 
@@ -83,6 +84,11 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.6c
+
+- The cooldown for the Spectrum Graph Socket has been reduced to 3000 ms to improve the responsiveness of the scanning process
+- Whitelist mode has been completely revamped and now utilizes the Spectrum plugin to pre-determine signal strength
 
 ### v4.6b
 
