@@ -1,7 +1,7 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.6b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.6c)      ///
 ///                                                         ///
 ///  by Highpoint               last update: 26.06.2026     ///
 ///  powered by PE5PVB                                      ///
@@ -15,7 +15,7 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.6b';
+    const pluginVersion = '4.6c';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";

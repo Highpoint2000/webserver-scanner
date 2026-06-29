@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.6b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.6c)      ///
 ///                                                         ///
-///  by Highpoint               last update: 26.06.2026     ///
+///  by Highpoint               last update: 28.06.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -474,9 +474,9 @@ function applyScannerConfig(configData) {
     if (SpectrumPlusMinusValue === 0) SpectrumPlusMinusValue = 100;
     if (scanIntervalTime > 1000) scanIntervalTime = 1000;
 
-    if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
-        defaultSensitivityValue = 10;
-    }
+    // if ((SensitivityCalibrationFrequenz !== '') && defaultSensitivityValue >= 10) {
+    //    defaultSensitivityValue = 10;
+    // }
 
     const ssu = (SignalStrengthUnit || '').toLowerCase();
     
@@ -2106,7 +2106,7 @@ async function setupSendSocket() {
 
             setTimeout(() => {
                 isSpectrumCooldown = false;
-            }, 8000);
+            }, 3000);
         }, 400); 
 
     });
@@ -2269,9 +2269,28 @@ async function startScan(direction) {
                     currentFrequency = Math.round(currentFrequency * 100) / 100; 
                 }
             } 
-			// Handle whitelist mode
+            // Handle whitelist mode
 			else if (ScannerMode === 'whitelist' && Scan === 'on' && EnableWhitelist) {		
-				while (!isInWhitelist(currentFrequency, whitelist)) { 
+                if ((EnableSpectrumScan || EnableSpectrumScanBL) && sigArray.length === 0) {
+                    startSpectrumAnalyse();
+                    return true; 
+                }
+                
+                const isStrongEnough = (freq) => {
+                    if ((EnableSpectrumScan || EnableSpectrumScanBL) && sigArray.length > 0) {
+ 
+                        let closestEntry = sigArray.reduce((prev, curr) => {
+                            return (Math.abs(parseFloat(curr.freq) - freq) < Math.abs(parseFloat(prev.freq) - freq) ? curr : prev);
+                        });
+                        
+                        if (closestEntry && Math.abs(parseFloat(closestEntry.freq) - freq) <= 0.06) {
+                            return parseFloat(closestEntry.sig) > Sensitivity; 
+                        }
+                    }
+                    return true;
+                };
+
+				while (!isInWhitelist(currentFrequency, whitelist) || !isStrongEnough(currentFrequency)) { 
 					const tempPreviousFrequency = currentFrequency;
 					if (direction === 'up') {
 							currentFrequency += 0.01;
@@ -2437,8 +2456,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
         
     let ScanHoldTimeValue = ScanHoldTime * 10;
 
-    if (stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' )) {
-        
+    if (strength > Sensitivity || stereo_detect === true || picode.length > 1 || !isSearching && (ScannerMode === 'spectrum' && Scan === 'on' || ScannerMode === 'spectrumBL' && Scan === 'on' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' && Scan === 'on' || ScannerMode === 'whitelist' && Scan === 'on' || ScannerMode === 'normal' && Scan === 'on')) {        
         // Overwrite the actual signal strength in the corresponding array for all four modes
         if (ScannerMode === 'spectrum' || ScannerMode === 'spectrumBL' || ScannerMode === 'difference' || ScannerMode === 'differenceBL' ) {
             

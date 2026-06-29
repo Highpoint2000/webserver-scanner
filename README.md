@@ -14,12 +14,10 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.6b
+## v4.6c
 
-- Autoscan Concurrency: Prevented scan activation or resumption during active user sessions via real-time connection checks and immediate timer cancellation.
-- System Stability & UI: Resolved spectrum-empty search errors and optimized button layouts for narrow displays.
-
-Many thanks to AmateurAudioDude for this code improvements!
+- The cooldown for the Spectrum Graph Socket has been reduced to 3000 ms to improve the responsiveness of the scanning process
+- Whitelist mode has been completely revamped and now utilizes the Spectrum plugin to pre-determine signal strength
 
 ## Installation notes:
 
@@ -85,6 +83,13 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.6b
+
+- Autoscan Concurrency: Prevented scan activation or resumption during active user sessions via real-time connection checks and immediate timer cancellation.
+- System Stability & UI: Resolved spectrum-empty search errors and optimized button layouts for narrow displays.
+
+Many thanks to AmateurAudioDude for this code improvements!
 
 ### v4.6a
 
