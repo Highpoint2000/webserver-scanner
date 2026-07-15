@@ -327,6 +327,29 @@
     }
 
     ///////////////////////////////////////////////////////////
+    // /data_plugins is an open, unauthenticated bus: any client
+    // can send a 'Scanner' message. Toast text must therefore
+    // never be built from the payload's own text - only from a
+    // small set of values/strings the plugin itself recognizes.
+    // A value that doesn't match a known-good value becomes '?'
+    // rather than being displayed as-is.
+    ///////////////////////////////////////////////////////////
+    const KNOWN_SCANNER_MODES = ['normal', 'blacklist', 'whitelist', 'spectrum', 'spectrumBL', 'spectrumWL', 'difference', 'differenceBL', 'differenceWL'];
+
+    function safeEnum(value, allowed) {
+        return allowed.includes(value) ? value : '?';
+    }
+
+    function safeBool(value) {
+        return (value === true || value === false) ? String(value) : '?';
+    }
+
+    function safeNumber(value) {
+        const num = Number(value);
+        return (value !== '' && value !== null && value !== undefined && Number.isFinite(num)) ? String(num) : '?';
+    }
+
+    ///////////////////////////////////////////////////////////
     // Toast with cooldown
     ///////////////////////////////////////////////////////////
     let lastToastTime = 0;
@@ -421,7 +444,7 @@
                                 sendToastWithCooldown(
                                     'info',
                                     'Scanner',
-                                    `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Limit: ${SpectrumLimiterValue} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`,
+                                    `Settings activated! PE5PVB Scan: ${safeBool(ScanPE5PVB)} | PE5PVB Search: ${safeBool(SearchPE5PVB)} | Autoscan: ${safeEnum(Scan, ['on', 'off'])} | Sensitivity: ${safeNumber(Sensitivity)} | Limit: ${safeNumber(SpectrumLimiterValue)} | Scanmode: ${safeEnum(ScannerMode, KNOWN_SCANNER_MODES)} | Scanholdtime: ${safeNumber(ScanHoldTime)}`,
                                     false,
                                     false
                                 );
@@ -433,7 +456,7 @@
                                 sendToastWithCooldown(
                                     'info',
                                     'Scanner',
-                                    `Settings activated! PE5PVB Scan: ${ScanPE5PVB} | PE5PVB Search: ${SearchPE5PVB} | Autoscan: ${Scan} | Sensitivity: ${Sensitivity} | Scanmode: ${ScannerMode} | Scanholdtime: ${ScanHoldTime}`,
+                                    `Settings activated! PE5PVB Scan: ${safeBool(ScanPE5PVB)} | PE5PVB Search: ${safeBool(SearchPE5PVB)} | Autoscan: ${safeEnum(Scan, ['on', 'off'])} | Sensitivity: ${safeNumber(Sensitivity)} | Scanmode: ${safeEnum(ScannerMode, KNOWN_SCANNER_MODES)} | Scanholdtime: ${safeNumber(ScanHoldTime)}`,
                                     false,
                                     false
                                 );
@@ -452,7 +475,7 @@
                     InfoFMLIST &&
                     InfoFMLIST.includes("successful")
                 ) {
-                    sendToastWithCooldown('success important', 'Scanner', `${InfoFMLIST}`, false, false);
+                    sendToastWithCooldown('success important', 'Scanner', 'FMLIST log entry sent successfully.', false, false);
                     sendInitialWebSocketMessage();
 
                 } else if (
@@ -460,7 +483,7 @@
                     InfoFMLIST &&
                     InfoFMLIST.includes("failed")
                 ) {
-                    sendToastWithCooldown('error important', 'Scanner', `${InfoFMLIST}`, false, false);
+                    sendToastWithCooldown('error important', 'Scanner', 'FMLIST log entry could not be sent.', false, false);
                     sendInitialWebSocketMessage();
 
                 } else if (status === 'broadcast' || status === 'send') {
@@ -983,6 +1006,13 @@
     // Scanner controls
     ///////////////////////////////////////////////////////////
     function createScannerControls(Sensitivity, ScannerMode, ScanHoldTime) {
+        // These values are rendered via innerHTML below and can originate
+        // from an unauthenticated /data_plugins broadcast - never trust
+        // them as-is (see safeEnum/safeBool/safeNumber above).
+        Sensitivity = safeNumber(Sensitivity);
+        ScannerMode = safeEnum(ScannerMode, KNOWN_SCANNER_MODES);
+        ScanHoldTime = safeNumber(ScanHoldTime);
+
         const scannerControls = document.createElement('div');
         scannerControls.className = "no-bg h-100";
         scannerControls.id = "scanner-controls";
@@ -1217,7 +1247,7 @@
                          ScannerModeStatus === 'differenceBL' ||
                          ScannerModeStatus === 'differenceWL')
                     ) {
-                        sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${SpectrumLimiterValueStatus} ${SignalStrengthUnit})!`, false, false);
+                        sendToast('error important', 'Scanner', `Sensitivity must be smaller than SpectrumLimiter (${safeNumber(SpectrumLimiterValueStatus)} ${safeEnum(SignalStrengthUnit, ['dBf', 'dBµV', 'dBm'])})!`, false, false);
                     }
                 }
                 if (commandPrefix === 'M') {

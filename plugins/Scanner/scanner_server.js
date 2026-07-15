@@ -47,6 +47,36 @@ const oldConfigFilePath = path.join(__dirname, 'configPlugin.json');
 const newConfigFilePath = path.join(__dirname, './../../plugins_configs/scanner.json');
 const pluginsConfigDir = path.dirname(newConfigFilePath);
 
+// -------------------------------------------------------------
+// Log-sanitization helpers
+// -------------------------------------------------------------
+// PS/RT/ECC/AF come straight from live-decoded RDS data (an
+// attacker with a transmitter in range of the receiver controls
+// their content); station/city/itu/stationid come from the tx
+// lookup. Neither is safe to write verbatim into a sink that
+// later interprets the content.
+
+// The HTML log is opened directly in a browser - never write
+// untrusted text into it without escaping.
+function escapeHtml(value) {
+    if (value === undefined || value === null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// The CSV log is typically opened in a spreadsheet - a value
+// starting with = + - @ (or a tab/CR) is interpreted as a formula
+// by Excel/LibreOffice regardless of surrounding quotes.
+function csvFormulaGuard(value) {
+    if (value === undefined || value === null) return '';
+    const str = String(value);
+    return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+}
+
 // Operational Global Variables
 let manualSensitivityAbsolute = null;
 let manualSensitivityOffset = null;
@@ -2848,30 +2878,30 @@ async function writeCSVLogEntry() {
     }
 
     const PI = logPi ? `0x${logPi}` : `""`;
-    const formattedPS = logPs ? logPs.replace(/ /g, '_').padEnd(8, '_').substring(0, 8) : ''; 
+    const formattedPS = logPs ? csvFormulaGuard(logPs.replace(/ /g, '_').padEnd(8, '_').substring(0, 8)) : '';
     const PS = `"${formattedPS}"`;
-    
-    const formattedPsAi = psAiCol ? psAiCol.replace(/ /g, '_').padEnd(8, '_').substring(0, 8) : '';
+
+    const formattedPsAi = psAiCol ? csvFormulaGuard(psAiCol.replace(/ /g, '_').padEnd(8, '_').substring(0, 8)) : '';
     const PS_AI_CSV = formattedPsAi ? `"${formattedPsAi}"` : `""`;
     const PI_AI_CSV = piAiCol ? `0x${piAiCol}` : `""`;
     const TA = `${ta}`;
     const TP = `${tp}`;
-    
+
     const MUSIC = `0`;
     const ProgramType = `"${getProgrammeByPTYFromFile(pty, __dirname, './../../web/js/main.js')}"`;
     const GRP = `"0A"`;
-    const STEREO = stereo ? 1 : 0;  
+    const STEREO = stereo ? 1 : 0;
     const DYNPTY = `0`;
     const OTHERPI = ``;
     const ALLPSTEXT = `"allps:"`;
     const OTHERPS = `""`;
-    const ECC = `"${ecc}"`;
-    const STATIONID = `"${stationid}"`;
-    const AF = `"${af}"`;
-    const RT = `"${rt}"`;
+    const ECC = `"${csvFormulaGuard(ecc)}"`;
+    const STATIONID = `"${csvFormulaGuard(stationid)}"`;
+    const AF = `"${csvFormulaGuard(af)}"`;
+    const RT = `"${csvFormulaGuard(rt)}"`;
 
     // --- TX information ---
-    const safe = v => (typeof v === 'undefined' || v === null) ? '' : String(v).trim().replace(/"/g, '');
+    const safe = v => csvFormulaGuard((typeof v === 'undefined' || v === null) ? '' : String(v).trim().replace(/"/g, ''));
     const TX_STATION = `"${safe(station)}"`;
     const TX_CITY    = `"${safe(city)}"`;
     const TX_ITU     = `"${safe(itu)}"`;
@@ -3204,9 +3234,9 @@ function writeHTMLLogEntry(isFiltered) {
 	
     logFilePathHTML = getLogFilePathHTML(date, time, isFiltered);
 
-	let link1 = stationid !== '' && stationid !== 'offline' ? `<a href="#" onclick="window.open('https://fmscan.org/stream.php?i=${stationid}', 'newWindow', 'width=800,height=160'); return false;" target="_blank">STREAM</a>` : '';     
-	let link2 = stationid !== '' && stationid !== 'offline' ? `<a href="https://maps.fmdx.org/#qth=${LAT},${LON}&id=${stationid}&findId=*" target="_blank">MAP</a>` : '';     
-	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${stationid}&qrb=${distance}&qtf=${azimuth}&country=${itu}&omid=${FMLIST_OM_ID}" target="_blank">FMLIST</a>` : '';
+	let link1 = stationid !== '' && stationid !== 'offline' ? `<a href="#" onclick="window.open('https://fmscan.org/stream.php?i=${escapeHtml(stationid)}', 'newWindow', 'width=800,height=160'); return false;" target="_blank">STREAM</a>` : '';
+	let link2 = stationid !== '' && stationid !== 'offline' ? `<a href="https://maps.fmdx.org/#qth=${escapeHtml(LAT)},${escapeHtml(LON)}&id=${escapeHtml(stationid)}&findId=*" target="_blank">MAP</a>` : '';
+	let link3 = stationid !== '' && stationid !== 'offline' && stationid > 0 && FMLIST_OM_ID !== '' ? `<a href="https://www.fmlist.org/fi_inslog.php?lfd=${escapeHtml(stationid)}&qrb=${escapeHtml(distance)}&qtf=${escapeHtml(azimuth)}&country=${escapeHtml(itu)}&omid=${escapeHtml(FMLIST_OM_ID)}" target="_blank">FMLIST</a>` : '';
 
     let logPi = picode;
     let logPs = ps;
@@ -3231,7 +3261,7 @@ function writeHTMLLogEntry(isFiltered) {
 		scanmode = 'M';
 	}
 
-    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${logPi}</td><td>${psWithUnderscores}</td><td>${station}</td><td>${city}</td><td>${itu}</td><td>${antennaName}</td><td>${pol}</td><td>${erp}</td><td>${SNR}</td><td>${distance}</td><td>${azimuth}</td><td>${stationid}</td><td>${scanmode}</td><td>${rdsAiCol}</td><td>${piAiCol}</td><td>${psAiWithUnderscores}</td><td contenteditable="true"></td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
+    let line = `<tr><td>${date}</td><td>${time}</td><td>${freq}</td><td>${escapeHtml(logPi)}</td><td>${escapeHtml(psWithUnderscores)}</td><td>${escapeHtml(station)}</td><td>${escapeHtml(city)}</td><td>${escapeHtml(itu)}</td><td>${escapeHtml(antennaName)}</td><td>${escapeHtml(pol)}</td><td>${escapeHtml(erp)}</td><td>${SNR}</td><td>${escapeHtml(distance)}</td><td>${escapeHtml(azimuth)}</td><td>${escapeHtml(stationid)}</td><td>${scanmode}</td><td>${rdsAiCol}</td><td>${escapeHtml(piAiCol)}</td><td>${escapeHtml(psAiWithUnderscores)}</td><td contenteditable="true"></td><td>${link1}</td><td>${link2}</td><td>${link3}</td></tr>\n`;
     let logContent = '';
     if (fs.existsSync(logFilePathHTML)) {
         try {
@@ -3243,7 +3273,7 @@ function writeHTMLLogEntry(isFiltered) {
     }
 
     if (HTMLOnlyFirstLog) {
-        const entryExists = logContent.includes(`<td>${freq}</td>`) && logContent.includes(`<td>${picode}</td>`) && logContent.includes(`<td>${station}</td>`);
+        const entryExists = logContent.includes(`<td>${freq}</td>`) && logContent.includes(`<td>${escapeHtml(picode)}</td>`) && logContent.includes(`<td>${escapeHtml(station)}</td>`);
         if (entryExists) {
             return;
         }
