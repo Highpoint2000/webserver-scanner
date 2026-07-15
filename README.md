@@ -14,11 +14,9 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.7
+## v4.7a
 
-- Addition of two further scan modes: "spectrumWL" and "differenceWL". These hybrid modes combine the speed of spectrum-diagram-based filtering with the exclusivity of the "whitelist.txt" file
-- The standard whitelist scan mode has been reverted to its state prior to version 4.6c
-- Sensitivity fix: A user interface bug that caused a (cumulative) increase in the sensitivity value when switching modes has been resolved by ensuring that only explicitly updated values ​​are transmitted from the client to the server
+- Important security update (Thanks to PE5PVB!)
 
 ## Installation notes:
 
@@ -84,6 +82,12 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+ ### v4.7
+
+- Addition of two further scan modes: "spectrumWL" and "differenceWL". These hybrid modes combine the speed of spectrum-diagram-based filtering with the exclusivity of the "whitelist.txt" file
+- The standard whitelist scan mode has been reverted to its state prior to version 4.6c
+- Sensitivity fix: A user interface bug that caused a (cumulative) increase in the sensitivity value when switching modes has been resolved by ensuring that only explicitly updated values ​​are transmitted from the client to the server
 
 ### v4.6c
 
