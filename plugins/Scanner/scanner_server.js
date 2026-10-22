@@ -140,6 +140,12 @@ let StartScanByMUF_Region = 'EU';
 let isMUFScanActive = false;
 let mufCheckInterval = null;
 let currentUsers = 0; // Tracks connected users for MUF reversion logic
+let pluginHoldUntil = 0; // Hold requested by another plugin via 'scanner:hold'
+let pluginHoldFreq = null;
+
+function isPluginHoldActive(frequency) {
+    return pluginHoldUntil > Date.now() && Math.abs(parseFloat(frequency) - pluginHoldFreq) < 0.005;
+}
 
 // Variables for dynamic scanner configurations
 let availableScannerConfigs = getAvailableConfigs();
@@ -212,6 +218,26 @@ try {
                 value: data,
                 isScanning: true
             }), null);
+        });
+
+        // Lets another plugin keep the scanner on a frequency.
+        // Payload: { freq: <MHz>, seconds: <hold time, 0 cancels>, source: <plugin name, optional> }
+        // A new request replaces the current.
+        pluginsApi.onPluginEvent('scanner:hold', (data) => {
+            const seconds = Number(data?.seconds);
+            const holdFreq = Number(data?.freq);
+            if (!Number.isFinite(seconds) || seconds < 0) return;
+            if (seconds === 0) {
+                if (pluginHoldUntil <= Date.now()) return;
+                if (Number.isFinite(holdFreq) && Math.abs(holdFreq - pluginHoldFreq) >= 0.005) return;
+                pluginHoldUntil = 0;
+                logInfo(`Scanner hold released${data?.source ? ` by ${data.source}` : ''}`);
+                return;
+            }
+            if (!Number.isFinite(holdFreq)) return;
+            pluginHoldFreq = holdFreq;
+            pluginHoldUntil = Date.now() + seconds * 1000;
+            logInfo(`Scanner holding ${holdFreq.toFixed(2)} MHz for ${seconds}s${data?.source ? ` (requested by ${data.source})` : ''}`);
         });
     }
 } catch (err) {
@@ -1742,18 +1768,22 @@ function checkUserCount(users) {
 				}, 500);
 			}
 
-			let targetRestoreFreq = saveAutoscanFrequency;
-			if (enableDefaultFreq && DefaultFreq !== undefined && DefaultFreq !== null && DefaultFreq !== '') {
-				let sanitizedFreq = String(DefaultFreq).replace(',', '.');
-				let parsedFreq = parseFloat(sanitizedFreq);
-				if (!isNaN(parsedFreq)) {
-					targetRestoreFreq = parsedFreq;
+			if (isPluginHoldActive(currentFrequency)) {
+				logInfo(`Scanner stays on ${currentFrequency} MHz: hold requested by plugin`);
+			} else {
+				let targetRestoreFreq = saveAutoscanFrequency;
+				if (enableDefaultFreq && DefaultFreq !== undefined && DefaultFreq !== null && DefaultFreq !== '') {
+					let sanitizedFreq = String(DefaultFreq).replace(',', '.');
+					let parsedFreq = parseFloat(sanitizedFreq);
+					if (!isNaN(parsedFreq)) {
+						targetRestoreFreq = parsedFreq;
+					}
 				}
-			}
-			
-			sendDataToClient(targetRestoreFreq);
 
-			if (AntennaSwitch && saveAutoscanAntenna) sendCommandToClient(`Z${saveAutoscanAntenna}`);
+				sendDataToClient(targetRestoreFreq);
+
+				if (AntennaSwitch && saveAutoscanAntenna) sendCommandToClient(`Z${saveAutoscanAntenna}`);
+			}
         }
     }
 }
@@ -2562,7 +2592,7 @@ function checkStereo(stereo_detect, freq, strength, picode, station, checkStreng
                                     station = '';
                                     Savefreq = freq;
 
-                                    startScan('up');
+                                    if (!isPluginHoldActive(freq)) startScan('up');
                         } 
                                                     
                     } else {
