@@ -95,6 +95,7 @@ let checkStrengthCounter = 0;
 let stereo_detect = false;
 let stereo_forced_user = 'stereo';
 let scanInterval = null; 
+let bandEndRestartTimer = null;
 let autoScanActive = false; 
 let autoScanTimer; 
 let autoScanScheduled = false; 
@@ -567,6 +568,9 @@ function applyScannerConfig(configData) {
     SearchPE5PVB = Search_PE5PVB_Mode;
 
     hasSensitivityCalibrationRun = false;
+
+    checkBlacklist();
+    checkWhitelist();
 
     // --- NEW: MUF Integration Setup ---
     if (mufCheckInterval) {
@@ -2093,6 +2097,7 @@ async function AutoScan() {
 
 function stopAutoScan() {
 	clearInterval(scanInterval); // Stops the scan interval
+	clearTimeout(bandEndRestartTimer);
 	if (scanBandwithSave === '0' || scanBandwithSave === 0) {
 		if (scanBandwith !== '0' && scanBandwith !== 0) {
 			logInfo('Scanner set bandwith from:', scanBandwith, 'Hz back to: auto mode');
@@ -2158,7 +2163,8 @@ async function startSpectrumAnalyse() {
 
 async function startScan(direction) {
     clearInterval(scanInterval); // Stops any active scan interval from the previous scan
-    
+    clearTimeout(bandEndRestartTimer);
+
     // Explicitly parse the limits to floats to prevent string concatenation bugs (e.g. "87.30" + 0.1 = "87.300.1")
     const lowerLimit = parseFloat(tuningLowerLimit);
     const upperLimit = parseFloat(tuningUpperLimit);
@@ -2234,8 +2240,10 @@ async function startScan(direction) {
                 isCalibrating = false; // Safely release the lock before restarting the scan
             }
             
-            // Start the scan now that the lock is released
-            if (currentUsers === 0 && Scan === 'on') startScan('up');
+            // Deferred, a band pass with no valid frequency would otherwise recurse until the stack overflows
+            bandEndRestartTimer = setTimeout(() => {
+                if (currentUsers === 0 && Scan === 'on') startScan('up');
+            }, scanIntervalTime);
             return true; // We exit this cycle to allow a clean restart
         }
 
