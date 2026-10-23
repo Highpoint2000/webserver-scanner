@@ -14,9 +14,12 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.7a
+## v4.7b
 
-- Important security update (Thanks to PE5PVB!)
+- Fix Scanner crash on whitelist profile switch
+- Add scanner: hold plugin event (see documentation under point 6.9)
+
+Many thanks to AmateurAudioDude for these code adjustments!
 
 ## Installation notes:
 
@@ -82,6 +85,10 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.7a
+
+- Important security update (Thanks to PE5PVB!)
 
  ### v4.7
 
