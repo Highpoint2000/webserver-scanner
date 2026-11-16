@@ -1407,10 +1407,11 @@ async function handleDataPluginsMessage(eventData, ws) {
                 return Math.abs(sigNum - prevSig) > SpectrumChangeValue;
             });
 
-            if (currentAntennaIndex === 0) sigArraySave0 = Array.from(sigArray);
-            if (currentAntennaIndex === 1) sigArraySave1 = Array.from(sigArray);
-            if (currentAntennaIndex === 2) sigArraySave2 = Array.from(sigArray);
-            if (currentAntennaIndex === 3) sigArraySave3 = Array.from(sigArray);
+            // Separate copy, so checkStereo() level updates don't change the saved scan
+            if (currentAntennaIndex === 0) sigArraySave0 = sigArray.map(item => ({ ...item }));
+            if (currentAntennaIndex === 1) sigArraySave1 = sigArray.map(item => ({ ...item }));
+            if (currentAntennaIndex === 2) sigArraySave2 = sigArray.map(item => ({ ...item }));
+            if (currentAntennaIndex === 3) sigArraySave3 = sigArray.map(item => ({ ...item }));
         }
 
         if (message.type === 'Scanner' && message.value.status === 'command') {
