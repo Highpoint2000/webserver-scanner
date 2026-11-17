@@ -14,12 +14,13 @@ This plugin provides scanning functions for the FM-DX web server.
 
 <img width="373" height="224" alt="grafik" src="https://github.com/user-attachments/assets/05aaa482-c717-4d39-98f6-eed7dba50028" />
 
-## v4.7b
+## v4.8
 
-- Fix Scanner crash on whitelist profile switch
-- Add scanner: hold plugin event (see documentation under point 6.9)
+- Added configurable scan raster, allowing the scan step size to be set freely in kHz instead of the fixed 100 kHz grid (e.g. 200k Hz for North America), calculated relative to tuningLowerLimit and correctly handling upper-band-limit overshoot 
+- Increased the spectrum-wait poll divisor from 17 to 25 ticks, extending the effective wait time to 5 seconds for a more reliable fresh spectrum capture after band-end
+- Fixed the per-antenna spectrum baseline arrays (sigArraySave0–3) to store a deep copy of each signal entry instead of a shallow array copy, preventing live checkStereo() updates from silently corrupting saved difference-scan baselines
 
-Many thanks to AmateurAudioDude for these code adjustments!
+Many thanks to AmateurAudioDude for the code adjustments!
 
 ## Installation notes:
 
@@ -85,6 +86,11 @@ If you have any questions, would like to report problems, or have suggestions fo
 
 <details>
 <summary>History</summary>
+
+### v4.7b
+
+- Fix Scanner crash on whitelist profile switch
+- Add scanner: hold plugin event (see documentation under point 6.9)
 
 ### v4.7a
 

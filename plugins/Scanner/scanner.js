@@ -1,9 +1,9 @@
 (() => {
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.7b)      ///
+///  SCANNER CLIENT SCRIPT FOR FM-DX-WEBSERVER (V4.8)       ///
 ///                                                         ///
-///  by Highpoint               last update: 23.10.2026     ///
+///  by Highpoint               last update: 17.11.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -15,12 +15,12 @@
 
 ///////////////////////////////////////////////////////////////
 
-    const pluginVersion = '4.7b';
+    const pluginVersion = '4.8';
     const pluginName         = "Scanner";
     const pluginHomepageUrl  = "https://github.com/Highpoint2000/webserver-scanner/releases";
     const pluginUpdateUrl    = "https://raw.githubusercontent.com/Highpoint2000/webserver-scanner/refs/heads/main/plugins/Scanner/scanner.js";
 
-    let AvailableScannerConfigs = ["default","SpE","Tropo"];
+    let AvailableScannerConfigs = ["default","Guido","SpE","Tropo"];
     let ActiveScannerConfig = 'default';
     const EnableBlacklist = true; // auto from config
     const EnableWhitelist = true; // auto from config

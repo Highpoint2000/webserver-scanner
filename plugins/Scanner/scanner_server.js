@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.7b)      ///
+///  SCANNER SERVER SCRIPT FOR FM-DX-WEBSERVER (V4.8)       ///
 ///                                                         ///
-///  by Highpoint               last update: 23.10.2026     ///
+///  by Highpoint               last update: 17.11.2026     ///
 ///  powered by PE5PVB                                      ///
 ///                                                         ///
 ///  https://github.com/Highpoint2000/webserver-scanner     ///
@@ -179,7 +179,7 @@ const activeChallenges = new Map();     // Store challenges per client
 // Global Variables mapped from Config
 // -------------------------------------------------------------
 let Scanmode, Autoscan_PE5PVB_Mode, Search_PE5PVB_Mode, StartAutoScan, AntennaSwitch, OnlyScanHoldTime;
-let defaultSensitivityValue, SensitivityCalibrationFrequenz, defaultScanHoldTime, defaultScannerMode, scanIntervalTime, scanBandwith;
+let defaultSensitivityValue, SensitivityCalibrationFrequenz, defaultScanHoldTime, defaultScannerMode, scanIntervalTime, scanBandwith, scanRaster;
 let EnableBlacklist, EnableWhitelist, tuningLowerLimit, tuningUpperLimit;
 let EnableSpectrumScan, EnableDifferenceScan, SpectrumChangeValue, SpectrumLimiterValue, SpectrumPlusMinusValue;
 let HTMLlogOnlyID, HTMLlogRAW, HTMLOnlyFirstLog, CSVcreate, CSVcompletePS, UTCtime, Log_Blacklist, SignalStrengthUnit;
@@ -187,6 +187,7 @@ let FMLIST_OM_ID, FMLIST_Autolog, FMLIST_MinDistance, FMLIST_MaxDistance, FMLIST
 let BEEP_CONTROL;
 
 let Sensitivity, ScannerMode, ScanHoldTime, StatusFMLIST;
+let scanStepMHz = 0.1; // Scan step in MHz, derived from scanRaster (kHz); default equals the previous fixed 100 kHz grid
 let EnableSpectrumScanBL = false;
 let EnableDifferenceScanBL = false;
 let ScanPE5PVB;
@@ -330,6 +331,8 @@ const defaultConfig = {
     defaultScannerMode: 'normal',        	// Set the startmode: 'normal', 'spectrum', 'spectrumBL', 'spectrumWL' 'difference', 'differenceBL', 'differenceWL', 'blacklist', or 'whitelist' / Only valid for PE5PVB_Mode = false 
     scanIntervalTime: 500,               	// Set the waiting time for the scanner here. (Default: 500 ms) A higher value increases the detection rate, but slows down the scanner!
     scanBandwith: 0,                     	// Set the bandwidth in Hz for the scanning process here (default = 0 [auto]). Possible values ​​are 56000, 64000, 72000, 84000, 97000, 114000, 133000, 151000, 184000, 200000, 217000, 236000, 254000, 287000, 311000
+    scanRaster: 100,                     	// Set the scan raster/step in kHz for the scanning process here (default = 100 kHz). The step can be set freely (e.g. 50, 100, 200, ...) and is always calculated starting from the lower tuning limit,
+											// e.g. tuningLowerLimit 87.7 with scanRaster 100 scans 87.7 - 87.8 - 87.9 ... and with scanRaster 200 scans 87.7 - 87.9 - 88.1 ... The upper tuning limit is always handled correctly, even if it is overshot instead of hit exactly.
 
     EnableBlacklist: false,              	// Enable Blacklist, set it 'true' or 'false' / the blacklist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
     EnableWhitelist: false,              	// Enable Whitelist, set it 'true' or 'false' / the whitelist.txt file with frequency values ​​(e.g. 89.000) must be located in the scanner plugin folder 
@@ -474,6 +477,14 @@ function applyScannerConfig(configData) {
     defaultScannerMode = configData.defaultScannerMode;
     scanIntervalTime = configData.scanIntervalTime;
     scanBandwith = configData.scanBandwith;
+
+    // Scan raster/step in kHz, converted to MHz for the frequency stepping logic.
+    // Falls back to the default 100 kHz grid if the configured value is missing or invalid.
+    scanRaster = parseFloat(configData.scanRaster);
+    if (isNaN(scanRaster) || scanRaster <= 0) {
+        scanRaster = 100;
+    }
+    scanStepMHz = scanRaster / 1000;
 
     EnableBlacklist = configData.EnableBlacklist;
     EnableWhitelist = configData.EnableWhitelist;
@@ -1407,10 +1418,11 @@ async function handleDataPluginsMessage(eventData, ws) {
                 return Math.abs(sigNum - prevSig) > SpectrumChangeValue;
             });
 
-            if (currentAntennaIndex === 0) sigArraySave0 = Array.from(sigArray);
-            if (currentAntennaIndex === 1) sigArraySave1 = Array.from(sigArray);
-            if (currentAntennaIndex === 2) sigArraySave2 = Array.from(sigArray);
-            if (currentAntennaIndex === 3) sigArraySave3 = Array.from(sigArray);
+            // Separate copy, so checkStereo() level updates don't change the saved scan
+            if (currentAntennaIndex === 0) sigArraySave0 = sigArray.map(item => ({ ...item }));
+            if (currentAntennaIndex === 1) sigArraySave1 = sigArray.map(item => ({ ...item }));
+            if (currentAntennaIndex === 2) sigArraySave2 = sigArray.map(item => ({ ...item }));
+            if (currentAntennaIndex === 3) sigArraySave3 = sigArray.map(item => ({ ...item }));
         }
 
         if (message.type === 'Scanner' && message.value.status === 'command') {
@@ -2094,7 +2106,7 @@ async function AutoScan() {
                 } else {
                     // Same grid as in startScan():
                     //  - < 74 MHz  -> 0.01 MHz
-                    //  - >= 74 MHz -> 0.1 MHz, except Whitelist (0.01 MHz)
+                    //  - >= 74 MHz -> scanRaster (default 0.1 MHz), except Whitelist (0.01 MHz)
                     let step;
                     if (lastFreq < 74.0) {
                         step = 0.01;
@@ -2102,7 +2114,7 @@ async function AutoScan() {
                         if (ScannerMode === 'whitelist' && EnableWhitelist) {
                             step = 0.01;
                         } else {
-                            step = 0.1;
+                            step = scanStepMHz;
                         }
                     }
 
@@ -2207,9 +2219,9 @@ async function startScan(direction) {
     async function updateFrequency() {
         if (!isScanning) return false; 
 		
-		// Force snap to 100kHz grid if above 74MHz and currently on a 10kHz offset
-        if (currentFrequency >= 74.0 && (Math.round(currentFrequency * 100) % 10 !== 0)) {
-            currentFrequency = Math.round(currentFrequency * 10) / 10;
+		// Force snap to the configured scanRaster grid (relative to the lower tuning limit) if above 74MHz
+        if (currentFrequency >= 74.0) {
+            currentFrequency = snapToScanRaster(currentFrequency, lowerLimit, scanStepMHz);
         }
 
         currentFrequency = Math.round(currentFrequency * 100) / 100; // Round to two decimal places
@@ -2247,8 +2259,8 @@ async function startScan(direction) {
                         if (currentUsers > 0 || Scan !== 'on') break;
                         await new Promise(resolve => setTimeout(resolve, 200));
                         waitSpectrum++;
-                        // Retrigger every ~3.4 seconds just in case
-                        if (waitSpectrum % 17 === 0) {
+                        // Retrigger every ~5 seconds just in case
+                        if (waitSpectrum % 25 === 0) {
                             startSpectrumAnalyse();
                         }
                     }
@@ -2285,7 +2297,7 @@ async function startScan(direction) {
 				if (Scan === 'on' && ScannerMode === 'whitelist' && EnableWhitelist) {		
 					currentFrequency += 0.01; 
 				} else {
-					currentFrequency += 0.1; 
+					currentFrequency += scanStepMHz; 
 				}
             }
             if (currentFrequency > upperLimit) {
@@ -2312,7 +2324,7 @@ async function startScan(direction) {
 				if (Scan === 'on' && ScannerMode === 'whitelist' && EnableWhitelist) {		
 					currentFrequency -= 0.01; 
 				} else {
-					currentFrequency -= 0.1; 
+					currentFrequency -= scanStepMHz; 
 				}
             }
 
@@ -2329,11 +2341,11 @@ async function startScan(direction) {
                 while (isInBlacklist(currentFrequency, blacklist)) { 
                     if (direction === 'up') {
                         if (currentFrequency < 74.00) currentFrequency += 0.01;
-                        else currentFrequency += 0.1;
+                        else currentFrequency += scanStepMHz;
                         if (currentFrequency > upperLimit) currentFrequency = lowerLimit;
                     } else if (direction === 'down') {
                         if (currentFrequency < 74.00) currentFrequency -= 0.01;
-                        else currentFrequency -= 0.1;
+                        else currentFrequency -= scanStepMHz;
                         if (currentFrequency < lowerLimit) currentFrequency = upperLimit;
                     }
                     currentFrequency = Math.round(currentFrequency * 100) / 100; 
@@ -2421,6 +2433,15 @@ async function startScan(direction) {
             scanInterval = setInterval(updateFrequency, scanIntervalTime); 
         }
     });
+}
+
+// Aligns a frequency to the scanRaster grid that starts at the given reference frequency
+// (the lower tuning limit). Example: reference 87.70 MHz with a 200 kHz raster yields the
+// grid 87.70, 87.90, 88.10, ... regardless of the frequency's original decimal offset.
+function snapToScanRaster(frequency, reference, stepMHz) {
+    if (!stepMHz || stepMHz <= 0) return frequency;
+    const steps = Math.round((frequency - reference) / stepMHz);
+    return Math.round((reference + steps * stepMHz) * 100) / 100;
 }
 
 function isInBlacklist(frequency, blacklist) {
